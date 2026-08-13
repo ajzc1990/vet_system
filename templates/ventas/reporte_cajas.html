@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Control de Cajas y Arqueos - VetSoft{% endblock %}
+
+{% block content %}
+<!-- Header Principal -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-bar-graph-fill text-primary"></i> Auditoría de Cajas y Arqueos
+        </h2>
+        <p class="text-muted small mb-0">Historial de aperturas, cierres, cobros por medio de pago y balance de arqueos</p>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <a href="{% url 'ventas:lista_ventas' %}" class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-cart-check-fill"></i> Ir al Punto de Venta
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas KPI de Resumen Global -->
+<div class="row g-3 mb-4">
+    <!-- Total Efectivo Neto -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-success border-4 bg-white h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted extra-small fw-bold text-uppercase tracking-wider">Ingresos Reales Efectivo</div>
+                    <div class="fs-3 fw-extrabold text-success mt-1">${{ total_efectivo_acumulado|floatformat:2 }}</div>
+                    <div class="small text-muted fw-medium mt-1"><i class="bi bi-cash me-1"></i>Abonado en billetes (Arqueado)</div>
+                </div>
+                <div class="bg-success bg-opacity-10 text-success p-3 rounded-4">
+                    <i class="bi bi-cash-stack fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Digital / Tarjetas -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-primary border-4 bg-white h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted extra-small fw-bold text-uppercase tracking-wider">Ingresos Digitales / Tarjetas</div>
+                    <div class="fs-3 fw-extrabold text-primary mt-1">${{ total_digital_acumulado|floatformat:2 }}</div>
+                    <div class="small text-muted fw-medium mt-1"><i class="bi bi-credit-card me-1"></i>Mercado Pago / Posnet / Transf.</div>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4">
+                    <i class="bi bi-credit-card-2-front-fill fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Balance / Desfasaje Global -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start {% if total_diferencia_acumulada < 0 %}border-danger bg-danger bg-opacity-10{% elif total_diferencia_acumulada > 0 %}border-success bg-success bg-opacity-10{% else %}border-secondary bg-white{% endif %} border-4 h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="extra-small fw-bold text-uppercase tracking-wider {% if total_diferencia_acumulada < 0 %}text-danger{% elif total_diferencia_acumulada > 0 %}text-success{% else %}text-muted{% endif %}">
+                        Balance Histórico de Arqueos
+                    </div>
+                    <div class="fs-3 fw-extrabold mt-1 {% if total_diferencia_acumulada < 0 %}text-danger{% elif total_diferencia_acumulada > 0 %}text-success{% else %}text-dark{% endif %}">
+                        {% if total_diferencia_acumulada > 0 %}+{% endif %}${{ total_diferencia_acumulada|floatformat:2 }}
+                    </div>
+                    <div class="small fw-semibold mt-1">
+                        {% if total_diferencia_acumulada < 0 %}
+                            <span class="text-danger"><i class="bi bi-arrow-down-circle-fill me-1"></i>Faltante Acumulado</span>
+                        {% elif total_diferencia_acumulada > 0 %}
+                            <span class="text-success"><i class="bi bi-arrow-up-circle-fill me-1"></i>Sobrante Acumulado</span>
+                        {% else %}
+                            <span class="text-muted"><i class="bi bi-check-circle-fill text-success me-1"></i>Cajas Cuadradas (100% Exactas)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="p-3 rounded-4 {% if total_diferencia_acumulada < 0 %}bg-danger bg-opacity-20 text-danger{% elif total_diferencia_acumulada > 0 %}bg-success bg-opacity-20 text-success{% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                    <i class="bi bi-calculator-fill fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla Detallada de Auditoría de Cajas -->
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+    <div class="card-header bg-white py-3 px-4 border-bottom">
+        <h5 class="card-title fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-clock-history text-primary"></i> Historial Detallado de Auditoría de Cajas
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem; letter-spacing: 0.5px;">
+                        <th class="ps-4 py-3">Caja / Estado</th>
+                        <th class="py-3">Apertura</th>
+                        <th class="py-3">Cierre / Cajero</th>
+                        <th class="py-3">Fondo Inicial</th>
+                        <th class="py-3">Esperado (Sistema)</th>
+                        <th class="py-3">Real (Conteo)</th>
+                        <th class="py-3">Diferencia</th>
+                        <th class="py-3">Digital</th>
+                        <th class="text-end pe-4 py-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cajas_reporte %}
+                    <tr>
+                        <!-- ID y Estado -->
+                        <td class="ps-4 py-3">
+                            <strong class="text-dark d-block">Caja #{{ item.caja.id }}</strong>
+                            <div>
+                                {% if item.caja.estado == 'ABIERTA' %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-2.5 py-1 rounded-pill fw-bold small">Abierta</span>
+                                {% else %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2.5 py-1 rounded-pill fw-bold small">Cerrada</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Apertura -->
+                        <td class="py-3">
+                            <span class="small fw-semibold text-dark d-block"><i class="bi bi-calendar-event text-primary me-1"></i>{{ item.caja.fecha_apertura|date:"d/m/Y H:i" }} hs</span>
+                            <small class="text-muted extra-small">Por: {{ item.caja.usuario_apertura.get_full_name|default:item.caja.usuario_apertura.username }}</small>
+                        </td>
+
+                        <!-- Cierre -->
+                        <td class="py-3">
+                            {% if item.caja.fecha_cierre %}
+                                <span class="small fw-semibold text-dark d-block"><i class="bi bi-calendar-check text-success me-1"></i>{{ item.caja.fecha_cierre|date:"d/m/Y H:i" }} hs</span>
+                                <small class="text-muted extra-small">Por: {{ item.caja.usuario_cierre.get_full_name|default:item.caja.usuario_cierre.username }}</small>
+                            {% else %}
+                                <span class="text-muted small italic"><i class="bi bi-hourglass-split me-1"></i>En curso...</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Fondo Inicial -->
+                        <td class="py-3 fw-semibold text-secondary">
+                            ${{ item.caja.monto_inicial|floatformat:2 }}
+                        </td>
+
+                        <!-- Esperado -->
+                        <td class="py-3 fw-bold text-dark">
+                            ${{ item.esperado|floatformat:2 }}
+                        </td>
+
+                        <!-- Real -->
+                        <td class="py-3 fw-bold text-primary">
+                            {% if item.caja.estado == 'CERRADA' %}
+                                ${{ item.real|floatformat:2 }}
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Diferencia -->
+                        <td class="py-3">
+                            {% if item.caja.estado == 'CERRADA' %}
+                                {% if item.diferencia == 0 %}
+                                    <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-20 px-2.5 py-1.5 rounded-pill fw-bold" title="Sin diferencias"><i class="bi bi-check-lg me-1"></i>$0.00</span>
+                                {% elif item.diferencia < 0 %}
+                                    <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-20 px-2.5 py-1.5 rounded-pill fw-bold" title="Faltante en caja"><i class="bi bi-arrow-down-right me-1"></i>-${{ item.diferencia|stringformat:".2f"|slice:"1:" }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20 px-2.5 py-1.5 rounded-pill fw-bold" title="Sobrante en caja"><i class="bi bi-arrow-up-right me-1"></i>+${{ item.diferencia|floatformat:2 }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Digital -->
+                        <td class="py-3 fw-bold text-primary">
+                            ${{ item.digital|floatformat:2 }}
+                        </td>
+
+                        <!-- Acciones -->
+                        <td class="text-end pe-4 py-3">
+                            {% if item.caja.estado == 'ABIERTA' %}
+                                <a href="{% url 'ventas:cerrar_caja' item.caja.id %}" class="btn btn-outline-danger btn-sm fw-bold px-3 py-1.5 rounded-2 shadow-sm d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-lock-fill"></i> Cerrar
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-success border px-2 py-1"><i class="bi bi-check-all fs-6"></i></span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <div class="py-4">
+                                <i class="bi bi-inbox display-4 d-block mb-3 text-secondary opacity-50"></i>
+                                <h5 class="fw-bold text-dark">No hay registros de caja</h5>
+                                <p class="small text-muted mb-0">No se encontraron historiales de cierres ni aperturas de caja archivados.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block title %}Agenda de Turnos - VetSoft{% endblock %}
+
+{% block content %}
+<!-- Header & Controles de Filtro -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-week-fill text-primary"></i> Agenda Diaria de Turnos
+        </h2>
+        <p class="text-muted small mb-0">Gestión y control de citas médicas programadas</p>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <!-- Filtro por Fecha -->
+        <form method="GET" class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border gap-2">
+            <label for="fecha" class="form-label me-1 mb-0 fw-bold text-secondary small text-nowrap">
+                <i class="bi bi-funnel-fill text-primary me-1"></i>Fecha:
+            </label>
+            <input type="date" id="fecha" name="fecha" class="form-control form-control-sm border-0 bg-light fw-semibold" value="{{ fecha_seleccionada|date:'Y-m-d' }}">
+            <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold rounded-2">
+                <i class="bi bi-search me-1"></i> Ver
+            </button>
+        </form>
+
+        <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
+        </a>
+    </div>
+</div>
+
+<!-- Tabla Principal de Turnos -->
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem; letter-spacing: 0.5px;">
+                        <th class="ps-4 py-3">Hora / Fecha</th>
+                        <th class="py-3">Paciente / Tutor</th>
+                        <th class="py-3">Veterinario Asignado</th>
+                        <th class="py-3">Estado</th>
+                        <th class="py-3">Motivo Consulta</th>
+                        <th class="text-end pe-4 py-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turno in turnos %}
+                    <tr class="{% if turno.estado == 'ATENDIENDO' %}table-info bg-opacity-10{% elif turno.estado == 'COMPLETADO' %}opacity-75{% endif %}">
+                        <!-- Hora y Fecha -->
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 text-center" style="min-width: 48px;">
+                                    <i class="bi bi-clock-fill d-block mb-0 fs-6"></i>
+                                </div>
+                                <div>
+                                    <span class="fs-6 fw-extrabold text-dark d-block">{{ turno.fecha_hora|date:"H:i" }} hs</span>
+                                    <small class="text-muted fw-semibold">{{ turno.fecha_hora|date:"d/m/Y" }}</small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Mascota y Tutor -->
+                        <td class="py-3">
+                            {% if turno.mascota %}
+                                <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-1">
+                                    <i class="bi bi-heart-pulse-fill text-danger me-1"></i>{{ turno.mascota.nombre }}
+                                </div>
+                                {% if turno.mascota.cliente %}
+                                    <div class="small text-muted d-flex align-items-center gap-1">
+                                        <i class="bi bi-person-circle"></i> {{ turno.mascota.cliente.apellido }}, {{ turno.mascota.cliente.nombre }}
+                                        {% if turno.mascota.cliente.telefono %}
+                                            <a href="https://wa.me/{{ turno.mascota.cliente.telefono }}" target="_blank" class="text-success text-decoration-none ms-1" title="Contactar por WhatsApp">
+                                                <i class="bi bi-whatsapp"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="fw-semibold text-muted">Sin Mascota</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Veterinario -->
+                        <td class="py-3">
+                            {% if turno.veterinario %}
+                                <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-person-badge-fill text-primary"></i> Dr(a). {{ turno.veterinario.apellido }}, {{ turno.veterinario.nombre }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small italic"><i class="bi bi-dash-circle me-1"></i>Sin asignar</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Estado del Turno -->
+                        <td class="py-3">
+                            {% if turno.estado == 'PENDIENTE' %}
+                                <span class="badge bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                    <i class="bi bi-hourglass-split me-1"></i> Pendiente
+                                </span>
+                            {% elif turno.estado == 'CONFIRMADO' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Confirmado
+                                </span>
+                            {% elif turno.estado == 'ATENDIENDO' %}
+                                <span class="badge bg-info bg-opacity-20 text-info-emphasis border border-info border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                    <i class="bi bi-activity me-1"></i> Atendiendo
+                                </span>
+                            {% elif turno.estado == 'COMPLETADO' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                    <i class="bi bi-check-all me-1"></i> Completado
+                                </span>
+                            {% elif turno.estado == 'CANCELADO' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                    <i class="bi bi-x-circle-fill me-1"></i> Cancelado
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary px-3 py-2 rounded-pill fw-bold">{{ turno.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Motivo -->
+                        <td class="py-3">
+                            <span class="small text-muted fw-medium d-block text-truncate" style="max-width: 220px;" title="{{ turno.motivo }}">
+                                {{ turno.motivo|default:"Sin especificar" }}
+                            </span>
+                        </td>
+
+                        <!-- Acciones -->
+                        <td class="text-end pe-4 py-3">
+                            <div class="d-inline-flex gap-1 align-items-center">
+                                <!-- Botón de Atención Directa -->
+                                {% if turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
+                                    <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-success btn-sm fw-bold px-3 py-1.5 shadow-sm rounded-2 d-inline-flex align-items-center gap-1" title="Iniciar Consulta médica en Historia Clínica">
+                                        <i class="bi bi-stethoscope"></i> Atender
+                                    </a>
+                                {% endif %}
+
+                                <a href="{% url 'turnos:editar_turno' turno.id %}" class="btn btn-light btn-sm border text-secondary rounded-2" title="Editar Turno">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+
+                                {% if turno.estado == 'PENDIENTE' %}
+                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'CONFIRMADO' %}" class="btn btn-outline-primary btn-sm rounded-2" title="Confirmar Turno">
+                                        <i class="bi bi-check-circle"></i>
+                                    </a>
+                                {% endif %}
+
+                                {% if turno.estado == 'PENDIENTE' or turno.estado == 'CONFIRMADO' or turno.estado == 'ATENDIENDO' %}
+                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}" class="btn btn-outline-success btn-sm rounded-2" title="Marcar Completado">
+                                        <i class="bi bi-check-all"></i>
+                                    </a>
+                                {% endif %}
+
+                                {% if turno.estado != 'CANCELADO' %}
+                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'CANCELADO' %}" class="btn btn-outline-danger btn-sm rounded-2" title="Cancelar Turno">
+                                        <i class="bi bi-x-circle"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="py-4">
+                                <i class="bi bi-calendar-x display-4 d-block mb-3 text-secondary opacity-50"></i>
+                                <h5 class="fw-bold text-dark">No hay turnos registrados</h5>
+                                <p class="small text-muted mb-3">No se encontraron citas agendadas para la fecha seleccionada.</p>
+                                <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary btn-sm fw-bold px-4 py-2 rounded-3">
+                                    <i class="bi bi-plus-lg me-1"></i> Crear Primer Turno
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

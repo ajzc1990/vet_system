@@ -1,0 +1,555 @@
+{% extends 'base.html' %}
+
+{% block title %}Historia Clínica: {{ mascota.nombre }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Enlace de regreso al Cliente -->
+    <div class="mb-3">
+        <a href="{% url 'clientes:detalle_cliente' mascota.cliente.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Cliente
+        </a>
+    </div>
+
+    <!-- Header / Banner de la Mascota y Cliente -->
+    <div class="card border-0 shadow-lg mb-4 bg-white rounded-4 overflow-hidden">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="bi bi-heart-pulse-fill fs-2 text-danger"></i>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1 rounded-pill extra-small fw-bold mb-1">
+                            {{ mascota.get_especie_display|default:mascota.especie }}
+                        </span>
+                        <h3 class="fw-extrabold text-dark mb-0 fs-3">
+                            Historia Clínica: <span class="text-primary">{{ mascota.nombre }}</span>
+                        </h3>
+                        <p class="mb-0 text-muted small mt-1">
+                            <strong>Raza:</strong> {{ mascota.raza|default:"Mestizo" }} &bull; 
+                            <strong>Dueño:</strong> <span class="fw-bold text-dark">{{ mascota.cliente.apellido }}, {{ mascota.cliente.nombre }}</span>
+                            {% if mascota.cliente.telefono %}
+                                <a href="https://wa.me/{{ mascota.cliente.telefono }}" target="_blank" class="text-success text-decoration-none ms-1 fw-bold" title="WhatsApp">
+                                    (<i class="bi bi-whatsapp"></i> {{ mascota.cliente.telefono }})
+                                </a>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <!-- BOTÓN CARNET SANITARIO PDF -->
+                    <a href="{% url 'historia_clinica:descargar_carnet_vacunas_pdf' mascota.id %}" class="btn btn-outline-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" title="Descargar Carnet Sanitario PDF">
+                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Carnet PDF
+                    </a>
+                    
+                    <!-- ACCIONES EXCLUSIVAS VETERINARIOS / ADMINS -->
+                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                        <a href="{% url 'historia_clinica:subir_estudio' mascota.id %}" class="btn btn-light border text-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" title="Adjuntar Estudio / Ecografía / RX">
+                            <i class="bi bi-paperclip text-primary"></i> Adjuntar Estudio
+                        </a>
+
+                        <button class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="collapse" data-bs-target="#nuevaConsultaForm" aria-expanded="false" aria-controls="nuevaConsultaForm">
+                            <i class="bi bi-plus-circle-fill"></i> Registrar Consulta
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Desplegable para Nueva Consulta Médica -->
+    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+    <div class="collapse mb-4 {% if form.errors %}show{% endif %}" id="nuevaConsultaForm">
+        <div class="card border-primary border-opacity-25 shadow-lg rounded-4 overflow-hidden">
+            <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
+                    <i class="bi bi-plus-square-fill text-warning fs-5"></i> Registro Rápido de Consulta Médica
+                </h5>
+                <span class="badge bg-white bg-opacity-20 text-white extra-small px-2.5 py-1 rounded-pill">Atención Médica</span>
+            </div>
+            <div class="card-body p-4 p-md-4">
+                <form method="post" action="{% url 'clientes:detalle_historia_clinica' mascota.id %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                        <div class="alert alert-danger border-0 rounded-3 mb-3 py-2 small shadow-sm">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> <strong>Error al guardar:</strong> Por favor revisá los datos ingresados.
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Motivo de Consulta *</label>
+                            {{ form.motivo_consulta }}
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small mb-1">Peso (kg)</label>
+                            {{ form.peso_actual_kg }}
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small mb-1">Temp (°C)</label>
+                            {{ form.temperatura_c }}
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold text-dark small mb-1">FC (LPM)</label>
+                            {{ form.frecuencia_cardiaca }}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Síntomas / Anamnesis</label>
+                            {{ form.anamnesis }}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Diagnóstico *</label>
+                            {{ form.diagnostico }}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Tratamiento / Receta *</label>
+                            {{ form.tratamiento }}
+                        </div>
+                    </div>
+
+                    <!-- Adjuntar Estudio Directo -->
+                    <div class="row g-3 mb-3 bg-light p-3 rounded-4 border">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark extra-small mb-1"><i class="bi bi-paperclip me-1 text-primary"></i>Título del Estudio / Adjunto (Opcional)</label>
+                            <input type="text" name="estudio_titulo" class="form-control form-control-sm" placeholder="Ej: Ecografía Abdominal, Laboratorio">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark extra-small mb-1">Categoría / Tipo</label>
+                            <select name="estudio_tipo" class="form-select form-select-sm">
+                                <option value="OTRO">Otro Estudio / Adjunto</option>
+                                <option value="ECOGRAFIA">Ecografía</option>
+                                <option value="RADIOGRAFIA">Radiografía (RX)</option>
+                                <option value="ANALISIS_SANGRE">Análisis de Sangre / Laboratorio</option>
+                                <option value="URANALISIS">Análisis de Orina</option>
+                                <option value="CITOLOGIA">Citología / Histopatología</option>
+                                <option value="ELECTROCARDIOGRAMA">Electrocardiograma (ECG)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark extra-small mb-1">Subir Archivo (PDF, JPG, PNG)</label>
+                            <input type="file" name="estudio_archivo" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow">
+                            <i class="bi bi-check-circle-fill me-1"></i> Guardar Consulta y Adjunto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- PESTAÑAS DE NAVEGACIÓN -->
+    <ul class="nav nav-pills mb-4 bg-white p-2 rounded-4 shadow-sm border gap-1" id="historiaTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="consultas-tab" data-bs-toggle="tab" data-bs-target="#consultasTab" type="button" role="tab">
+                <i class="bi bi-clock-history"></i> Consultas <span class="badge bg-primary bg-opacity-20 text-primary rounded-pill small">{{ consultas.count|default:"0" }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="estudios-tab" data-bs-toggle="tab" data-bs-target="#estudiosTab" type="button" role="tab">
+                <i class="bi bi-paperclip"></i> Estudios <span class="badge bg-secondary bg-opacity-20 text-secondary rounded-pill small">{{ estudios.count|default:"0" }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="vacunas-tab" data-bs-toggle="tab" data-bs-target="#vacunasTab" type="button" role="tab">
+                <i class="bi bi-shield-plus"></i> Vacunas <span class="badge bg-success bg-opacity-20 text-success rounded-pill small">{{ vacunas.count|default:"0" }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="desparasitaciones-tab" data-bs-toggle="tab" data-bs-target="#desparasitacionesTab" type="button" role="tab">
+                <i class="bi bi-capsule"></i> Desparasitaciones <span class="badge bg-info bg-opacity-20 text-info-emphasis rounded-pill small">{{ desparasitaciones.count|default:"0" }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- CONTENIDO DE LAS PESTAÑAS -->
+    <div class="tab-content" id="historiaTabContent">
+        
+        <!-- PESTAÑA 1: CONSULTAS MÉDICAS -->
+        <div class="tab-pane fade show active" id="consultasTab" role="tabpanel">
+            {% if consultas %}
+                <div class="accordion" id="accordionConsultas">
+                    {% for consulta in consultas %}
+                        <div class="accordion-item mb-3 border-0 shadow-md rounded-4 overflow-hidden">
+                            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                                <button class="accordion-button bg-light text-dark fw-bold px-4 py-3 {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse{{ forloop.counter }}">
+                                    <div class="d-flex align-items-center gap-2 w-100 justify-content-between me-3">
+                                        <span>
+                                            <i class="bi bi-calendar-event-fill text-primary me-2"></i>{{ consulta.fecha_hora|date:"d/m/Y H:i" }} hs &bull; {{ consulta.motivo_consulta }}
+                                        </span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 rounded-pill px-3 py-1">
+                                            Dr(a). {{ consulta.veterinario.user.get_full_name|default:consulta.veterinario.user.username|default:"Atención Médica" }}
+                                        </span>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#accordionConsultas">
+                                <div class="accordion-body p-4 bg-white">
+                                    <div class="row g-2 mb-3 bg-light p-2.5 rounded-3 text-center border">
+                                        <div class="col-md-4"><small class="text-muted d-block extra-small text-uppercase fw-bold">Peso</small><span class="fw-bold text-dark">{{ consulta.peso_actual_kg|default:"--" }} kg</span></div>
+                                        <div class="col-md-4"><small class="text-muted d-block extra-small text-uppercase fw-bold">Temperatura</small><span class="fw-bold text-dark">{{ consulta.temperatura_c|default:"--" }} °C</span></div>
+                                        <div class="col-md-4"><small class="text-muted d-block extra-small text-uppercase fw-bold">FC</small><span class="fw-bold text-dark">{{ consulta.frecuencia_cardiaca|default:"--" }} LPM</span></div>
+                                    </div>
+
+                                    <div class="mb-2"><strong class="text-dark">Anamnesis / Síntomas:</strong> <span class="text-secondary">{{ consulta.anamnesis|default:"Sin registro" }}</span></div>
+                                    <div class="mb-2"><strong class="text-dark">Examen Clínico:</strong> <span class="text-secondary">{{ consulta.examen_clinico|default:"Sin registro" }}</span></div>
+                                    <div class="mb-2"><strong class="text-dark">Diagnóstico:</strong> <span class="fw-bold text-primary">{{ consulta.diagnostico|default:"Sin registro" }}</span></div>
+                                    <div class="mb-3"><strong class="text-dark">Tratamiento & Prescripción:</strong> <span class="text-secondary">{{ consulta.tratamiento|default:"Sin registro" }}</span></div>
+
+                                    <!-- Archivos Adjuntos -->
+                                    {% if consulta.estudios.all %}
+                                    <div class="bg-light p-3 rounded-3 border mb-3">
+                                        <h6 class="fw-bold text-dark small mb-2"><i class="bi bi-paperclip me-1 text-primary"></i>Estudios / Archivos Adjuntos:</h6>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            {% for est in consulta.estudios.all %}
+                                                <a href="{{ est.archivo.url }}" target="_blank" class="btn btn-sm btn-white border shadow-sm text-primary fw-bold rounded-2">
+                                                    <i class="bi bi-file-earmark-arrow-down-fill text-danger me-1"></i> {{ est.titulo }} ({{ est.get_tipo_estudio_display }})
+                                                </a>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <!-- Acciones -->
+                                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                                        <a href="{% url 'historia_clinica:descargar_receta_pdf' consulta.id %}" class="btn btn-sm btn-light border text-primary fw-bold rounded-2 px-3 shadow-sm d-inline-flex align-items-center gap-1" title="Imprimir Receta PDF">
+                                            <i class="bi bi-printer-fill text-primary"></i> Receta PDF
+                                        </a>
+
+                                        {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                            <a href="{% url 'clientes:editar_consulta' consulta.id %}" class="btn btn-sm btn-light border text-secondary rounded-2">
+                                                <i class="bi bi-pencil-fill me-1"></i> Editar
+                                            </a>
+                                            <a href="{% url 'clientes:eliminar_consulta' consulta.id %}" class="btn btn-sm btn-light border text-danger rounded-2">
+                                                <i class="bi bi-trash-fill me-1"></i> Eliminar
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+                    <div class="py-4">
+                        <i class="bi bi-folder2-open display-4 text-secondary opacity-50 d-block mb-3"></i>
+                        <h6 class="fw-bold text-dark">No hay consultas médicas registradas</h6>
+                        <p class="small text-muted mb-0">Esta mascota aún no cuenta con atenciones clínicas en su expediente.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- PESTAÑA 2: ESTUDIOS Y ADJUNTOS -->
+        <div class="tab-pane fade" id="estudiosTab" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-file-earmark-medical-fill me-2 text-primary"></i>Estudios e Informes Adjuntos</h5>
+                
+                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                    <a href="{% url 'historia_clinica:subir_estudio' mascota.id %}" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-sm">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Cargar Nuevo Estudio
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="row g-3">
+                {% for e in estudios %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                        <div class="card-body p-3 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1 rounded-pill fw-bold extra-small">{{ e.get_tipo_estudio_display }}</span>
+                                <small class="text-muted extra-small"><i class="bi bi-calendar me-1"></i>{{ e.fecha_estudio|date:"d/m/Y" }}</small>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">{{ e.titulo }}</h6>
+                            
+                            <p class="small text-muted mb-3 flex-grow-1">
+                                {{ e.observaciones|default:"Sin observaciones adicionales."|truncatewords:15 }}
+                            </p>
+
+                            {% if e.archivo %}
+                                {% if e.es_imagen %}
+                                    <div class="text-center mb-3 bg-light p-2 rounded-3 border">
+                                        <a href="{{ e.archivo.url }}" target="_blank">
+                                            <img src="{{ e.archivo.url }}" alt="{{ e.titulo }}" style="max-height: 120px; object-fit: contain;" class="img-fluid rounded border shadow-sm">
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+
+                            <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-auto">
+                                {% if e.archivo %}
+                                    <a href="{{ e.archivo.url }}" target="_blank" class="btn btn-sm btn-light border text-primary fw-bold rounded-2 px-2.5">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i> Ver / Descargar
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">Sin archivo</span>
+                                {% endif %}
+                                
+                                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                    <a href="{% url 'historia_clinica:eliminar_estudio' e.id %}" class="btn btn-sm btn-light border text-danger rounded-2" title="Eliminar Estudio">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+                        <div class="py-4">
+                            <i class="bi bi-file-earmark-zip display-4 text-secondary opacity-50 d-block mb-3"></i>
+                            <p class="mb-0">No se han subido estudios ni análisis para esta mascota.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: VACUNAS -->
+        <div class="tab-pane fade" id="vacunasTab" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-shield-check me-2 text-success"></i>Esquema de Vacunación</h5>
+                
+                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                    <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-1.5 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalVacuna">
+                        <i class="bi bi-plus-lg me-1"></i> Registrar Vacuna
+                    </button>
+                {% endif %}
+            </div>
+
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light border-bottom">
+                                <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                                    <th class="ps-4 py-3">Fecha Aplicación</th>
+                                    <th class="py-3">Vacuna / Dosis</th>
+                                    <th class="py-3">Lote</th>
+                                    <th class="py-3">Próxima Dosis / Alerta</th>
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                        <th class="text-center py-3">Acciones</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for v in vacunas %}
+                                <tr>
+                                    <td class="ps-4 py-3 fw-semibold text-dark">{{ v.fecha_aplicacion|date:"d/m/Y" }}</td>
+                                    <td class="py-3 fw-bold text-dark fs-6">
+                                        <i class="bi bi-syringe-fill text-warning me-1"></i>{{ v.nombre_vacuna }}
+                                    </td>
+                                    <td class="py-3"><code class="bg-light text-secondary border px-2 py-1 rounded small">{{ v.lote|default:"N/A" }}</code></td>
+                                    <td class="py-3">
+                                        {% if v.proxima_dosis or v.fecha_proxima_dosis %}
+                                            <span class="badge {% if v.proxima_dosis_vencida %}bg-danger bg-opacity-15 text-danger border border-danger border-opacity-20{% else %}bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20{% endif %} px-3 py-1.5 rounded-pill fw-bold">
+                                                <i class="bi bi-calendar-event me-1"></i>{{ v.fecha_proxima_dosis|default:v.proxima_dosis|date:"d/m/Y" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">--</span>
+                                        {% endif %}
+                                    </td>
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                        <td class="text-center py-3">
+                                            <a href="{% url 'clientes:eliminar_vacuna' v.id %}" class="btn btn-sm btn-light border text-danger rounded-2" title="Eliminar" onclick="return confirm('¿Seguro que deseas eliminar esta vacuna?');">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </a>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <i class="bi bi-file-earmark-x display-5 d-block text-secondary opacity-50 mb-2"></i>
+                                        No hay registro de vacunas aplicadas en el carnet.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PESTAÑA 4: DESPARASITACIONES -->
+        <div class="tab-pane fade" id="desparasitacionesTab" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-capsule me-2 text-info"></i>Control Antiparasitario</h5>
+                
+                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold px-3 py-1.5 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDesparasitacion">
+                        <i class="bi bi-plus-lg me-1"></i> Registrar Desparasitante
+                    </button>
+                {% endif %}
+            </div>
+
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light border-bottom">
+                                <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                                    <th class="ps-4 py-3">Fecha Aplicación</th>
+                                    <th class="py-3">Producto / Fármaco</th>
+                                    <th class="py-3">Dosis Administrada</th>
+                                    <th class="py-3">Próximo Refuerzo</th>
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                        <th class="text-center py-3">Acciones</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in desparasitaciones %}
+                                <tr>
+                                    <td class="ps-4 py-3 fw-semibold text-dark">{{ d.fecha_aplicacion|date:"d/m/Y" }}</td>
+                                    <td class="py-3 fw-bold text-dark fs-6">{{ d.producto }}</td>
+                                    <td class="py-3 text-secondary small fw-medium">{{ d.dosis|default:"-" }}</td>
+                                    <td class="py-3">
+                                        {% if d.proxima_dosis or d.fecha_proxima_dosis %}
+                                            <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-20 px-3 py-1.5 rounded-pill fw-bold">
+                                                <i class="bi bi-calendar-event me-1"></i>{{ d.fecha_proxima_dosis|default:d.proxima_dosis|date:"d/m/Y" }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">--</span>
+                                        {% endif %}
+                                    </td>
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                        <td class="text-center py-3">
+                                            <a href="{% url 'clientes:eliminar_desparasitacion' d.id %}" class="btn btn-sm btn-light border text-danger rounded-2" title="Eliminar" onclick="return confirm('¿Seguro que deseas eliminar esta desparasitación?');">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </a>
+                                        </td>
+                                    {% endif %}
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <i class="bi bi-file-earmark-x display-5 d-block text-secondary opacity-50 mb-2"></i>
+                                        No hay controles antiparasitarios registrados.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODALES PARA CARGA RÁPIDA (SOLO SI TIENE PERMISO VETERINARIO) -->
+{% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+<!-- Modal Vacuna -->
+<div class="modal fade" id="modalVacuna" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="{% url 'clientes:agregar_vacuna' mascota.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white py-3 px-4">
+                    <h5 class="modal-title fw-bold fs-6"><i class="bi bi-shield-plus me-2"></i>Registrar Aplicación de Vacuna</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Nombre de la Vacuna *</label>
+                        <input type="text" name="nombre_vacuna" class="form-control" required placeholder="Ej: Séxtuple, Quintuple, Antirrábica">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Fecha Aplicación *</label>
+                            <input type="date" name="fecha_aplicacion" class="form-control" required value="{% now 'Y-m-d' %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Próxima Dosis</label>
+                            <input type="date" name="proxima_dosis" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">N° de Lote</label>
+                        <input type="text" name="lote" class="form-control" placeholder="Opcional">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 px-4">
+                    <button type="button" class="btn btn-outline-secondary fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 rounded-3 shadow">Guardar Vacuna</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Desparasitación -->
+<div class="modal fade" id="modalDesparasitacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="{% url 'clientes:agregar_desparasitacion' mascota.id %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-dark py-3 px-4">
+                    <h5 class="modal-title fw-bold fs-6"><i class="bi bi-capsule me-2"></i>Registrar Desparasitante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Producto / Fármaco *</label>
+                        <input type="text" name="producto" class="form-control" required placeholder="Ej: Total Full, Pipeta, Drontal">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Fecha Aplicación *</label>
+                            <input type="date" name="fecha_aplicacion" class="form-control" required value="{% now 'Y-m-d' %}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">Próximo Refuerzo</label>
+                            <input type="date" name="proxima_dosis" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Dosis Administrada</label>
+                        <input type="text" name="dosis" class="form-control" placeholder="Ej: 1 comprimido / 10kg">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 px-4">
+                    <button type="button" class="btn btn-outline-secondary fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold px-4 rounded-3 shadow">Guardar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Script para aplicar clases de bootstrap automáticas en formulario inline -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const formConsulta = document.querySelector("#nuevaConsultaForm form");
+        if (formConsulta) {
+            const inputs = formConsulta.querySelectorAll("input, select, textarea");
+            inputs.forEach(function(input) {
+                if (input.type !== "hidden" && input.type !== "submit" && input.type !== "file") {
+                    input.classList.add("form-control");
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

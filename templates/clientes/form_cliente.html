@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo|default:"Cliente" }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Botón Volver -->
+    <div class="mb-4">
+        <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Clientes
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="fw-extrabold mb-0 fs-5 d-flex align-items-center gap-2">
+                            <i class="bi bi-person-fill"></i> {{ titulo|default:"Formulario de Cliente" }}
+                        </h4>
+                        <small class="text-white-50">Registro del tutor de la mascota</small>
+                    </div>
+                    <span class="badge bg-white bg-opacity-20 text-white small px-3 py-1.5 rounded-pill">VetSoft Clientes</span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4 py-2 px-3 small d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                <div><strong>Atención:</strong> Por favor corregí los campos marcados abajo.</div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Datos Personales -->
+                        <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                            <i class="bi bi-person-badge me-1"></i> Datos Personales
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.nombre.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    Nombre *
+                                </label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.nombre.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.apellido.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    Apellido *
+                                </label>
+                                {{ form.apellido }}
+                                {% if form.apellido.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.apellido.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.dni.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-card-heading text-secondary me-1"></i> DNI / Documento
+                                </label>
+                                {{ form.dni }}
+                                {% if form.dni.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.dni.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="opacity-10 my-4">
+
+                        <!-- Datos de Contacto -->
+                        <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                            <i class="bi bi-telephone me-1"></i> Información de Contacto
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.telefono.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-whatsapp text-success me-1"></i> Teléfono / WhatsApp *
+                                </label>
+                                {{ form.telefono }}
+                                {% if form.telefono.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.telefono.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="{{ form.email.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-envelope text-primary me-1"></i> Email
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.email.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                <label for="{{ form.direccion.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-geo-alt text-secondary me-1"></i> Dirección / Domicilio
+                                </label>
+                                {{ form.direccion }}
+                                {% if form.direccion.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.direccion.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Estado del Cliente -->
+                        <div class="p-3 bg-light rounded-3 border mb-4">
+                            <div class="form-check d-flex align-items-center gap-2 mb-0">
+                                {{ form.activo }}
+                                <label class="form-check-label fw-bold text-dark small mb-0" for="{{ form.activo.id_for_label }}">
+                                    Cliente Activo
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between align-items-center pt-4 border-top mt-4">
+                            <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-check-lg me-1"></i> Guardar Cliente
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- Script para aplicar clases de Bootstrap automáticamente -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector("form");
+        if (form) {
+            const inputs = form.querySelectorAll("input, select, textarea");
+            inputs.forEach(function(input) {
+                if (input.type === "checkbox") {
+                    input.classList.add("form-check-input");
+                } else if (input.type !== "hidden" && input.type !== "submit") {
+                    if (input.tagName.toLowerCase() === "select") {
+                        input.classList.add("form-select");
+                    } else {
+                        input.classList.add("form-control");
+                    }
+                }
+            });
+        }
+    });
+</script>

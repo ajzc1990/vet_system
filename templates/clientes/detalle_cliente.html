@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block title %}Ficha de {{ cliente.nombre }} {{ cliente.apellido }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Botón Volver -->
+    <div class="mb-4">
+        <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Clientes
+        </a>
+    </div>
+
+    <!-- Banner Ficha del Cliente -->
+    <div class="card border-0 shadow-lg mb-4 bg-white rounded-4 overflow-hidden">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-circle bg-primary bg-opacity-10 text-primary fw-extrabold rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; font-size: 1.3rem;">
+                        {{ cliente.apellido|slice:":1"|upper }}{{ cliente.nombre|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h2 class="h3 fw-extrabold text-dark mb-0">
+                                {{ cliente.nombre }} {{ cliente.apellido }}
+                            </h2>
+                            {% if cliente.activo %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-2.5 py-1 rounded-pill extra-small fw-bold">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2.5 py-1 rounded-pill extra-small fw-bold">Inactivo</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small mb-0 d-flex flex-wrap gap-3 align-items-center">
+                            <span><i class="bi bi-card-heading text-primary me-1"></i><strong>DNI:</strong> {{ cliente.dni|default:"--" }}</span>
+                            <span>
+                                <i class="bi bi-telephone text-success me-1"></i><strong>Teléfono:</strong> 
+                                {% if cliente.telefono %}
+                                    <a href="https://wa.me/{{ cliente.telefono }}" target="_blank" class="text-success text-decoration-none fw-bold" title="WhatsApp">
+                                        {{ cliente.telefono }} <i class="bi bi-whatsapp ms-0.5"></i>
+                                    </a>
+                                {% else %}
+                                    --
+                                {% endif %}
+                            </span>
+                            <span><i class="bi bi-envelope text-primary me-1"></i><strong>Email:</strong> {{ cliente.email|default:"--" }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="btn btn-light border text-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-pencil-fill text-primary"></i> Editar Tutor
+                    </a>
+                    <a href="{% url 'clientes:agregar_mascota' cliente.id %}" class="btn btn-success fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-plus-circle-fill"></i> Nueva Mascota
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listado de Mascotas -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="h5 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-heart-pulse-fill text-danger"></i> Pacientes / Mascotas Registradas
+        </h3>
+        <span class="badge bg-light text-secondary border fw-bold px-3 py-1.5 rounded-pill">{{ mascotas.count }} paciente(s)</span>
+    </div>
+
+    <div class="row g-3">
+        {% for mascota in mascotas %}
+            <div class="col-md-6">
+                <div class="card border-0 shadow-md h-100 rounded-4 overflow-hidden">
+                    <div class="card-body p-4 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
+                                    🐾 {{ mascota.nombre }}
+                                </h4>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1 rounded-pill fw-bold extra-small">
+                                    {{ mascota.get_especie_display }}
+                                </span>
+                            </div>
+                            
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <div class="row g-2 extra-small text-secondary">
+                                    <div class="col-6">
+                                        <span class="d-block text-muted">Raza:</span>
+                                        <strong class="text-dark">{{ mascota.raza|default:"Mestizo" }}</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="d-block text-muted">Sexo:</span>
+                                        <strong class="text-dark">{{ mascota.get_sexo_display }}</strong>
+                                    </div>
+                                    <div class="col-6 pt-2 border-top">
+                                        <span class="d-block text-muted">Peso:</span>
+                                        <strong class="text-dark">{{ mascota.peso_kg|default:"--" }} kg</strong>
+                                    </div>
+                                    <div class="col-6 pt-2 border-top">
+                                        <span class="d-block text-muted">Esterilizado:</span>
+                                        <strong class="text-dark">{% if mascota.castrado %}Sí{% else %}No{% endif %}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-center mt-auto">
+                            <a href="{% url 'clientes:editar_mascota' mascota.id %}" class="btn btn-light btn-sm border text-secondary fw-semibold rounded-2 px-3">
+                                <i class="bi bi-pencil-fill me-1"></i> Editar
+                            </a>
+                            <!-- Botón principal hacia la Historia Clínica -->
+                            <a href="{% url 'clientes:detalle_historia_clinica' mascota.id %}" class="btn btn-sm btn-primary fw-bold rounded-2 px-3 shadow-sm d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-journal-medical"></i> Historia Clínica
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+                    <div class="py-4">
+                        <i class="bi bi-heartbreak display-4 text-secondary opacity-50 d-block mb-3"></i>
+                        <h6 class="fw-bold text-dark">Este cliente no tiene mascotas asociadas</h6>
+                        <p class="small text-muted mb-3">Registrá la primera mascota del tutor para comenzar a llevar su historia clínica.</p>
+                        <a href="{% url 'clientes:agregar_mascota' cliente.id %}" class="btn btn-success btn-sm fw-bold px-4 py-2 rounded-3 shadow-sm">
+                            <i class="bi bi-plus-lg me-1"></i> Agregar Mascota
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

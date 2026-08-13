@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo|default:"Editar Consulta Médica" }} - VetSoft{% endblock %}
+
+{% block content %}
+{% with mascota_actual=mascota|default:consulta.mascota %}
+<div class="container py-4">
+    <!-- Botón Volver -->
+    <div class="mb-4">
+        {% if mascota_actual %}
+            <a href="{% url 'historia_clinica:expediente_mascota' mascota_actual.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Expediente
+            </a>
+        {% else %}
+            <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver a Clientes
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-9 col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="card-title h5 mb-0 fw-extrabold d-flex align-items-center gap-2">
+                            <i class="bi bi-pencil-square text-warning fs-4"></i> {{ titulo|default:"Editar Consulta Médica" }}
+                        </h4>
+                        {% if mascota_actual %}
+                            <small class="text-white-50">Paciente: <strong>{{ mascota_actual.nombre }}</strong> &bull; Dueño: {{ mascota_actual.cliente.apellido }}, {{ mascota_actual.cliente.nombre }}</small>
+                        {% endif %}
+                    </div>
+                    <span class="badge bg-white bg-opacity-20 text-white small px-3 py-1.5 rounded-pill">Edición</span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4 py-2 px-3 small d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                <div><strong>Por favor, corregí los errores señalados abajo:</strong></div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Motivo de Consulta -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark small mb-1">Motivo de la Consulta *</label>
+                            {{ form.motivo }}
+                            {% if form.motivo.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.motivo.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Constantes Vitales -->
+                        <div class="p-3 bg-light rounded-4 border mb-4">
+                            <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                                <i class="bi bi-activity me-1"></i> Constantes Vitales
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark extra-small mb-1">Peso (kg)</label>
+                                    {{ form.peso }}
+                                    {% if form.peso.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.peso.errors|striptags }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark extra-small mb-1">Temperatura (°C)</label>
+                                    {{ form.temperatura }}
+                                    {% if form.temperatura.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.temperatura.errors|striptags }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold text-dark extra-small mb-1">Frecuencia Cardíaca (LPM)</label>
+                                    {{ form.frecuencia_cardiaca }}
+                                    {% if form.frecuencia_cardiaca.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.frecuencia_cardiaca.errors|striptags }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evaluación y Prescripción -->
+                        <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                            <i class="bi bi-journal-check me-1"></i> Historial y Tratamiento
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-dark small mb-1">Síntomas / Anamnesis</label>
+                                {{ form.sintomas }}
+                                {% if form.sintomas.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.sintomas.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-dark small mb-1">Diagnóstico Presuntivo / Definitivo</label>
+                                {{ form.diagnostico }}
+                                {% if form.diagnostico.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.diagnostico.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-dark small mb-1">Tratamiento / Receta Prescripta</label>
+                                {{ form.tratamiento }}
+                                {% if form.tratamiento.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.tratamiento.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-calendar-event text-secondary me-1"></i> Próximo Control / Cita
+                                </label>
+                                {{ form.proximo_control }}
+                                {% if form.proximo_control.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.proximo_control.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between align-items-center pt-4 border-top mt-4">
+                            {% if mascota_actual %}
+                                <a href="{% url 'historia_clinica:expediente_mascota' mascota_actual.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                    Cancelar
+                                </a>
+                            {% else %}
+                                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                    Cancelar
+                                </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-check-lg me-1"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endwith %}
+
+<!-- Script para aplicar clases de Bootstrap automáticamente -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector("form");
+        if (form) {
+            const inputs = form.querySelectorAll("input, select, textarea");
+            inputs.forEach(function(input) {
+                if (input.type !== "hidden" && input.type !== "submit" && input.type !== "checkbox") {
+                    if (input.tagName.toLowerCase() === "select") {
+                        input.classList.add("form-select");
+                    } else {
+                        input.classList.add("form-control");
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

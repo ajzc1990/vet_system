@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+
+{% block title %}Ventas y Caja Diaria - VetSoft{% endblock %}
+
+{% block content %}
+<!-- Header Principal -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-cart-check-fill text-primary"></i> Punto de Venta y Caja
+        </h2>
+        <p class="text-muted small mb-0">Registro de cobranzas, ventas de mostrador y control de efectivo</p>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <!-- Control de Arqueos -->
+        <a href="{% url 'ventas:reporte_cajas' %}" class="btn btn-outline-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-file-earmark-bar-graph-fill"></i> Control de Arqueos
+        </a>
+
+        {% if caja_activa %}
+            <a href="{% url 'ventas:registrar_venta' %}" class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+                <i class="bi bi-plus-circle-fill"></i> Nueva Venta
+            </a>
+            <a href="{% url 'ventas:cerrar_caja' caja_activa.id %}" class="btn btn-outline-danger fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+                <i class="bi bi-lock-fill"></i> Cerrar Caja (#{{ caja_activa.id }})
+            </a>
+        {% else %}
+            <a href="{% url 'ventas:abrir_caja' %}" class="btn btn-success fw-bold d-inline-flex align-items-center gap-2 px-4 py-2 rounded-3 shadow-sm">
+                <i class="bi bi-unlock-fill"></i> Abrir Caja Diaria
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Banner Estado de Caja -->
+{% if caja_activa %}
+    <div class="alert alert-success bg-success bg-opacity-10 border border-success border-opacity-20 shadow-sm rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-success text-white p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+            </div>
+            <div>
+                <span class="badge bg-success text-white fw-bold px-2.5 py-1 rounded-pill small mb-1">Caja ABIERTA</span>
+                <div class="text-dark fw-bold mb-0">
+                    Apertura: {{ caja_activa.fecha_apertura|date:"H:i hs" }} &bull; Fondo Inicial: <span class="text-success">${{ caja_activa.monto_inicial|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+        <div>
+            <span class="badge bg-white text-success border border-success border-opacity-30 px-3 py-2 rounded-pill fw-extrabold fs-6 shadow-sm">
+                <i class="bi bi-cash-stack me-1"></i> Efectivo en Caja: ${{ caja_activa.total_efectivo|floatformat:2 }}
+            </span>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-warning bg-warning bg-opacity-15 border border-warning border-opacity-30 shadow-sm rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-warning text-dark p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold text-dark mb-0">La caja se encuentra CERRADA</h6>
+                <small class="text-muted">No podrás registrar nuevas ventas hasta realizar la apertura diaria.</small>
+            </div>
+        </div>
+        <a href="{% url 'ventas:abrir_caja' %}" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-key-fill me-1"></i> Abrir Ahora
+        </a>
+    </div>
+{% endif %}
+
+<!-- Tabla Principal de Ventas -->
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem; letter-spacing: 0.5px;">
+                        <th class="ps-4 py-3"># Venta / Fecha</th>
+                        <th class="py-3">Cliente</th>
+                        <th class="py-3">Vendedor</th>
+                        <th class="py-3">Medio de Pago</th>
+                        <th class="py-3">Monto Total</th>
+                        <th class="text-end pe-4 py-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in ventas %}
+                    <tr>
+                        <!-- ID Venta y Fecha -->
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1.5 rounded-3 fw-mono fw-bold">
+                                    #{{ v.id }}
+                                </span>
+                                <div>
+                                    <span class="small fw-semibold text-dark d-block">{{ v.fecha_hora|date:"d/m/Y" }}</span>
+                                    <small class="text-muted extra-small"><i class="bi bi-clock me-1"></i>{{ v.fecha_hora|date:"H:i" }} hs</small>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Cliente -->
+                        <td class="py-3">
+                            {% if v.cliente %}
+                                <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-1">
+                                    <i class="bi bi-person-fill text-primary"></i> {{ v.cliente.nombre }} {{ v.cliente.apellido }}
+                                </div>
+                            {% else %}
+                                <span class="badge bg-light text-secondary border px-2.5 py-1 fw-semibold">Consumidor Final</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Vendedor -->
+                        <td class="py-3">
+                            <span class="small text-secondary fw-medium d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-person-badge"></i> {{ v.vendedor.get_full_name|default:v.vendedor.username|default:"Caja" }}
+                            </span>
+                        </td>
+
+                        <!-- Medio de Pago -->
+                        <td class="py-3">
+                            <span class="badge bg-info bg-opacity-15 text-info-emphasis border border-info border-opacity-20 px-3 py-1.5 rounded-pill fw-bold">
+                                <i class="bi bi-credit-card-2-front me-1"></i>{{ v.get_medio_pago_display }}
+                            </span>
+                        </td>
+
+                        <!-- Total -->
+                        <td class="py-3">
+                            <span class="fs-6 fw-extrabold text-success">
+                                ${{ v.total|floatformat:2 }}
+                            </span>
+                        </td>
+
+                        <!-- Acciones -->
+                        <td class="text-end pe-4 py-3">
+                            <a href="{% url 'ventas:descargar_ticket_pdf' v.id %}" class="btn btn-light btn-sm border text-primary fw-bold rounded-2 px-3 shadow-sm d-inline-flex align-items-center gap-1" title="Descargar Ticket PDF">
+                                <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Ticket PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="py-4">
+                                <i class="bi bi-cart-x display-4 d-block mb-3 text-secondary opacity-50"></i>
+                                <h5 class="fw-bold text-dark">No hay ventas registradas</h5>
+                                <p class="small text-muted mb-3">No se encontraron comprobantes emitidos en la caja actual o período seleccionado.</p>
+                                {% if caja_activa %}
+                                    <a href="{% url 'ventas:registrar_venta' %}" class="btn btn-primary btn-sm fw-bold px-4 py-2 rounded-3">
+                                        <i class="bi bi-plus-lg me-1"></i> Registrar Primera Venta
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

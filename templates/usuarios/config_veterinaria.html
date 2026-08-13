@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Perfil de la Veterinaria - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Botón Volver al Dashboard (con namespace correcto dashboard:index) -->
+    <div class="mb-4">
+        <a href="{% url 'dashboard:index' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Dashboard
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <h3 class="card-title h5 mb-0 fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-building-gear fs-4"></i> Configuración de la Clínica / Veterinaria
+                    </h3>
+                    <span class="badge bg-white text-primary fw-bold px-3 py-2 rounded-pill shadow-sm">
+                        {{ veterinaria.nombre }}
+                    </span>
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+                                <i class="bi bi-info-circle-fill me-2"></i> {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold text-dark small">Nombre de la Veterinaria / Clínica *</label>
+                                {{ form.nombre }}
+                                {% if form.nombre.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.nombre.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold text-dark small">CUIT / ID Fiscal</label>
+                                {{ form.cuit_rif }}
+                                {% if form.cuit_rif.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.cuit_rif.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark small"><i class="bi bi-whatsapp text-success me-1"></i> Teléfono / WhatsApp</label>
+                                {{ form.telefono }}
+                                {% if form.telefono.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.telefono.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold text-dark small"><i class="bi bi-envelope text-primary me-1"></i> Correo Electrónico de Contacto</label>
+                                {{ form.email_contacto }}
+                                {% if form.email_contacto.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.email_contacto.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark small"><i class="bi bi-geo-alt text-danger me-1"></i> Dirección Física</label>
+                            {{ form.direccion }}
+                            {% if form.direccion.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.direccion.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4 p-3 bg-light rounded-4 border">
+                            <label class="form-label fw-bold text-dark small d-block mb-1">
+                                <i class="bi bi-image text-primary me-1"></i> Logo Institucional (Para PDFs, Recetas y Carnets)
+                            </label>
+                            <small class="text-muted d-block mb-3">Se incluirá de forma automática en los membretes de recetas médicas y carnet de vacunación.</small>
+                            
+                            {{ form.logo }}
+                            {% if form.logo.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.logo.errors|striptags }}</div>
+                            {% endif %}
+
+                            {% if veterinaria.logo %}
+                                <div class="mt-3 p-3 bg-white rounded-3 text-center border shadow-sm">
+                                    <small class="text-muted d-block mb-2 fw-bold text-uppercase">Logo Institucional Actual:</small>
+                                    <img src="{{ veterinaria.logo.url }}" alt="Logo {{ veterinaria.nombre }}" style="max-height: 110px;" class="img-fluid rounded border p-1 bg-white shadow-sm">
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 border-top pt-4">
+                            <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-check-lg me-1"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

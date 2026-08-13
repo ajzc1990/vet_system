@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo|default:"Mascota" }} - VetSoft{% endblock %}
+
+{% block content %}
+{% with cliente_actual=cliente %}
+<div class="container py-4">
+    <!-- Botón Volver -->
+    <div class="mb-4">
+        {% if cliente_actual %}
+            <a href="{% url 'clientes:detalle_cliente' cliente_actual.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver al Cliente
+            </a>
+        {% else %}
+            <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver a Clientes
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="fw-extrabold mb-0 fs-5 d-flex align-items-center gap-2">
+                            <i class="bi bi-heart-pulse-fill text-danger"></i> {{ titulo|default:"Formulario de Mascota" }}
+                        </h4>
+                        {% if cliente_actual %}
+                            <small class="text-white-50">Tutor responsable: <strong>{{ cliente_actual.nombre }} {{ cliente_actual.apellido }}</strong></small>
+                        {% else %}
+                            <small class="text-white-50">Registro Sanitario del Paciente</small>
+                        {% endif %}
+                    </div>
+                    <span class="badge bg-white bg-opacity-20 text-white small px-3 py-1.5 rounded-pill">Paciente</span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <form method="POST" novalidate>
+                        {% csrf_token %}
+                        
+                        {% if form.errors %}
+                            <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4 py-2 px-3 small d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                                <div><strong>Atención:</strong> Por favor corregí los campos marcados abajo.</div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Nombre de la Mascota -->
+                        <div class="mb-4">
+                            <label for="{{ form.nombre.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                Nombre de la Mascota *
+                            </label>
+                            {{ form.nombre }}
+                            {% if form.nombre.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.nombre.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Especie y Raza -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.especie.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-tag-fill text-primary me-1"></i> Especie *
+                                </label>
+                                {{ form.especie }}
+                                {% if form.especie.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.especie.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.raza.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-card-text text-secondary me-1"></i> Raza
+                                </label>
+                                {{ form.raza }}
+                                {% if form.raza.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.raza.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Sexo y Peso -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.sexo.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-gender-ambiguous text-primary me-1"></i> Sexo
+                                </label>
+                                {{ form.sexo }}
+                                {% if form.sexo.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.sexo.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.peso_kg.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-speedometer2 text-primary me-1"></i> Peso (kg)
+                                </label>
+                                {{ form.peso_kg }}
+                                {% if form.peso_kg.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.peso_kg.errors|striptags }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Fecha Nacimiento -->
+                        <div class="mb-4">
+                            <label for="{{ form.fecha_nacimiento.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                <i class="bi bi-calendar-event text-secondary me-1"></i> Fecha de Nacimiento (Estimada)
+                            </label>
+                            {{ form.fecha_nacimiento }}
+                            {% if form.fecha_nacimiento.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_nacimiento.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Castrado Check -->
+                        <div class="p-3 bg-light rounded-3 border mb-4">
+                            <div class="form-check d-flex align-items-center gap-2 mb-0">
+                                {{ form.castrado }}
+                                <label class="form-check-label fw-bold text-dark small mb-0" for="{{ form.castrado.id_for_label }}">
+                                    ¿Está castrado / esterilizado?
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="mb-4">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                <i class="bi bi-chat-left-text-fill text-secondary me-1"></i> Observaciones Particulares / Alergias
+                            </label>
+                            {{ form.observaciones }}
+                            {% if form.observaciones.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.observaciones.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between align-items-center pt-4 border-top mt-4">
+                            {% if cliente_actual %}
+                                <a href="{% url 'clientes:detalle_cliente' cliente_actual.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                    Cancelar
+                                </a>
+                            {% else %}
+                                <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                    Cancelar
+                                </a>
+                            {% endif %}
+                            <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-check-lg me-1"></i> Guardar Mascota
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endwith %}
+
+<!-- Script para aplicar clases Bootstrap automáticamente -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.querySelector("form");
+        if (form) {
+            const inputs = form.querySelectorAll("input, select, textarea");
+            inputs.forEach(function(input) {
+                if (input.type === "checkbox") {
+                    input.classList.add("form-check-input");
+                } else if (input.type !== "hidden" && input.type !== "submit") {
+                    if (input.tagName.toLowerCase() === "select") {
+                        input.classList.add("form-select");
+                    } else {
+                        input.classList.add("form-control");
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

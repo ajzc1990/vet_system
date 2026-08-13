@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo|default:"Nueva Consulta" }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Botón Volver al Expediente -->
+    <div class="mb-4">
+        <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Expediente
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="card-title h5 mb-0 fw-extrabold d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-medical-fill fs-4 text-info"></i> {{ titulo|default:"Consulta Médica Veterinarias" }}
+                        </h4>
+                        <small class="text-white-50">Atención clínica, examen físico y prescripción médica</small>
+                    </div>
+                    <span class="badge bg-white bg-opacity-20 text-white small px-3 py-1.5 rounded-pill">Historia Clínica</span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- Ficha Resumen del Paciente -->
+                    <div class="p-3 bg-light rounded-4 border mb-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary p-2.5 rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 46px;">
+                                <i class="bi bi-heart-pulse-fill fs-4 text-danger"></i>
+                            </div>
+                            <div>
+                                <span class="extra-small text-muted fw-bold text-uppercase tracking-wider d-block">Paciente en Atención</span>
+                                <h6 class="fw-extrabold mb-0 text-dark fs-6">
+                                    {{ mascota.nombre }}
+                                    <span class="badge bg-light text-dark border ms-1 fw-semibold extra-small">{{ mascota.get_especie_display }}</span>
+                                </h6>
+                                <small class="text-muted extra-small">
+                                    <i class="bi bi-person-fill text-primary"></i> Tutor: {{ mascota.cliente.nombre }} {{ mascota.cliente.apellido }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Datos Generales -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.veterinario.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-person-badge-fill text-primary me-1"></i> Veterinario Atendiente *
+                                </label>
+                                {{ form.veterinario }}
+                                {% if form.veterinario.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.veterinario.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.turno.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-calendar-event-fill text-primary me-1"></i> Turno Vinculado (Opcional)
+                                </label>
+                                {{ form.turno }}
+                                {% if form.turno.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.turno.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Constantes Vitales -->
+                        <div class="p-3 bg-light rounded-4 border mb-4">
+                            <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                                <i class="bi bi-activity me-1"></i> Constantes Vitales
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-6 col-md-3">
+                                    <label for="{{ form.peso_actual_kg.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">Peso (kg)</label>
+                                    {{ form.peso_actual_kg }}
+                                    {% if form.peso_actual_kg.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.peso_actual_kg.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label for="{{ form.temperatura_c.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">Temp (°C)</label>
+                                    {{ form.temperatura_c }}
+                                    {% if form.temperatura_c.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.temperatura_c.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label for="{{ form.frecuencia_cardiaca.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">FC (LPM)</label>
+                                    {{ form.frecuencia_cardiaca }}
+                                    {% if form.frecuencia_cardiaca.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.frecuencia_cardiaca.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <label for="{{ form.frecuencia_respiratoria.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">FR (RPM)</label>
+                                    {{ form.frecuencia_respiratoria }}
+                                    {% if form.frecuencia_respiratoria.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.frecuencia_respiratoria.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Evaluación Médica -->
+                        <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                            <i class="bi bi-journal-check me-1"></i> Evaluación y Diagnóstico
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label for="{{ form.motivo_consulta.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    {{ form.motivo_consulta.label }} *
+                                </label>
+                                {{ form.motivo_consulta }}
+                                {% if form.motivo_consulta.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.motivo_consulta.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.anamnesis.id_for_label }}" class="form-label fw-bold text-dark small mb-1">Anamnesis / Historia Previa</label>
+                                {{ form.anamnesis }}
+                                {% if form.anamnesis.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.anamnesis.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.examen_clinico.id_for_label }}" class="form-label fw-bold text-dark small mb-1">Examen Clínico</label>
+                                {{ form.examen_clinico }}
+                                {% if form.examen_clinico.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.examen_clinico.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label for="{{ form.diagnostico.id_for_label }}" class="form-label fw-bold text-dark small mb-1">{{ form.diagnostico.label }}</label>
+                                {{ form.diagnostico }}
+                                {% if form.diagnostico.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.diagnostico.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12">
+                                <label for="{{ form.tratamiento.id_for_label }}" class="form-label fw-bold text-dark small mb-1">{{ form.tratamiento.label }}</label>
+                                {{ form.tratamiento }}
+                                {% if form.tratamiento.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.tratamiento.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Adjuntar Estudio / Archivo Médico -->
+                        <div class="p-3 bg-light rounded-4 border mb-4">
+                            <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                                <i class="bi bi-paperclip me-1"></i> Adjuntar Estudio Complementario (Opcional)
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="{{ form.estudio_titulo.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">{{ form.estudio_titulo.label }}</label>
+                                    {{ form.estudio_titulo }}
+                                    {% if form.estudio_titulo.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.estudio_titulo.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.estudio_tipo.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">{{ form.estudio_tipo.label }}</label>
+                                    {{ form.estudio_tipo }}
+                                    {% if form.estudio_tipo.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.estudio_tipo.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.estudio_archivo.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">{{ form.estudio_archivo.label }}</label>
+                                    {{ form.estudio_archivo }}
+                                    {% if form.estudio_archivo.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.estudio_archivo.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Descuento de Inventario Opcional -->
+                        <div class="p-3 bg-light rounded-4 border mb-4">
+                            <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
+                                <i class="bi bi-box-seam-fill me-1"></i> Desconto de Medicamento / Insumo de Stock (Opcional)
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <label for="{{ form.producto_inventario.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">{{ form.producto_inventario.label }}</label>
+                                    {{ form.producto_inventario }}
+                                    {% if form.producto_inventario.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.producto_inventario.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="{{ form.cantidad_insumo.id_for_label }}" class="form-label fw-bold text-dark extra-small mb-1">{{ form.cantidad_insumo.label }}</label>
+                                    {{ form.cantidad_insumo }}
+                                    {% if form.cantidad_insumo.errors %}
+                                        <div class="text-danger extra-small mt-1">{{ form.cantidad_insumo.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observaciones Privadas -->
+                        <div class="mb-4">
+                            <label for="{{ form.observaciones_privadas.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                <i class="bi bi-lock-fill text-secondary me-1"></i> Observaciones Privadas (Solo Uso Interno)
+                            </label>
+                            {{ form.observaciones_privadas }}
+                            {% if form.observaciones_privadas.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.observaciones_privadas.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between align-items-center pt-4 border-top mt-4">
+                            <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-check-lg me-1"></i> Guardar Consulta Médica
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
