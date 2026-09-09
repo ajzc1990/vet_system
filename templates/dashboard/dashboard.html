@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard General - VetSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="h3 fw-bold text-dark mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Panel de Control Operativo</h2>
+        <p class="text-muted small mb-0">Resumen del día {{ hoy|date:"d/m/Y" }}</p>
+    </div>
+    
+    <div class="d-flex gap-2">
+        <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary fw-semibold shadow-sm">
+            <i class="bi bi-calendar-plus me-1"></i> Agendar Turno
+        </a>
+        <a href="{% url 'clientes:crear_cliente' %}" class="btn btn-outline-primary fw-semibold shadow-sm">
+            <i class="bi bi-person-plus me-1"></i> Nuevo Cliente
+        </a>
+    </div>
+</div>
+
+<!-- Tarjetas de KPIs Principales -->
+<div class="row g-3 mb-4">
+    <!-- Turnos del día -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-primary border-4">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold">Turnos para Hoy</div>
+                    <div class="fs-3 fw-bold text-dark">{{ cant_turnos_hoy }}</div>
+                    <div class="small text-primary fw-medium">{{ cant_turnos_pendientes }} pendientes</div>
+                </div>
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                    <i class="bi bi-calendar-check fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consultas Hoy -->
+    <div class="col-md-3 col-sm-6">
+        <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-success border-4">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="text-muted small fw-semibold">Atenciones Hoy</div>
+                    <div class="fs-3 fw-bold text-dark">{{ cant_consultas_hoy }}</div>
+                    <div class="small text-success fw-medium">Consultas cerradas</div>
+                </div>
+                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                    <i class="bi bi-stethoscope fs-3"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas de Stock Mínimo -->
+    <div class="col-md-3 col-sm-6">
+        <a href="{% url 'inventario:lista_productos' %}?filtro=bajo_stock" class="text-decoration-none">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-danger border-4 bg-danger bg-opacity-10">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-danger small fw-semibold">Insumos Bajo Stock</div>
+                        <div class="fs-3 fw-bold text-danger">{{ cant_bajo_stock }}</div>
+                        <div class="small text-danger">Reposición requerida</div>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Alerta de Vencimientos -->
+    <div class="col-md-3 col-sm-6">
+        <a href="{% url 'inventario:lista_productos' %}?filtro=proximo_vencer" class="text-decoration-none">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-warning border-4 bg-warning bg-opacity-10">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-warning-emphasis small fw-semibold">Vencen &lt; 30 días</div>
+                        <div class="fs-3 fw-bold text-warning-emphasis">{{ cant_proximo_vencer }}</div>
+                        <div class="small text-warning-emphasis">{{ cant_vencidos }} ya vencidos</div>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 text-warning-emphasis p-3 rounded-circle">
+                        <i class="bi bi-hourglass-split fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Próximos Turnos del Día -->
+<div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Próxima Sala de Espera / Turnos</h5>
+        <a href="{% url 'turnos:lista_turnos' %}" class="btn btn-sm btn-outline-primary fw-semibold">Ver Agenda Completa</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Hora</th>
+                        <th>Paciente / Tutor</th>
+                        <th>Veterinario</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-3">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turno in proximos_turnos %}
+                    <tr>
+                        <td class="ps-3 fw-bold text-primary">{{ turno.fecha_hora|date:"H:i" }} hs</td>
+                        <td>
+                            <strong>{{ turno.mascota.nombre }}</strong>
+                            <div class="small text-muted">{{ turno.mascota.cliente.nombre }} {{ turno.mascota.cliente.apellido }}</div>
+                        </td>
+                        <td class="small text-secondary">
+                            {% if turno.veterinario %}Dr(a). {{ turno.veterinario.apellido }}{% else %}-{% endif %}
+                        </td>
+                        <td>
+                            {% if turno.estado == 'PENDIENTE' %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}
+                            {% if turno.estado == 'CONFIRMADO' %}<span class="badge bg-primary">Confirmado</span>{% endif %}
+                            {% if turno.estado == 'ATENDIENDO' %}<span class="badge bg-info text-dark">Atendiendo</span>{% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-sm btn-success fw-bold">
+                                <i class="bi bi-stethoscope me-1"></i> Atender
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">No hay turnos pendientes para lo que resta del día.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- CONSULTAS Y MENSAJES RECIBIDOS DESDE LA LANDING PAGE -->
+<div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="card-title fw-bold text-dark mb-0">
+            <i class="bi bi-envelope-paper me-2 text-primary"></i>Consultas Recibidas desde la Landing Page
+        </h5>
+        {% if mensajes_no_leidos_count > 0 %}
+            <span class="badge bg-danger rounded-pill px-3 py-2 fw-bold">
+                <i class="bi bi-bell-fill me-1"></i>{{ mensajes_no_leidos_count }} Novedades
+            </span>
+        {% else %}
+            <span class="badge bg-success rounded-pill px-3 py-2 fw-semibold">
+                <i class="bi bi-check-all me-1"></i>Consultas al día
+            </span>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Estado</th>
+                        <th>Nombre / Remitente</th>
+                        <th>Contacto</th>
+                        <th>Veterinaria / Asunto</th>
+                        <th>Mensaje</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in mensajes_contacto %}
+                    <tr class="{% if not m.leido %}table-warning bg-opacity-10 fw-semibold{% endif %}">
+                        <td class="ps-3">
+                            {% if not m.leido %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle-fill me-1"></i>NUEVO</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Leído</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong class="text-dark">{{ m.nombre }}</strong>
+                        </td>
+                        <td class="small">
+                            <div><i class="bi bi-envelope me-1 text-primary"></i>{{ m.email }}</div>
+                            {% if m.telefono %}
+                                <div><i class="bi bi-whatsapp me-1 text-success"></i>{{ m.telefono }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="small fw-bold text-secondary">
+                            {{ m.asunto|default:"Consulta General" }}
+                        </td>
+                        <td class="small text-muted" style="max-width: 300px;">
+                            {{ m.mensaje }}
+                        </td>
+                        <td class="small text-muted">
+                            {{ m.fecha_envio|date:"d/m/Y H:i" }} hs
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-4 d-block mb-1 text-secondary"></i>
+                            No hay consultas web registradas hasta el momento.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

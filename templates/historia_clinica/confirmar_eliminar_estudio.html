@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Estudio Médico - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-danger text-white py-3 px-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <h5 class="fw-extrabold mb-0 fs-6 text-uppercase tracking-wider">Confirmar Eliminación</h5>
+                </div>
+
+                <div class="card-body text-center p-4 p-md-5">
+                    <!-- Ícono de Alerta Flotante -->
+                    <div class="mb-3">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                            <i class="bi bi-trash3-fill fs-1"></i>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-2">
+                        ¿Eliminar <span class="text-danger">"{{ estudio.titulo }}"</span>?
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Se borrará permanentemente este archivo adjunto de la ficha clínica de <strong>{{ estudio.mascota.nombre }}</strong> y se quitará del servidor.
+                    </p>
+
+                    <!-- Ficha Resumen del Estudio -->
+                    <div class="p-3 bg-light rounded-3 border text-start mb-4 shadow-sm">
+                        <div class="row g-2 extra-small text-secondary">
+                            <div class="col-6">
+                                <span class="d-block text-muted">Tipo de Estudio:</span>
+                                <strong class="text-dark">{{ estudio.get_tipo_estudio_display }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted">Fecha de Carga:</span>
+                                <strong class="text-dark">{{ estudio.fecha_estudio|date:"d/m/Y" }}</strong>
+                            </div>
+                            <div class="col-12 pt-2 border-top">
+                                <span class="d-block text-muted">Paciente / Mascota:</span>
+                                <strong class="text-dark">{{ estudio.mascota.nombre }}</strong> 
+                                <span class="text-muted">({{ estudio.mascota.cliente.nombre }} {{ estudio.mascota.cliente.apellido }})</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acciones -->
+                    <form method="post" class="d-flex justify-content-center gap-2 pt-2">
+                        {% csrf_token %}
+                        <a href="{% url 'historia_clinica:expediente_mascota' estudio.mascota.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold rounded-3 shadow">
+                            <i class="bi bi-trash-fill me-1"></i> Sí, Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

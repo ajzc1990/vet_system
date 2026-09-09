@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirmar Eliminación - VetSoft{% endblock %}
+
+{% block content %}
+{% with mascota_actual=mascota|default:consulta.mascota %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-danger text-white py-3 px-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <h5 class="fw-extrabold mb-0 fs-6 text-uppercase tracking-wider">Confirmar Eliminación</h5>
+                </div>
+
+                <div class="card-body text-center p-4 p-md-5">
+                    <!-- Ícono de Alerta Flotante -->
+                    <div class="mb-3">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                            <i class="bi bi-trash3-fill fs-1"></i>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-2">
+                        ¿Eliminar consulta médica?
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Estás a punto de borrar de forma permanente la consulta registrada para 
+                        <strong>{{ mascota_actual.nombre|default:"la mascota" }}</strong>. Esta acción no se podrá deshacer.
+                    </p>
+
+                    <!-- Ficha Resumen de la Consulta -->
+                    <div class="p-3 bg-light rounded-3 border text-start mb-4 shadow-sm">
+                        <div class="row g-2 extra-small text-secondary">
+                            <div class="col-6">
+                                <span class="d-block text-muted">Fecha de Atención:</span>
+                                <strong class="text-dark">{{ consulta.fecha_hora|default:consulta.fecha|date:"d/m/Y H:i" }} hs</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted">Paciente:</span>
+                                <strong class="text-dark">{{ mascota_actual.nombre|default:"--" }}</strong>
+                            </div>
+                            <div class="col-12 pt-2 border-top">
+                                <span class="d-block text-muted">Motivo de Consulta:</span>
+                                <strong class="text-dark">{{ consulta.motivo_consulta|default:consulta.motivo|default:"Sin registro" }}</strong>
+                            </div>
+                            {% if mascota_actual.cliente %}
+                            <div class="col-12 pt-1">
+                                <span class="d-block text-muted">Tutor Responsable:</span>
+                                <span class="text-dark fw-semibold">{{ mascota_actual.cliente.apellido }}, {{ mascota_actual.cliente.nombre }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Formulario con Botones de Confirmación -->
+                    <form method="post" class="d-flex justify-content-center gap-2 pt-2">
+                        {% csrf_token %}
+                        {% if mascota_actual %}
+                            <a href="{% url 'historia_clinica:expediente_mascota' mascota_actual.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                        {% else %}
+                            <a href="{% url 'clientes:lista_clientes' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-danger px-4 fw-bold rounded-3 shadow">
+                            <i class="bi bi-trash-fill me-1"></i> Sí, Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Producto - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-danger text-white py-3 px-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <h5 class="fw-extrabold mb-0 fs-6 text-uppercase tracking-wider">Confirmar Eliminación</h5>
+                </div>
+                
+                <div class="card-body text-center p-4 p-md-5">
+                    <!-- Ícono de Alerta Gigante -->
+                    <div class="mb-3">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                            <i class="bi bi-trash3-fill fs-1"></i>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-2">
+                        ¿Eliminar <span class="text-danger">"{{ producto.nombre }}"</span>?
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Esta acción quitará de forma permanente el insumo del inventario y no se podrá deshacer.
+                    </p>
+
+                    <!-- Resumen del Producto a Eliminar -->
+                    <div class="p-3 bg-light rounded-3 border text-start mb-4 shadow-sm">
+                        <div class="row g-2 extra-small text-secondary">
+                            <div class="col-6">
+                                <span class="d-block text-muted">Código:</span>
+                                <strong class="text-dark">{{ producto.codigo_barras|default:"-" }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted">Categoría:</span>
+                                <strong class="text-dark">{{ producto.categoria.nombre|default:"Sin categoría" }}</strong>
+                            </div>
+                            <div class="col-6 pt-2">
+                                <span class="d-block text-muted">Stock Actual:</span>
+                                <strong class="text-dark">{{ producto.stock_actual }} unidades</strong>
+                            </div>
+                            <div class="col-6 pt-2">
+                                <span class="d-block text-muted">Precio Venta:</span>
+                                <strong class="text-dark">${{ producto.precio_venta|floatformat:2 }}</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario con Botones de Confirmación -->
+                    <form method="post" class="d-flex justify-content-center gap-2 pt-2">
+                        {% csrf_token %}
+                        <a href="{% url 'inventario:lista_productos' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                            <i class="bi bi-x-circle me-1"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold rounded-3 shadow">
+                            <i class="bi bi-trash-fill me-1"></i> Confirmar Eliminación
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

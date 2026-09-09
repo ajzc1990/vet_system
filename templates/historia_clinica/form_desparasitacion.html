@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo|default:"Registrar Desparasitación" }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Botón Volver al Expediente -->
+    <div class="mb-4">
+        <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Expediente
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="card-title h5 mb-0 fw-extrabold d-flex align-items-center gap-2">
+                            <i class="bi bi-capsule text-info fs-4"></i> {{ titulo|default:"Registro de Desparasitación" }}
+                        </h4>
+                        <small class="text-white-50">Control antiparasitario interno / externo en la ficha médica</small>
+                    </div>
+                    <span class="badge bg-white bg-opacity-20 text-white small px-3 py-1.5 rounded-pill">Antiparasitario</span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- Ficha Resumen del Paciente -->
+                    <div class="p-3 bg-light rounded-4 border mb-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary p-2.5 rounded-circle d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                                <i class="bi bi-heart-pulse-fill fs-4 text-danger"></i>
+                            </div>
+                            <div>
+                                <span class="extra-small text-muted fw-bold text-uppercase tracking-wider d-block">Paciente Sanitario</span>
+                                <h6 class="fw-extrabold mb-0 text-dark fs-6">
+                                    {{ mascota.nombre }}
+                                    <span class="badge bg-light text-dark border ms-1 fw-semibold extra-small">{{ mascota.get_especie_display }}</span>
+                                </h6>
+                                <small class="text-muted extra-small">
+                                    <i class="bi bi-person-fill text-primary"></i> Tutor: {{ mascota.cliente.nombre }} {{ mascota.cliente.apellido }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Veterinario y Tipo de Desparasitación -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.veterinario.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-person-badge-fill text-primary me-1"></i> Veterinario Atendiente *
+                                </label>
+                                {{ form.veterinario }}
+                                {% if form.veterinario.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.veterinario.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-tag-fill text-primary me-1"></i> Tipo *
+                                </label>
+                                {{ form.tipo }}
+                                {% if form.tipo.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.tipo.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Antiparasitario / Producto y Dosis -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-7">
+                                <label for="{{ form.producto.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-prescription2 text-primary me-1"></i> {{ form.producto.label }} *
+                                </label>
+                                {{ form.producto }}
+                                {% if form.producto.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.producto.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <label for="{{ form.dosis.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-droplet-fill text-info me-1"></i> Dosis Administrada
+                                </label>
+                                {{ form.dosis }}
+                                {% if form.dosis.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.dosis.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Fechas de Aplicación y Próxima Dosis -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.fecha_aplicacion.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-calendar-check-fill text-success me-1"></i> {{ form.fecha_aplicacion.label }} *
+                                </label>
+                                {{ form.fecha_aplicacion }}
+                                {% if form.fecha_aplicacion.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_aplicacion.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.fecha_proxima_dosis.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-bell-fill text-warning me-1"></i> Próxima Dosis / Alerta
+                                </label>
+                                {{ form.fecha_proxima_dosis }}
+                                {% if form.fecha_proxima_dosis.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_proxima_dosis.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Descuento de Inventario Opcional -->
+                        <div class="mb-4 p-3 bg-light rounded-4 border">
+                            <label for="{{ form.producto_inventario.id_for_label }}" class="form-label fw-bold text-dark small d-block mb-1">
+                                <i class="bi bi-box-seam-fill text-primary me-1"></i> Descontar del Inventario (Opcional)
+                            </label>
+                            <small class="text-muted d-block mb-2">Si el antiparasitario proviene del stock de la clínica, podés seleccionarlo para descontar 1 unidad.</small>
+                            {{ form.producto_inventario }}
+                            {% if form.producto_inventario.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.producto_inventario.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between align-items-center pt-4 border-top mt-4">
+                            <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-check-lg me-1"></i> Registrar Desparasitación
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

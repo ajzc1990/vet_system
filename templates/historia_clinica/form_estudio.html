@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo|default:"Subir Estudio Médico" }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Botón Volver -->
+    <div class="mb-4">
+        <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver al Expediente
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="card-title h5 mb-0 fw-extrabold d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-medical-fill text-info"></i> {{ titulo|default:"Adjuntar Estudio Médico" }}
+                        </h4>
+                        <small class="text-white-50">Carga de análisis clínico, ecografía, radiografía o informe PDF</small>
+                    </div>
+                    <span class="badge bg-white bg-opacity-20 text-white small px-3 py-1.5 rounded-pill">Diagnóstico</span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+
+                    <!-- Resumen del Paciente -->
+                    <div class="p-3 bg-light rounded-4 border mb-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary p-2.5 rounded-circle d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                                <i class="bi bi-heart-pulse-fill fs-4 text-danger"></i>
+                            </div>
+                            <div>
+                                <span class="extra-small text-muted fw-bold text-uppercase tracking-wider d-block">Paciente</span>
+                                <h6 class="fw-extrabold mb-0 text-dark fs-6">
+                                    {{ mascota.nombre }}
+                                    <span class="badge bg-light text-dark border ms-1 fw-semibold extra-small">{{ mascota.get_especie_display }}</span>
+                                </h6>
+                                <small class="text-muted extra-small">
+                                    <i class="bi bi-person-fill text-primary"></i> Tutor: {{ mascota.cliente.nombre }} {{ mascota.cliente.apellido }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Veterinario y Tipo de Estudio -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.veterinario.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-person-badge-fill text-primary me-1"></i> Veterinario Atendiente
+                                </label>
+                                {{ form.veterinario }}
+                                {% if form.veterinario.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.veterinario.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.tipo_estudio.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-file-earmark-diff-fill text-primary me-1"></i> Tipo de Estudio *
+                                </label>
+                                {{ form.tipo_estudio }}
+                                {% if form.tipo_estudio.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.tipo_estudio.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Título del Estudio -->
+                        <div class="mb-4">
+                            <label for="{{ form.titulo.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                <i class="bi bi-journal-text text-secondary me-1"></i> {{ form.titulo.label }} *
+                            </label>
+                            {{ form.titulo }}
+                            {% if form.titulo.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.titulo.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Archivo y Fecha de Estudio -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-7">
+                                <label for="{{ form.archivo.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-paperclip text-primary me-1"></i> {{ form.archivo.label }} *
+                                </label>
+                                {{ form.archivo }}
+                                {% if form.archivo.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.archivo.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-5">
+                                <label for="{{ form.fecha_estudio.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-calendar-event text-secondary me-1"></i> {{ form.fecha_estudio.label }}
+                                </label>
+                                {{ form.fecha_estudio }}
+                                {% if form.fecha_estudio.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_estudio.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Vincular a Consulta -->
+                        <div class="mb-4 p-3 bg-light rounded-4 border">
+                            <label for="{{ form.consulta.id_for_label }}" class="form-label fw-bold text-dark small d-block mb-1">
+                                <i class="bi bi-link-45deg text-primary me-1"></i> Vincular a Consulta Médica (Opcional)
+                            </label>
+                            <small class="text-muted d-block mb-2">Permite relacionar este estudio directamente a un registro de consulta previa.</small>
+                            {{ form.consulta }}
+                            {% if form.consulta.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.consulta.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Observaciones / Conclusiones -->
+                        <div class="mb-4">
+                            <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                <i class="bi bi-chat-left-text-fill text-secondary me-1"></i> Informe / Conclusiones del Estudio
+                            </label>
+                            {{ form.observaciones }}
+                            {% if form.observaciones.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.observaciones.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Botones de Acción -->
+                        <div class="d-flex justify-content-between align-items-center pt-4 border-top mt-4">
+                            <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Estudio
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
