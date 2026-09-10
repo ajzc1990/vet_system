@@ -1,22 +1,23 @@
+import json
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.urls import reverse
 from django.utils.crypto import get_random_string
-from django.db.models import F, Q
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
 
-from apps.inventario.models import Producto
-from apps.clientes.models import Cliente, Mascota
-from apps.turnos.models import Turno
-from apps.historia_clinica.models import RegistroVacuna
 from .models import PerfilUsuario, Veterinaria, MensajeContacto, RegistroAuditoria, Plan, Suscripcion
 from .forms import RegistroForm, ConfigVeterinariaForm
 from .utils import get_veterinaria_activa
+from .audit import registrar_auditoria
+from .pagos import mp_configurado, crear_preferencia_pago, obtener_pago
 
 
 # ==============================================================================
@@ -96,11 +97,34 @@ def registro(request):
     return render(request, 'usuarios/registro.html', {'form': form})
 
 
+LOGIN_THROTTLE_MAX_INTENTOS = 5
+LOGIN_THROTTLE_VENTANA_MINUTOS = 15
+
+
 class CustomLoginView(LoginView):
     """
-    LoginView personalizado que verifica si el usuario fue aprobado por el superusuario.
+    LoginView personalizado que verifica si el usuario fue aprobado por el superusuario
+    y bloquea temporalmente el acceso tras varios intentos fallidos (fuerza bruta).
     """
     template_name = 'usuarios/login.html'
+
+    def post(self, request, *args, **kwargs):
+        username = (request.POST.get('username') or '').strip()
+        if username and self._demasiados_intentos_fallidos(username):
+            messages.error(
+                request,
+                f"Demasiados intentos fallidos para el usuario '{username}'. "
+                f"Por seguridad, esperá {LOGIN_THROTTLE_VENTANA_MINUTOS} minutos antes de volver a intentar."
+            )
+            return redirect('login')
+        return super().post(request, *args, **kwargs)
+
+    def _demasiados_intentos_fallidos(self, username):
+        limite = timezone.now() - timedelta(minutes=LOGIN_THROTTLE_VENTANA_MINUTOS)
+        intentos = RegistroAuditoria.objects.filter(
+            accion='LOGIN_FALLIDO', objeto_id=username, fecha__gte=limite
+        ).count()
+        return intentos >= LOGIN_THROTTLE_MAX_INTENTOS
 
     def form_valid(self, form):
         user = form.get_user()
@@ -138,65 +162,9 @@ class CustomLoginView(LoginView):
 
 @login_required
 def dashboard(request):
-    veterinaria = get_veterinaria_activa(request)
-    hoy = timezone.now().date()
-    limite_proximos = hoy + timedelta(days=15)
-
-    if veterinaria:
-        total_clientes = Cliente.objects.filter(veterinaria=veterinaria).count()
-        total_mascotas = Mascota.objects.filter(cliente__veterinaria=veterinaria).count()
-
-        productos_qs = Producto.objects.filter(veterinaria=veterinaria)
-        total_productos = productos_qs.count()
-        alertas_stock_qs = productos_qs.filter(stock_actual__lte=F('stock_minimo'))
-
-        turnos_hoy_qs = Turno.objects.filter(veterinaria=veterinaria, fecha_hora__date=hoy)
-
-        vacunas_alerta = RegistroVacuna.objects.filter(
-            veterinaria=veterinaria,
-            fecha_proxima_dosis__lte=limite_proximos
-        ).select_related('mascota', 'mascota__cliente').order_by('fecha_proxima_dosis')[:5]
-
-    elif request.user.is_superuser:
-        total_clientes = Cliente.objects.count()
-        total_mascotas = Mascota.objects.count()
-        productos_qs = Producto.objects.all()
-        total_productos = productos_qs.count()
-        alertas_stock_qs = Producto.objects.filter(stock_actual__lte=F('stock_minimo'))
-        turnos_hoy_qs = Turno.objects.filter(fecha_hora__date=hoy)
-        vacunas_alerta = RegistroVacuna.objects.filter(
-            fecha_proxima_dosis__lte=limite_proximos
-        ).select_related('mascota', 'mascota__cliente').order_by('fecha_proxima_dosis')[:5]
-
-    else:
-        # Usuario autenticado sin veterinaria asignada: no debe ver datos de otros tenants.
-        total_clientes = 0
-        total_mascotas = 0
-        productos_qs = Producto.objects.none()
-        total_productos = 0
-        alertas_stock_qs = Producto.objects.none()
-        turnos_hoy_qs = Turno.objects.none()
-        vacunas_alerta = RegistroVacuna.objects.none()
-
-    turnos_totales = turnos_hoy_qs.count()
-    turnos_pendientes = turnos_hoy_qs.filter(estado__in=['PENDIENTE', 'CONFIRMADO', 'EN_ESPERA']).count()
-    turnos_completados = turnos_hoy_qs.filter(estado='COMPLETADO').count()
-
-    context = {
-        'veterinaria': veterinaria,
-        'fecha_hoy': hoy,
-        'total_clientes': total_clientes,
-        'total_mascotas': total_mascotas,
-        'total_productos': total_productos,
-        'productos_bajo_stock': alertas_stock_qs.count(),
-        'alertas_stock': alertas_stock_qs.select_related('categoria')[:5],
-        'turnos_hoy_total': turnos_totales,
-        'turnos_hoy_pendientes': turnos_pendientes,
-        'turnos_hoy_completados': turnos_completados,
-        'proximos_turnos': turnos_hoy_qs.select_related('mascota', 'veterinario').order_by('fecha_hora')[:5],
-        'vacunas_alerta': vacunas_alerta,
-    }
-    return render(request, 'dashboard.html', context)
+    """Alias histórico: el panel operativo real vive en dashboard:index
+    (apps.dashboard). Se conserva esta URL solo para no romper enlaces viejos."""
+    return redirect('dashboard:index')
 
 
 # ==============================================================================
@@ -243,7 +211,85 @@ def mi_suscripcion(request):
     return render(request, 'usuarios/mi_suscripcion.html', {
         'veterinaria': vet,
         'suscripcion': suscripcion,
+        'mp_configurado': mp_configurado(),
+        'pago': request.GET.get('pago'),
     })
+
+
+@login_required
+def iniciar_pago_suscripcion(request):
+    """Redirige al Checkout Pro de Mercado Pago para pagar el mes en curso del plan contratado."""
+    vet = get_veterinaria_activa(request)
+    suscripcion = getattr(vet, 'suscripcion', None) if vet else None
+
+    if not suscripcion:
+        messages.error(request, "No se encontró una suscripción para procesar el pago.")
+        return redirect('usuarios:mi_suscripcion')
+
+    if not mp_configurado():
+        messages.warning(
+            request,
+            "Los pagos online todavía no están configurados. Contactá al equipo de VetSoft para coordinar el pago."
+        )
+        return redirect('usuarios:mi_suscripcion')
+
+    try:
+        preferencia = crear_preferencia_pago(suscripcion, request)
+    except Exception:
+        messages.error(request, "No se pudo iniciar el pago en este momento. Intentá nuevamente más tarde.")
+        return redirect('usuarios:mi_suscripcion')
+
+    init_point = preferencia.get('init_point') or preferencia.get('sandbox_init_point')
+    if not init_point:
+        messages.error(request, "No se pudo iniciar el pago en este momento.")
+        return redirect('usuarios:mi_suscripcion')
+
+    return redirect(init_point)
+
+
+@csrf_exempt
+def webhook_mercadopago(request):
+    """Notificación de pago de Mercado Pago (IPN clásica por querystring o Webhooks v2 por
+    JSON). Si el pago está aprobado, extiende 30 días la Suscripcion referenciada."""
+    topic = request.GET.get('type') or request.GET.get('topic')
+    payment_id = request.GET.get('data.id') or request.GET.get('id')
+
+    if not payment_id and request.method == 'POST' and request.body:
+        try:
+            body = json.loads(request.body)
+            topic = topic or body.get('type') or body.get('action', '').split('.')[0]
+            payment_id = payment_id or (body.get('data') or {}).get('id')
+        except (ValueError, TypeError):
+            pass
+
+    if not payment_id or (topic and topic != 'payment') or not mp_configurado():
+        return HttpResponse(status=200)
+
+    try:
+        pago = obtener_pago(payment_id)
+    except Exception:
+        return HttpResponse(status=200)
+
+    if pago.get('status') == 'approved':
+        suscripcion = Suscripcion.objects.filter(pk=pago.get('external_reference')).select_related('veterinaria').first()
+        if suscripcion:
+            hoy = timezone.now().date()
+            base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy else hoy
+            suscripcion.fecha_vencimiento = base + timedelta(days=30)
+            suscripcion.estado = 'ACTIVA'
+            suscripcion.ultimo_pago_registrado = hoy
+            suscripcion.save()
+
+            registrar_auditoria(
+                None, 'EDITAR', modelo='Suscripcion', objeto_id=suscripcion.id,
+                descripcion=(
+                    f"Pago aprobado vía Mercado Pago (payment_id={payment_id}). "
+                    f"Suscripción extendida hasta {suscripcion.fecha_vencimiento.strftime('%d/%m/%Y')}."
+                ),
+                veterinaria=suscripcion.veterinaria,
+            )
+
+    return HttpResponse(status=200)
 
 
 @login_required

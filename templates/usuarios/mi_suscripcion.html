@@ -8,6 +8,14 @@
         <i class="bi bi-credit-card-2-front-fill text-primary"></i> Mi Suscripción
     </h2>
 
+    {% if pago == 'exitoso' %}
+    <div class="alert alert-success border-0 rounded-3 shadow-sm mb-4"><i class="bi bi-check-circle-fill me-2"></i>¡Pago recibido! Puede demorar unos segundos en reflejarse mientras Mercado Pago confirma la acreditación.</div>
+    {% elif pago == 'pendiente' %}
+    <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4"><i class="bi bi-hourglass-split me-2"></i>Tu pago está pendiente de confirmación. Te avisaremos cuando se acredite.</div>
+    {% elif pago == 'fallido' %}
+    <div class="alert alert-danger border-0 rounded-3 shadow-sm mb-4"><i class="bi bi-x-circle-fill me-2"></i>El pago no pudo procesarse. Podés intentarlo nuevamente.</div>
+    {% endif %}
+
     {% if suscripcion %}
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
         <div class="card-header py-3 px-4 {% if suscripcion.esta_vencida %}bg-danger{% elif suscripcion.estado == 'PRUEBA' %}bg-info{% else %}bg-success{% endif %} text-white d-flex justify-content-between align-items-center">
@@ -46,9 +54,21 @@
             </ul>
 
             {% if suscripcion.esta_vencida %}
-            <div class="alert alert-danger border-0 rounded-3 mt-4 mb-0">
-                <i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción venció. Contactá al equipo de VetSoft para regularizar el pago y continuar operando sin interrupciones.
+            <div class="alert alert-danger border-0 rounded-3 mt-4 mb-3">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción venció. Regularizá el pago para continuar operando sin interrupciones.
             </div>
+            {% endif %}
+
+            {% if mp_configurado %}
+                <div class="d-flex justify-content-end mt-3">
+                    <a href="{% url 'usuarios:iniciar_pago_suscripcion' %}" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow d-inline-flex align-items-center gap-2">
+                        <i class="bi bi-credit-card-fill"></i> Pagar ${{ suscripcion.plan.precio_mensual }} con Mercado Pago
+                    </a>
+                </div>
+            {% else %}
+                <div class="alert alert-secondary border-0 rounded-3 mt-3 mb-0 small">
+                    <i class="bi bi-info-circle-fill me-2"></i>Los pagos online todavía no están configurados para este entorno. El pago se coordina manualmente con el equipo de VetSoft.
+                </div>
             {% endif %}
         </div>
     </div>

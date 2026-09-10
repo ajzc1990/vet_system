@@ -39,6 +39,7 @@ def log_login_fallido(sender, credentials, request=None, **kwargs):
             usuario=None,
             accion='LOGIN_FALLIDO',
             modelo='User',
+            objeto_id=username,
             descripcion=f"Intento de login fallido para el usuario '{username}'",
             ip_address=_get_client_ip(request),
         )

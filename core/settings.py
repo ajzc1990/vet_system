@@ -126,6 +126,11 @@ else:
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@vetsoft.local')
 
+# Mercado Pago (cobro de suscripciones). Sin estas variables, el botón de pago
+# muestra un aviso en vez de romper: se puede operar en modo de facturación manual.
+MP_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
+MP_PUBLIC_KEY = os.getenv('MP_PUBLIC_KEY')
+
 # Rutas de Autenticación
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/dashboard/'  # O la vista principal que prefieras

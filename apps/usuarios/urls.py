@@ -23,6 +23,10 @@ urlpatterns = [
     path('suscripciones/', views.panel_suscripciones, name='panel_suscripciones'),
     path('suscripciones/<int:suscripcion_id>/extender/', views.extender_suscripcion, name='extender_suscripcion'),
 
+    # Pagos (Mercado Pago)
+    path('pagos/iniciar/', views.iniciar_pago_suscripcion, name='iniciar_pago_suscripcion'),
+    path('pagos/webhook/', views.webhook_mercadopago, name='webhook_mercadopago'),
+
     # Auditoría
     path('auditoria/', views.auditoria_view, name='auditoria'),
 ]
