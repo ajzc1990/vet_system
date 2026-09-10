@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Aplicaciones del proyecto VetSoft
+    # Aplicaciones del proyecto VeterSystem
     'apps.clientes',
     'apps.turnos',
     'apps.historia_clinica',
@@ -80,9 +80,9 @@ if USE_POSTGRES:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'vetsoft_db'),
-            'USER': os.getenv('DB_USER', 'vetsoft_user'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'vetsoft_pass_2026'),
+            'NAME': os.getenv('DB_NAME', 'vetersystem_db'),
+            'USER': os.getenv('DB_USER', 'vetersystem_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', 'vetersystem_pass_2026'),
             'HOST': os.getenv('DB_HOST', 'db'),
             'PORT': os.getenv('DB_PORT', '5432'),
         }
@@ -124,7 +124,7 @@ else:
     EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
     EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
     EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@vetsoft.local')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@vetersystem.local')
 
 # Mercado Pago (cobro de suscripciones). Sin estas variables, el botón de pago
 # muestra un aviso en vez de romper: se puede operar en modo de facturación manual.

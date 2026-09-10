@@ -474,7 +474,7 @@ def otorgar_acceso_portal(request, cliente_id):
 
         if cliente.email:
             send_mail(
-                subject="Acceso a tu Portal de Cliente - VetSoft",
+                subject="Acceso a tu Portal de Cliente - VeterSystem",
                 message=(
                     f"Hola {cliente.nombre}!\n\n"
                     "Ya podés acceder al portal para consultar la historia clínica y los turnos de tus mascotas.\n\n"

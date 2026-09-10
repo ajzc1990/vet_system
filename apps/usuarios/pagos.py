@@ -19,7 +19,7 @@ def crear_preferencia_pago(suscripcion, request):
 
     preference_data = {
         "items": [{
-            "title": f"Suscripción VetSoft - Plan {suscripcion.plan.nombre} ({suscripcion.veterinaria.nombre})",
+            "title": f"Suscripción VeterSystem - Plan {suscripcion.plan.nombre} ({suscripcion.veterinaria.nombre})",
             "quantity": 1,
             "unit_price": float(suscripcion.plan.precio_mensual),
             "currency_id": "ARS",

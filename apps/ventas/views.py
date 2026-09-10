@@ -192,7 +192,7 @@ def descargar_ticket_pdf(request, venta_id):
     styles = getSampleStyleSheet()
 
     vet_obj = venta.veterinaria or vet
-    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VetSoft"
+    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VeterSystem"
     
     # Encabezado
     story.append(Paragraph(f"<b>{nombre_vet}</b>", ParagraphStyle('H1', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor('#0d6efd'))))

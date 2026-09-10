@@ -16,7 +16,7 @@ from apps.historia_clinica.models import (
 from apps.inventario.models import Categoria, Producto
 from apps.ventas.models import CajaDiaria, Venta, DetalleVenta
 
-DEMO_VET_NOMBRE = "Veterinaria Demo VetSoft"
+DEMO_VET_NOMBRE = "Veterinaria Demo VeterSystem"
 DEMO_ADMIN_USERNAME = "demo_admin"
 DEMO_VET_USERNAME = "demo_vet"
 DEMO_PASSWORD = "Demo2026!"
@@ -82,7 +82,7 @@ class Command(BaseCommand):
             cuit_rif="30-71234567-9",
             telefono="3815551234",
             direccion="Av. Aconquija 2100, Yerba Buena, Tucumán",
-            email_contacto="contacto@vetsoftdemo.com.ar",
+            email_contacto="contacto@vetersystemdemo.com.ar",
             activo=True,
         )
         self.stdout.write(self.style.SUCCESS(f"Veterinaria creada: {vet.nombre}"))
@@ -118,23 +118,23 @@ class Command(BaseCommand):
     def _crear_staff(self, vet):
         admin_user = User.objects.create_user(
             username=DEMO_ADMIN_USERNAME, password=DEMO_PASSWORD,
-            first_name="Laura", last_name="Fernández", email="admin@vetsoftdemo.com.ar",
+            first_name="Laura", last_name="Fernández", email="admin@vetersystemdemo.com.ar",
         )
         PerfilUsuario.objects.create(user=admin_user, veterinaria=vet, rol="ADMIN", is_approved=True, telefono="3815551111")
 
         vet_django_user = User.objects.create_user(
             username=DEMO_VET_USERNAME, password=DEMO_PASSWORD,
-            first_name="Sofía", last_name="Herrera", email="vet@vetsoftdemo.com.ar",
+            first_name="Sofía", last_name="Herrera", email="vet@vetersystemdemo.com.ar",
         )
         PerfilUsuario.objects.create(user=vet_django_user, veterinaria=vet, rol="VET", is_approved=True, telefono="3815552222")
 
         veterinario_1 = Veterinario.objects.create(
             veterinaria=vet, usuario=vet_django_user, nombre="Sofía", apellido="Herrera",
-            matricula="MP-1234", telefono="3815552222", email="vet@vetsoftdemo.com.ar", activo=True,
+            matricula="MP-1234", telefono="3815552222", email="vet@vetersystemdemo.com.ar", activo=True,
         )
         veterinario_2 = Veterinario.objects.create(
             veterinaria=vet, nombre="Martín", apellido="Ibáñez",
-            matricula="MP-5678", telefono="3815553333", email="martin@vetsoftdemo.com.ar", activo=True,
+            matricula="MP-5678", telefono="3815553333", email="martin@vetersystemdemo.com.ar", activo=True,
         )
 
         self.stdout.write(self.style.SUCCESS("Staff y veterinarios creados."))

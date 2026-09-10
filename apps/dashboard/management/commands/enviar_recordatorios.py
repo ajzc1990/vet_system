@@ -85,7 +85,7 @@ class Command(BaseCommand):
                     lineas.append(f"  - {d.mascota.nombre}: {d.producto} (vence {d.fecha_proxima_dosis.strftime('%d/%m/%Y')})")
 
             send_mail(
-                subject=f"[VetSoft] Recordatorios de hoy - {vet.nombre}",
+                subject=f"[VeterSystem] Recordatorios de hoy - {vet.nombre}",
                 message="\n".join(lineas),
                 from_email=None,
                 recipient_list=[vet.email_contacto],

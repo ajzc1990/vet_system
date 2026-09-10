@@ -229,7 +229,7 @@ def iniciar_pago_suscripcion(request):
     if not mp_configurado():
         messages.warning(
             request,
-            "Los pagos online todavía no están configurados. Contactá al equipo de VetSoft para coordinar el pago."
+            "Los pagos online todavía no están configurados. Contactá al equipo de VeterSystem para coordinar el pago."
         )
         return redirect('usuarios:mi_suscripcion')
 

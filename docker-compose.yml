@@ -1,23 +1,23 @@
 services:
   db:
     image: postgres:15-alpine
-    container_name: vetsoft_postgres
+    container_name: vetersystem_postgres
     restart: always
     environment:
-      POSTGRES_DB: ${DB_NAME:-vetsoft_db}
-      POSTGRES_USER: ${DB_USER:-vetsoft_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-vetsoft_pass_2026}
+      POSTGRES_DB: ${DB_NAME:-vetersystem_db}
+      POSTGRES_USER: ${DB_USER:-vetersystem_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vetersystem_pass_2026}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vetsoft_user} -d ${DB_NAME:-vetsoft_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-vetersystem_user} -d ${DB_NAME:-vetersystem_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   web:
     build: .
-    container_name: vetsoft_django
+    container_name: vetersystem_django
     restart: always
     command: >
       sh -c "python manage.py migrate &&
@@ -33,9 +33,9 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - USE_POSTGRES=True
       - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=${DB_NAME:-vetsoft_db}
-      - DB_USER=${DB_USER:-vetsoft_user}
-      - DB_PASSWORD=${DB_PASSWORD:-vetsoft_pass_2026}
+      - DB_NAME=${DB_NAME:-vetersystem_db}
+      - DB_USER=${DB_USER:-vetersystem_user}
+      - DB_PASSWORD=${DB_PASSWORD:-vetersystem_pass_2026}
       - DB_HOST=db
       - DB_PORT=5432
     depends_on:
@@ -44,7 +44,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: vetsoft_nginx
+    container_name: vetersystem_nginx
     restart: always
     ports:
       - "80:80"
@@ -60,7 +60,7 @@ services:
 
   certbot:
     image: certbot/certbot
-    container_name: vetsoft_certbot
+    container_name: vetersystem_certbot
     restart: unless-stopped
     volumes:
       - certbot_etc:/etc/letsencrypt

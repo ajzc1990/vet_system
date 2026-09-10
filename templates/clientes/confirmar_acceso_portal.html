@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Otorgar Acceso al Portal - VetSoft{% endblock %}
+{% block title %}Otorgar Acceso al Portal - VeterSystem{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -23,7 +23,7 @@
                         ¿Crear acceso al portal para <span class="text-primary">{{ cliente.nombre }} {{ cliente.apellido }}</span>?
                     </h5>
                     <p class="text-muted small mb-4">
-                        Se generará un usuario y contraseña que le permitirán ingresar a VetSoft para ver la historia clínica
+                        Se generará un usuario y contraseña que le permitirán ingresar a VeterSystem para ver la historia clínica
                         y los turnos de sus mascotas (solo lectura). Las credenciales se mostrarán una única vez
                         {% if cliente.email %}y también se enviarán a <strong>{{ cliente.email }}</strong>{% endif %}.
                     </p>

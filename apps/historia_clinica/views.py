@@ -369,7 +369,7 @@ def descargar_receta_pdf(request, consulta_id):
     )
 
     vet_obj = consulta.veterinaria or vet
-    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VetSoft"
+    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VeterSystem"
     cuit_vet = f"CUIT/RIF: {vet_obj.cuit_rif}" if vet_obj and vet_obj.cuit_rif else ""
     tel_vet = f"Tel: {vet_obj.telefono}" if vet_obj and vet_obj.telefono else ""
     dir_vet = vet_obj.direccion if vet_obj and vet_obj.direccion else ""
@@ -766,7 +766,7 @@ def descargar_informe_internacion_pdf(request, internacion_id):
     subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#6c757d'), spaceAfter=3)
 
     vet_obj = internacion.veterinaria or vet
-    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VetSoft"
+    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VeterSystem"
 
     logo_img = None
     if vet_obj and vet_obj.logo and os.path.exists(vet_obj.logo.path):
