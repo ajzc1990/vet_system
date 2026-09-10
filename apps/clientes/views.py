@@ -1,12 +1,18 @@
+import re
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+from django.utils.crypto import get_random_string
 
 # Importaciones locales de Clientes
 from .models import Cliente, Mascota
 from .forms import ClienteForm, MascotaForm
 from apps.usuarios.utils import get_veterinaria_activa
+from apps.usuarios.audit import registrar_auditoria
 
 
 def get_historia_components():
@@ -76,6 +82,10 @@ def crear_cliente(request):
             if user_vet:
                 cliente.veterinaria = user_vet
             cliente.save()
+            registrar_auditoria(
+                request, 'CREAR', modelo='Cliente', objeto_id=cliente.id,
+                descripcion=f"Alta de cliente: {cliente.nombre} {cliente.apellido} (DNI: {cliente.dni})"
+            )
             messages.success(request, f"Cliente {cliente.nombre} {cliente.apellido} registrado con éxito.")
             return redirect('clientes:detalle_cliente', cliente_id=cliente.id)
     else:
@@ -171,6 +181,11 @@ def detalle_historia_clinica(request, mascota_id):
     # IMPORTANTE: Se recuperan los estudios asociados a la mascota
     estudios = EstudioMedico.objects.filter(mascota=mascota).order_by('-fecha_estudio')
 
+    # Internaciones (hospitalizaciones) del paciente
+    from apps.historia_clinica.models import Internacion
+    internaciones = Internacion.objects.filter(mascota=mascota).select_related('veterinario_responsable')
+    internacion_activa = internaciones.filter(estado='INTERNADO').first()
+
     if request.method == 'POST':
         form = ConsultaMedicaForm(request.POST, request.FILES, veterinaria=vet)
 
@@ -231,6 +246,8 @@ def detalle_historia_clinica(request, mascota_id):
         'vacunas': vacunas,
         'desparasitaciones': desparasitaciones,
         'estudios': estudios,  # <--- VARIABLE CLAVE ENVIADA A LA PLANTILLA
+        'internaciones': internaciones,
+        'internacion_activa': internacion_activa,
         'form': form,
     }
     return render(request, 'clientes/historia_clinica.html', context)
@@ -285,7 +302,12 @@ def eliminar_consulta(request, consulta_id):
     mascota_id = consulta.mascota.id
 
     if request.method == 'POST':
+        mascota_nombre = consulta.mascota.nombre
         consulta.delete()
+        registrar_auditoria(
+            request, 'ELIMINAR', modelo='ConsultaMedica', objeto_id=consulta_id,
+            descripcion=f"Eliminación de consulta médica de {mascota_nombre}"
+        )
         messages.success(request, "La consulta médica ha sido eliminada.")
         return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
 
@@ -353,7 +375,13 @@ def eliminar_vacuna(request, vacuna_id):
         vacuna = get_object_or_404(RegistroVacuna, pk=vacuna_id, mascota__cliente__veterinaria=vet)
         
     mascota_id = vacuna.mascota.id
+    mascota_nombre = vacuna.mascota.nombre
+    nombre_vacuna = vacuna.nombre_vacuna
     vacuna.delete()
+    registrar_auditoria(
+        request, 'ELIMINAR', modelo='RegistroVacuna', objeto_id=vacuna_id,
+        descripcion=f"Eliminación de vacuna '{nombre_vacuna}' de {mascota_nombre}"
+    )
     messages.success(request, "Registro de vacuna eliminado correctamente.")
     return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
 
@@ -401,6 +429,73 @@ def agregar_desparasitacion(request, mascota_id):
     return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
 
 
+# ==============================================================================
+# PORTAL DEL CLIENTE (ACCESO PARA TUTORES)
+# ==============================================================================
+
+@login_required
+def otorgar_acceso_portal(request, cliente_id):
+    """Genera credenciales de acceso al Portal del Cliente para que el tutor pueda
+    consultar la historia clínica y turnos de sus mascotas desde su propia cuenta."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser:
+        cliente = get_object_or_404(Cliente, pk=cliente_id)
+    else:
+        cliente = get_object_or_404(Cliente, pk=cliente_id, veterinaria=vet)
+
+    if cliente.usuario:
+        messages.info(request, f"{cliente.nombre} ya tiene acceso al portal (usuario: {cliente.usuario.username}).")
+        return redirect('clientes:detalle_cliente', cliente_id=cliente.id)
+
+    if request.method == 'POST':
+        base_username = re.sub(r'[^a-zA-Z0-9]', '', cliente.dni) or f"cliente{cliente.id}"
+        username = base_username
+        contador = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{contador}"
+            contador += 1
+
+        password_generada = get_random_string(10)
+        user = User.objects.create_user(
+            username=username,
+            password=password_generada,
+            first_name=cliente.nombre,
+            last_name=cliente.apellido,
+            email=cliente.email or '',
+        )
+        cliente.usuario = user
+        cliente.save(update_fields=['usuario'])
+
+        registrar_auditoria(
+            request, 'CREAR', modelo='PortalCliente', objeto_id=cliente.id,
+            descripcion=f"Acceso al portal creado para {cliente.nombre} {cliente.apellido} (usuario: {username})"
+        )
+
+        if cliente.email:
+            send_mail(
+                subject="Acceso a tu Portal de Cliente - VetSoft",
+                message=(
+                    f"Hola {cliente.nombre}!\n\n"
+                    "Ya podés acceder al portal para consultar la historia clínica y los turnos de tus mascotas.\n\n"
+                    f"Usuario: {username}\nContraseña: {password_generada}\n\n"
+                    f"Ingresá en: {request.build_absolute_uri('/login/')}"
+                ),
+                from_email=None,
+                recipient_list=[cliente.email],
+                fail_silently=True,
+            )
+
+        messages.success(
+            request,
+            f"Acceso al portal creado. Usuario: '{username}' — Contraseña: '{password_generada}'. "
+            "Compartísela al tutor/a: no se volverá a mostrar por seguridad."
+        )
+        return redirect('clientes:detalle_cliente', cliente_id=cliente.id)
+
+    return render(request, 'clientes/confirmar_acceso_portal.html', {'cliente': cliente})
+
+
 @login_required
 def eliminar_desparasitacion(request, desparasitacion_id):
     vet = get_veterinaria_activa(request)
@@ -412,6 +507,12 @@ def eliminar_desparasitacion(request, desparasitacion_id):
         registro = get_object_or_404(RegistroDesparasitacion, pk=desparasitacion_id, mascota__cliente__veterinaria=vet)
         
     mascota_id = registro.mascota.id
+    mascota_nombre = registro.mascota.nombre
+    producto_registro = registro.producto
     registro.delete()
+    registrar_auditoria(
+        request, 'ELIMINAR', modelo='RegistroDesparasitacion', objeto_id=desparasitacion_id,
+        descripcion=f"Eliminación de desparasitación '{producto_registro}' de {mascota_nombre}"
+    )
     messages.success(request, "Registro antiparasitario eliminado correctamente.")
     return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)

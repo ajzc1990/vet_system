@@ -17,6 +17,7 @@ from .models import Venta, DetalleVenta, CajaDiaria
 from .forms import VentaForm
 from apps.inventario.models import MovimientoStock
 from apps.usuarios.utils import get_veterinaria_activa
+from apps.usuarios.audit import registrar_auditoria
 
 
 @login_required
@@ -83,6 +84,11 @@ def registrar_venta(request):
                 subtotal=venta.total
             )
 
+            registrar_auditoria(
+                request, 'CREAR', modelo='Venta', objeto_id=venta.id,
+                descripcion=f"Venta #{venta.id} registrada por ${venta.total} ({producto.nombre} x{cantidad})"
+            )
+
             messages.success(request, f"¡Venta #{venta.id} registrada con éxito! Total: ${venta.total}")
             return redirect('ventas:lista_ventas')
         else:
@@ -118,6 +124,11 @@ def abrir_caja(request):
             observaciones=observaciones,
             estado='ABIERTA'
         )
+        registrar_auditoria(
+            request, 'CREAR', modelo='CajaDiaria', objeto_id=caja.id,
+            descripcion=f"Apertura de caja #{caja.id} con monto inicial ${caja.monto_inicial}"
+        )
+
         messages.success(request, f"¡Caja #{caja.id} abierta con éxito! Monto inicial: ${caja.monto_inicial}")
         return redirect('ventas:lista_ventas')
 
@@ -145,6 +156,12 @@ def cerrar_caja(request, caja_id):
         caja.fecha_cierre = timezone.now()
         caja.estado = 'CERRADA'
         caja.save()
+
+        diferencia = (caja.monto_final_real or 0) - caja.total_efectivo
+        registrar_auditoria(
+            request, 'EDITAR', modelo='CajaDiaria', objeto_id=caja.id,
+            descripcion=f"Cierre de caja #{caja.id}. Diferencia de arqueo: ${diferencia:.2f}"
+        )
 
         messages.success(request, f"Caja #{caja.id} cerrada correctamente.")
         return redirect('ventas:lista_ventas')

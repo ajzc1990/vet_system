@@ -24,6 +24,9 @@
             </button>
         </form>
 
+        <a href="{% url 'turnos:lista_solicitudes_turno' %}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-envelope-paper-heart-fill"></i> Solicitudes Online
+        </a>
         <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
             <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
         </a>

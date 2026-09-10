@@ -11,6 +11,20 @@
         </a>
     </div>
 
+    <!-- Alerta de Internación Activa -->
+    {% if internacion_activa %}
+    <a href="{% url 'historia_clinica:detalle_internacion' internacion_activa.id %}" class="text-decoration-none">
+        <div class="alert alert-danger border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="fw-bold d-flex align-items-center gap-2">
+                <i class="bi bi-hospital-fill fs-5"></i> Paciente actualmente internado
+                {% if internacion_activa.box %} &bull; Box {{ internacion_activa.box }}{% endif %}
+                &bull; Día {{ internacion_activa.dias_internado }}
+            </span>
+            <span class="badge bg-danger px-3 py-2 rounded-pill fw-bold">Ver Seguimiento <i class="bi bi-arrow-right ms-1"></i></span>
+        </div>
+    </a>
+    {% endif %}
+
     <!-- Header / Banner de la Mascota y Cliente -->
     <div class="card border-0 shadow-lg mb-4 bg-white rounded-4 overflow-hidden">
         <div class="card-body p-4">
@@ -45,10 +59,16 @@
                     </a>
                     
                     <!-- ACCIONES EXCLUSIVAS VETERINARIOS / ADMINS -->
-                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                         <a href="{% url 'historia_clinica:subir_estudio' mascota.id %}" class="btn btn-light border text-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" title="Adjuntar Estudio / Ecografía / RX">
                             <i class="bi bi-paperclip text-primary"></i> Adjuntar Estudio
                         </a>
+
+                        {% if not internacion_activa %}
+                        <a href="{% url 'historia_clinica:internar_mascota' mascota.id %}" class="btn btn-danger fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" title="Ingresar a Internación">
+                            <i class="bi bi-hospital-fill"></i> Internar
+                        </a>
+                        {% endif %}
 
                         <button class="btn btn-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="collapse" data-bs-target="#nuevaConsultaForm" aria-expanded="false" aria-controls="nuevaConsultaForm">
                             <i class="bi bi-plus-circle-fill"></i> Registrar Consulta
@@ -60,7 +80,7 @@
     </div>
 
     <!-- Formulario Desplegable para Nueva Consulta Médica -->
-    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
     <div class="collapse mb-4 {% if form.errors %}show{% endif %}" id="nuevaConsultaForm">
         <div class="card border-primary border-opacity-25 shadow-lg rounded-4 overflow-hidden">
             <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
@@ -173,6 +193,11 @@
                 <i class="bi bi-capsule"></i> Desparasitaciones <span class="badge bg-info bg-opacity-20 text-info-emphasis rounded-pill small">{{ desparasitaciones.count|default:"0" }}</span>
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" id="internaciones-tab" data-bs-toggle="tab" data-bs-target="#internacionesTab" type="button" role="tab">
+                <i class="bi bi-hospital"></i> Internaciones <span class="badge bg-danger bg-opacity-20 text-danger rounded-pill small">{{ internaciones.count|default:"0" }}</span>
+            </button>
+        </li>
     </ul>
 
     <!-- CONTENIDO DE LAS PESTAÑAS -->
@@ -229,7 +254,7 @@
                                             <i class="bi bi-printer-fill text-primary"></i> Receta PDF
                                         </a>
 
-                                        {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                        {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                             <a href="{% url 'clientes:editar_consulta' consulta.id %}" class="btn btn-sm btn-light border text-secondary rounded-2">
                                                 <i class="bi bi-pencil-fill me-1"></i> Editar
                                             </a>
@@ -259,7 +284,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-file-earmark-medical-fill me-2 text-primary"></i>Estudios e Informes Adjuntos</h5>
                 
-                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                     <a href="{% url 'historia_clinica:subir_estudio' mascota.id %}" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-3 shadow-sm">
                         <i class="bi bi-cloud-arrow-up-fill me-1"></i> Cargar Nuevo Estudio
                     </a>
@@ -300,7 +325,7 @@
                                     <span class="text-muted small">Sin archivo</span>
                                 {% endif %}
                                 
-                                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                     <a href="{% url 'historia_clinica:eliminar_estudio' e.id %}" class="btn btn-sm btn-light border text-danger rounded-2" title="Eliminar Estudio">
                                         <i class="bi bi-trash-fill"></i>
                                     </a>
@@ -327,7 +352,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-shield-check me-2 text-success"></i>Esquema de Vacunación</h5>
                 
-                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                     <button type="button" class="btn btn-sm btn-success fw-bold px-3 py-1.5 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalVacuna">
                         <i class="bi bi-plus-lg me-1"></i> Registrar Vacuna
                     </button>
@@ -344,7 +369,7 @@
                                     <th class="py-3">Vacuna / Dosis</th>
                                     <th class="py-3">Lote</th>
                                     <th class="py-3">Próxima Dosis / Alerta</th>
-                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                         <th class="text-center py-3">Acciones</th>
                                     {% endif %}
                                 </tr>
@@ -366,7 +391,7 @@
                                             <span class="text-muted small">--</span>
                                         {% endif %}
                                     </td>
-                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                         <td class="text-center py-3">
                                             <a href="{% url 'clientes:eliminar_vacuna' v.id %}" class="btn btn-sm btn-light border text-danger rounded-2" title="Eliminar" onclick="return confirm('¿Seguro que deseas eliminar esta vacuna?');">
                                                 <i class="bi bi-trash-fill"></i>
@@ -394,7 +419,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-capsule me-2 text-info"></i>Control Antiparasitario</h5>
                 
-                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                     <button type="button" class="btn btn-sm btn-warning text-dark fw-bold px-3 py-1.5 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalDesparasitacion">
                         <i class="bi bi-plus-lg me-1"></i> Registrar Desparasitante
                     </button>
@@ -411,7 +436,7 @@
                                     <th class="py-3">Producto / Fármaco</th>
                                     <th class="py-3">Dosis Administrada</th>
                                     <th class="py-3">Próximo Refuerzo</th>
-                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                         <th class="text-center py-3">Acciones</th>
                                     {% endif %}
                                 </tr>
@@ -431,7 +456,7 @@
                                             <span class="text-muted small">--</span>
                                         {% endif %}
                                     </td>
-                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+                                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                         <td class="text-center py-3">
                                             <a href="{% url 'clientes:eliminar_desparasitacion' d.id %}" class="btn btn-sm btn-light border text-danger rounded-2" title="Eliminar" onclick="return confirm('¿Seguro que deseas eliminar esta desparasitación?');">
                                                 <i class="bi bi-trash-fill"></i>
@@ -454,11 +479,70 @@
             </div>
         </div>
 
+        <!-- PESTAÑA 5: INTERNACIONES -->
+        <div class="tab-pane fade" id="internacionesTab" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-hospital-fill me-2 text-danger"></i>Historial de Internaciones</h5>
+
+                {% if not internacion_activa %}
+                    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
+                        <a href="{% url 'historia_clinica:internar_mascota' mascota.id %}" class="btn btn-sm btn-danger fw-bold px-3 py-1.5 rounded-3 shadow-sm">
+                            <i class="bi bi-plus-lg me-1"></i> Nuevo Ingreso
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light border-bottom">
+                                <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                                    <th class="ps-4 py-3">Ingreso</th>
+                                    <th class="py-3">Motivo</th>
+                                    <th class="py-3">Alta</th>
+                                    <th class="py-3">Estado</th>
+                                    <th class="text-end pe-4 py-3">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for i in internaciones %}
+                                <tr>
+                                    <td class="ps-4 py-3 fw-semibold text-dark">{{ i.fecha_ingreso|date:"d/m/Y H:i" }}</td>
+                                    <td class="py-3 text-secondary small">{{ i.motivo_ingreso|truncatewords:10 }}</td>
+                                    <td class="py-3 text-secondary small">{{ i.fecha_alta_real|date:"d/m/Y H:i"|default:"-" }}</td>
+                                    <td class="py-3">
+                                        <span class="badge {% if i.estado == 'INTERNADO' %}bg-danger{% elif i.estado == 'ALTA' %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                                            {{ i.get_estado_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4 py-3">
+                                        <a href="{% url 'historia_clinica:detalle_internacion' i.id %}" class="btn btn-sm btn-light border text-primary rounded-2">
+                                            <i class="bi bi-eye-fill me-1"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <i class="bi bi-hospital display-5 d-block text-secondary opacity-50 mb-2"></i>
+                                        Este paciente nunca fue internado.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <!-- MODALES PARA CARGA RÁPIDA (SOLO SI TIENE PERMISO VETERINARIO) -->
-{% if user.is_superuser or user.is_staff or user.perfil.rol == 'VETERINARIO' or 'Veterinarios' in user.groups.all %}
+{% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
 <!-- Modal Vacuna -->
 <div class="modal fade" id="modalVacuna" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

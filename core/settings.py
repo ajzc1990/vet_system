@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'apps.usuarios',
     'apps.ventas',
     'apps.dashboard',
+    'apps.portal',
 ]
 
 # Middlewares (Sin duplicados)
@@ -64,6 +65,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.usuarios.context_processors.suscripcion_activa',
             ],
         },
     },
@@ -109,6 +111,20 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configuración de Email (usado por el comando de recordatorios automáticos).
+# En desarrollo se imprime por consola; en producción se activa SMTP configurando
+# las variables de entorno EMAIL_HOST / EMAIL_HOST_USER / EMAIL_HOST_PASSWORD.
+if DEBUG or not os.getenv('EMAIL_HOST'):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST')
+    EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@vetsoft.local')
 
 # Rutas de Autenticación
 LOGIN_URL = 'login'

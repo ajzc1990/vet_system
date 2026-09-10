@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from .models import Turno, Veterinario
+from .models import Turno, Veterinario, SolicitudTurnoWeb
 from .forms import TurnoForm, VeterinarioForm
 from apps.usuarios.models import Veterinaria
 from apps.usuarios.utils import get_veterinaria_activa
@@ -165,3 +165,77 @@ def cancelar_turno(request, pk):
         return redirect('turnos:lista_turnos')
 
     return render(request, 'turnos/confirmar_cancelar_turno.html', {'turno': turno})
+
+
+# ==============================================================================
+# RESERVA DE TURNOS ONLINE (PÚBLICO, SIN LOGIN)
+# ==============================================================================
+
+def solicitar_turno_publico(request, veterinaria_id):
+    """Formulario público (sin login) para que un tutor pida un turno. Genera una
+    SolicitudTurnoWeb pendiente de revisión; el staff la convierte en Turno real."""
+    veterinaria = get_object_or_404(Veterinaria, pk=veterinaria_id, activo=True)
+
+    if request.method == 'POST':
+        nombre_tutor = request.POST.get('nombre_tutor')
+        telefono = request.POST.get('telefono')
+        nombre_mascota = request.POST.get('nombre_mascota')
+        motivo = request.POST.get('motivo')
+        fecha_deseada = request.POST.get('fecha_deseada')
+
+        if nombre_tutor and telefono and nombre_mascota and motivo and fecha_deseada:
+            SolicitudTurnoWeb.objects.create(
+                veterinaria=veterinaria,
+                nombre_tutor=nombre_tutor,
+                telefono=telefono,
+                email=request.POST.get('email') or None,
+                nombre_mascota=nombre_mascota,
+                especie=request.POST.get('especie') or None,
+                motivo=motivo,
+                fecha_deseada=fecha_deseada,
+                franja_preferida=request.POST.get('franja_preferida') or 'CUALQUIERA',
+            )
+            messages.success(
+                request,
+                f"¡Gracias {nombre_tutor}! Recibimos tu pedido de turno para {nombre_mascota}. "
+                "El equipo de la clínica se va a comunicar para confirmarlo."
+            )
+            return redirect('turnos:solicitar_turno_publico', veterinaria_id=veterinaria.id)
+        else:
+            messages.error(request, "Por favor completá todos los campos obligatorios.")
+
+    return render(request, 'turnos/solicitar_turno_publico.html', {'veterinaria': veterinaria})
+
+
+@login_required
+def lista_solicitudes_turno(request):
+    """Bandeja de pedidos de turno recibidos por el formulario público, para que el
+    staff los revise y agende el turno real (o los descarte)."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        solicitudes = SolicitudTurnoWeb.objects.all()
+    else:
+        solicitudes = SolicitudTurnoWeb.objects.filter(veterinaria=vet) if vet else SolicitudTurnoWeb.objects.none()
+
+    return render(request, 'turnos/lista_solicitudes.html', {
+        'solicitudes': solicitudes.order_by('estado', '-creado_el'),
+    })
+
+
+@login_required
+def actualizar_estado_solicitud(request, solicitud_id, nuevo_estado):
+    """Marca una solicitud de turno web como Contactada o Descartada."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        solicitud = get_object_or_404(SolicitudTurnoWeb, pk=solicitud_id)
+    else:
+        solicitud = get_object_or_404(SolicitudTurnoWeb, pk=solicitud_id, veterinaria=vet)
+
+    if nuevo_estado in dict(SolicitudTurnoWeb.ESTADOS):
+        solicitud.estado = nuevo_estado
+        solicitud.save(update_fields=['estado'])
+        messages.success(request, "Solicitud actualizada correctamente.")
+
+    return redirect('turnos:lista_solicitudes_turno')

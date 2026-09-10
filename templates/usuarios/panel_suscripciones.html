@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Suscripciones - VetSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-credit-card-2-front-fill text-primary"></i> Panel de Suscripciones
+        </h2>
+        <p class="text-muted small mb-0">Gestión de billing manual por veterinaria (tenant). Los planes y precios se administran desde el Django Admin.</p>
+    </div>
+    <a href="/admin/usuarios/plan/" class="btn btn-outline-primary fw-semibold shadow-sm">
+        <i class="bi bi-gear-fill me-1"></i> Administrar Planes
+    </a>
+</div>
+
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                        <th class="ps-4 py-3">Veterinaria</th>
+                        <th class="py-3">Plan</th>
+                        <th class="py-3">Estado</th>
+                        <th class="py-3">Vencimiento</th>
+                        <th class="py-3">Último Pago</th>
+                        <th class="text-end pe-4 py-3">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in suscripciones %}
+                    <tr>
+                        <td class="ps-4 py-3 fw-bold text-dark">{{ s.veterinaria.nombre }}</td>
+                        <td class="py-3 text-secondary small">{{ s.plan.nombre }}</td>
+                        <td class="py-3">
+                            <span class="badge {% if s.esta_vencida %}bg-danger{% elif s.estado == 'PRUEBA' %}bg-info{% else %}bg-success{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                                {% if s.esta_vencida %}VENCIDA{% else %}{{ s.get_estado_display }}{% endif %}
+                            </span>
+                        </td>
+                        <td class="py-3 text-secondary small">{{ s.fecha_vencimiento|date:"d/m/Y" }}</td>
+                        <td class="py-3 text-secondary small">{{ s.ultimo_pago_registrado|date:"d/m/Y"|default:"-" }}</td>
+                        <td class="text-end pe-4 py-3">
+                            <form method="post" action="{% url 'usuarios:extender_suscripcion' s.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-success fw-bold rounded-2 px-3" title="Registrar pago y extender 30 días">
+                                    <i class="bi bi-plus-circle-fill me-1"></i> +30 días
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-5 text-muted">No hay suscripciones registradas todavía.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if veterinarias_sin_suscripcion %}
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4">
+        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-info-circle-fill text-secondary me-2"></i>Veterinarias sin plan de facturación asignado</h6>
+        <p class="small text-muted mb-2">Estas veterinarias no tienen una Suscripción creada (no cargan ningún banner de vencimiento). Se les puede asignar una desde el Django Admin.</p>
+        <div class="d-flex flex-wrap gap-2">
+            {% for v in veterinarias_sin_suscripcion %}
+            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">{{ v.nombre }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

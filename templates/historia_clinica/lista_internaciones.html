@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}Sala de Internación - VetSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-hospital-fill text-primary"></i> Sala de Internación
+        </h2>
+        <p class="text-muted small mb-0">Pacientes hospitalizados y seguimiento de evoluciones en tiempo real.</p>
+    </div>
+    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-3 py-2 rounded-pill fw-bold fs-6">
+        <i class="bi bi-clipboard2-pulse-fill me-1"></i> {{ internaciones_activas.count }} internado(s) activo(s)
+    </span>
+</div>
+
+<!-- Pacientes Internados Actualmente -->
+<div class="row g-3 mb-5">
+    {% for i in internaciones_activas %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-md rounded-4 overflow-hidden border-start border-danger border-4">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0">🐾 {{ i.mascota.nombre }}</h5>
+                        <span class="small text-muted">{{ i.mascota.cliente.apellido }}, {{ i.mascota.cliente.nombre }}</span>
+                    </div>
+                    {% if i.box %}
+                    <span class="badge bg-dark bg-opacity-75 text-white px-2.5 py-1 rounded-pill fw-bold extra-small">
+                        <i class="bi bi-door-closed-fill me-1"></i>{{ i.box }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                <p class="small text-secondary mb-3 flex-grow-1">
+                    <strong class="text-dark">Motivo:</strong> {{ i.motivo_ingreso|truncatewords:18 }}
+                </p>
+
+                <div class="row g-2 mb-3 bg-light p-2 rounded-3 border text-center">
+                    <div class="col-6">
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Días Internado</small>
+                        <span class="fw-bold text-dark">{{ i.dias_internado }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Ingreso</small>
+                        <span class="fw-bold text-dark small">{{ i.fecha_ingreso|date:"d/m H:i" }}</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center border-top pt-3 mt-auto">
+                    <span class="small text-secondary fw-medium">
+                        <i class="bi bi-person-badge me-1 text-primary"></i>Dr(a). {{ i.veterinario_responsable.apellido|default:"Sin asignar" }}
+                    </span>
+                    <a href="{% url 'historia_clinica:detalle_internacion' i.id %}" class="btn btn-sm btn-primary fw-bold rounded-2 px-3 shadow-sm">
+                        <i class="bi bi-eye-fill me-1"></i> Ver Seguimiento
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+            <div class="py-4">
+                <i class="bi bi-hospital display-4 text-secondary opacity-50 d-block mb-3"></i>
+                <h6 class="fw-bold text-dark">No hay pacientes internados en este momento</h6>
+                <p class="small text-muted mb-0">Los ingresos a internación se registran desde la Historia Clínica de cada mascota.</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Historial Reciente -->
+<h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-clock-history text-secondary"></i> Historial Reciente de Altas
+</h5>
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                        <th class="ps-4 py-3">Paciente</th>
+                        <th class="py-3">Ingreso</th>
+                        <th class="py-3">Alta</th>
+                        <th class="py-3">Estado</th>
+                        <th class="py-3 text-end pe-4">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in internaciones_historial %}
+                    <tr>
+                        <td class="ps-4 py-3 fw-bold text-dark">{{ i.mascota.nombre }} <span class="fw-normal text-muted small">({{ i.mascota.cliente.apellido }})</span></td>
+                        <td class="py-3 text-secondary small">{{ i.fecha_ingreso|date:"d/m/Y H:i" }}</td>
+                        <td class="py-3 text-secondary small">{{ i.fecha_alta_real|date:"d/m/Y H:i"|default:"-" }}</td>
+                        <td class="py-3">
+                            <span class="badge {% if i.estado == 'ALTA' %}bg-success bg-opacity-15 text-success{% elif i.estado == 'FALLECIDO' %}bg-secondary bg-opacity-15 text-secondary{% else %}bg-warning bg-opacity-15 text-warning-emphasis{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
+                                {{ i.get_estado_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 text-end pe-4">
+                            <a href="{% url 'historia_clinica:detalle_internacion' i.id %}" class="btn btn-sm btn-light border text-primary rounded-2">
+                                <i class="bi bi-file-earmark-text-fill"></i> Ver Informe
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-5 text-muted">Aún no hay altas registradas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

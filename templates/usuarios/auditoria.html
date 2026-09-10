@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Auditoría del Sistema - VetSoft{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-shield-lock-fill text-primary"></i> Auditoría del Sistema
+        </h2>
+        <p class="text-muted small mb-0">Registro de acciones sensibles: altas, bajas, inicios de sesión y aprobaciones de acceso.</p>
+    </div>
+</div>
+
+<!-- Filtro por Acción -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{% url 'usuarios:auditoria' %}" class="btn btn-sm {% if not accion_filtro %}btn-primary{% else %}btn-light border{% endif %} rounded-pill px-3 fw-semibold">Todas</a>
+    {% for valor, etiqueta in acciones %}
+        <a href="{% url 'usuarios:auditoria' %}?accion={{ valor }}" class="btn btn-sm {% if accion_filtro == valor %}btn-primary{% else %}btn-light border{% endif %} rounded-pill px-3 fw-semibold">{{ etiqueta }}</a>
+    {% endfor %}
+</div>
+
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                        <th class="ps-4 py-3">Fecha</th>
+                        <th class="py-3">Acción</th>
+                        <th class="py-3">Usuario</th>
+                        <th class="py-3">Veterinaria</th>
+                        <th class="py-3">Descripción</th>
+                        <th class="py-3">IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in registros %}
+                    <tr>
+                        <td class="ps-4 py-3 text-secondary small">{{ r.fecha|date:"d/m/Y H:i" }}</td>
+                        <td class="py-3">
+                            <span class="badge {% if r.accion == 'ELIMINAR' %}bg-danger{% elif r.accion == 'CREAR' %}bg-success{% elif r.accion == 'LOGIN_FALLIDO' %}bg-warning text-dark{% elif r.accion == 'LOGIN' %}bg-primary{% else %}bg-secondary{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                                {{ r.get_accion_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 fw-semibold text-dark small">{{ r.usuario.username|default:"-" }}</td>
+                        <td class="py-3 text-secondary small">{{ r.veterinaria.nombre|default:"-" }}</td>
+                        <td class="py-3 text-secondary small">{{ r.descripcion }}</td>
+                        <td class="py-3 text-muted extra-small">{{ r.ip_address|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-5 text-muted">No hay registros de auditoría todavía.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% if registros.count == 200 %}
+<p class="text-muted small mt-2 text-center">Se muestran los últimos 200 registros.</p>
+{% endif %}
+{% endblock %}

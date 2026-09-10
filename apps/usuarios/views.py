@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import logout
+from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
+from django.urls import reverse
+from django.utils.crypto import get_random_string
 from django.db.models import F, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -11,7 +14,7 @@ from apps.inventario.models import Producto
 from apps.clientes.models import Cliente, Mascota
 from apps.turnos.models import Turno
 from apps.historia_clinica.models import RegistroVacuna
-from .models import PerfilUsuario, Veterinaria, MensajeContacto
+from .models import PerfilUsuario, Veterinaria, MensajeContacto, RegistroAuditoria, Plan, Suscripcion
 from .forms import RegistroForm, ConfigVeterinariaForm
 from .utils import get_veterinaria_activa
 
@@ -101,22 +104,32 @@ class CustomLoginView(LoginView):
 
     def form_valid(self, form):
         user = form.get_user()
-        
+
         # Superusuarios tienen libre acceso
         if user.is_superuser:
             return super().form_valid(form)
 
-        # Control de aprobación para usuarios normales
+        # Los clientes con acceso al Portal (creado por el staff) no requieren
+        # aprobación adicional: ya fueron validados al momento de crear el acceso.
+        if hasattr(user, 'cliente_portal'):
+            return super().form_valid(form)
+
+        # Control de aprobación para usuarios normales (staff de la veterinaria)
         perfil = getattr(user, 'perfil', None)
         if not perfil or not perfil.is_approved:
             logout(self.request)
             messages.error(
-                self.request, 
+                self.request,
                 "Tu cuenta aún no ha sido aprobada por el administrador/superusuario. Intenta nuevamente más tarde."
             )
             return redirect('login')
 
         return super().form_valid(form)
+
+    def get_success_url(self):
+        if hasattr(self.request.user, 'cliente_portal'):
+            return reverse('portal:home')
+        return super().get_success_url()
 
 
 # ==============================================================================
@@ -211,3 +224,89 @@ def configurar_veterinaria(request):
         form = ConfigVeterinariaForm(instance=vet)
 
     return render(request, 'usuarios/config_veterinaria.html', {'form': form, 'veterinaria': vet})
+
+
+# ==============================================================================
+# SUSCRIPCIONES / BILLING
+# ==============================================================================
+
+@login_required
+def mi_suscripcion(request):
+    """Muestra a la veterinaria activa el estado de su propia suscripción/plan contratado."""
+    vet = get_veterinaria_activa(request)
+
+    if not vet:
+        messages.error(request, "No tenés una veterinaria asociada para consultar la suscripción.")
+        return redirect('dashboard:index')
+
+    suscripcion = getattr(vet, 'suscripcion', None)
+    return render(request, 'usuarios/mi_suscripcion.html', {
+        'veterinaria': vet,
+        'suscripcion': suscripcion,
+    })
+
+
+@login_required
+def panel_suscripciones(request):
+    """Panel de gestión de suscripciones de todos los tenants, solo para superusuarios."""
+    if not request.user.is_superuser:
+        messages.error(request, "No tenés permisos para acceder al panel de suscripciones.")
+        return redirect('dashboard:index')
+
+    suscripciones = Suscripcion.objects.select_related('veterinaria', 'plan').all()
+    veterinarias_sin_suscripcion = Veterinaria.objects.filter(suscripcion__isnull=True)
+
+    return render(request, 'usuarios/panel_suscripciones.html', {
+        'suscripciones': suscripciones,
+        'veterinarias_sin_suscripcion': veterinarias_sin_suscripcion,
+    })
+
+
+@login_required
+def extender_suscripcion(request, suscripcion_id):
+    """Extiende 30 días la suscripción y la marca como ACTIVA (registro manual de pago)."""
+    if not request.user.is_superuser:
+        messages.error(request, "No tenés permisos para esta acción.")
+        return redirect('dashboard:index')
+
+    suscripcion = get_object_or_404(Suscripcion, pk=suscripcion_id)
+
+    if request.method == 'POST':
+        base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= timezone.now().date() else timezone.now().date()
+        suscripcion.fecha_vencimiento = base + timedelta(days=30)
+        suscripcion.estado = 'ACTIVA'
+        suscripcion.ultimo_pago_registrado = timezone.now().date()
+        suscripcion.save()
+
+        messages.success(request, f"Suscripción de {suscripcion.veterinaria.nombre} extendida hasta el {suscripcion.fecha_vencimiento.strftime('%d/%m/%Y')}.")
+
+    return redirect('usuarios:panel_suscripciones')
+
+
+# ==============================================================================
+# AUDITORÍA
+# ==============================================================================
+
+@login_required
+def auditoria_view(request):
+    """Bitácora de acciones relevantes del sistema. Un ADMIN de veterinaria solo ve
+    los eventos de su propio tenant; el superusuario ve todo el sistema."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser:
+        registros = RegistroAuditoria.objects.select_related('usuario', 'veterinaria').all()
+    elif vet and getattr(request.user, 'perfil', None) and request.user.perfil.rol == 'ADMIN':
+        registros = RegistroAuditoria.objects.filter(veterinaria=vet).select_related('usuario', 'veterinaria')
+    else:
+        messages.error(request, "Solo el administrador de la veterinaria puede consultar la auditoría.")
+        return redirect('dashboard:index')
+
+    accion_filtro = request.GET.get('accion')
+    if accion_filtro:
+        registros = registros.filter(accion=accion_filtro)
+
+    return render(request, 'usuarios/auditoria.html', {
+        'registros': registros[:200],
+        'acciones': RegistroAuditoria.ACCIONES,
+        'accion_filtro': accion_filtro,
+    })

@@ -19,4 +19,13 @@ urlpatterns = [
     # Estudios Médicos / Adjuntos
     path('mascota/<int:mascota_id>/subir-estudio/', views.subir_estudio, name='subir_estudio'),
     path('estudio/<int:estudio_id>/eliminar/', views.eliminar_estudio, name='eliminar_estudio'),
+
+    # Internación / Hospitalización
+    path('internaciones/', views.lista_internaciones, name='lista_internaciones'),
+    path('mascota/<int:mascota_id>/internar/', views.internar_mascota, name='internar_mascota'),
+    path('internacion/<int:internacion_id>/', views.detalle_internacion, name='detalle_internacion'),
+    path('internacion/<int:internacion_id>/nueva-evolucion/', views.nueva_evolucion_internacion, name='nueva_evolucion_internacion'),
+    path('internacion/<int:internacion_id>/dar-alta/', views.dar_alta_internacion, name='dar_alta_internacion'),
+    path('internacion/<int:internacion_id>/eliminar/', views.eliminar_internacion, name='eliminar_internacion'),
+    path('internacion/<int:internacion_id>/informe-pdf/', views.descargar_informe_internacion_pdf, name='descargar_informe_internacion_pdf'),
 ]

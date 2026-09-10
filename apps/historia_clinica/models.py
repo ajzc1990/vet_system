@@ -267,6 +267,134 @@ class EstudioMedico(models.Model):
         return False
 
 
+class Internacion(models.Model):
+    ESTADOS = [
+        ('INTERNADO', 'Internado / En Curso'),
+        ('ALTA', 'Alta Médica'),
+        ('FALLECIDO', 'Fallecimiento'),
+        ('DERIVADO', 'Derivado / Trasladado'),
+    ]
+
+    veterinaria = models.ForeignKey(
+        Veterinaria,
+        on_delete=models.CASCADE,
+        related_name='internaciones',
+        null=True,
+        blank=True,
+        verbose_name="Veterinaria"
+    )
+    mascota = models.ForeignKey(
+        Mascota,
+        on_delete=models.CASCADE,
+        related_name='internaciones',
+        verbose_name="Mascota"
+    )
+    veterinario_responsable = models.ForeignKey(
+        Veterinario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='internaciones_a_cargo',
+        verbose_name="Veterinario Responsable"
+    )
+    consulta_origen = models.ForeignKey(
+        ConsultaMedica,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='internacion_derivada',
+        verbose_name="Consulta que Origina el Ingreso"
+    )
+
+    box = models.CharField(max_length=50, blank=True, null=True, verbose_name="Jaula / Box")
+    motivo_ingreso = models.TextField(verbose_name="Motivo de Internación")
+    diagnostico_ingreso = models.TextField(blank=True, null=True, verbose_name="Diagnóstico al Ingreso")
+    dieta_indicaciones = models.TextField(blank=True, null=True, verbose_name="Dieta e Indicaciones Generales")
+
+    fecha_ingreso = models.DateTimeField(default=timezone.now, verbose_name="Fecha y Hora de Ingreso")
+    fecha_alta_estimada = models.DateField(blank=True, null=True, verbose_name="Alta Estimada")
+    fecha_alta_real = models.DateTimeField(blank=True, null=True, verbose_name="Fecha y Hora de Alta")
+
+    estado = models.CharField(max_length=15, choices=ESTADOS, default='INTERNADO', verbose_name="Estado")
+    resumen_alta = models.TextField(blank=True, null=True, verbose_name="Resumen / Epicrisis de Alta")
+
+    costo_dia_estadia = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Costo por Día de Estadía")
+
+    creado_el = models.DateTimeField(auto_now_add=True)
+    actualizado_el = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Internación"
+        verbose_name_plural = "Internaciones"
+        ordering = ['-fecha_ingreso']
+
+    def __str__(self):
+        return f"Internación de {self.mascota.nombre} ({self.fecha_ingreso.strftime('%d/%m/%Y')}) [{self.get_estado_display()}]"
+
+    def save(self, *args, **kwargs):
+        if not self.veterinaria_id and self.mascota and hasattr(self.mascota, 'cliente') and self.mascota.cliente:
+            self.veterinaria = self.mascota.cliente.veterinaria
+        super().save(*args, **kwargs)
+
+    @property
+    def esta_activa(self):
+        return self.estado == 'INTERNADO'
+
+    @property
+    def dias_internado(self):
+        fin = self.fecha_alta_real or timezone.now()
+        dias = (fin.date() - self.fecha_ingreso.date()).days
+        return max(dias, 1)
+
+    @property
+    def costo_estimado_estadia(self):
+        return self.dias_internado * self.costo_dia_estadia
+
+
+class EvolucionInternacion(models.Model):
+    ESTADO_GENERAL = [
+        ('ESTABLE', 'Estable'),
+        ('MEJORANDO', 'Mejorando'),
+        ('SIN_CAMBIOS', 'Sin Cambios'),
+        ('EMPEORANDO', 'Empeorando'),
+        ('CRITICO', 'Crítico'),
+    ]
+
+    internacion = models.ForeignKey(
+        Internacion,
+        on_delete=models.CASCADE,
+        related_name='evoluciones',
+        verbose_name="Internación"
+    )
+    veterinario = models.ForeignKey(
+        Veterinario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='evoluciones_registradas',
+        verbose_name="Veterinario"
+    )
+
+    fecha_hora = models.DateTimeField(default=timezone.now, verbose_name="Fecha y Hora")
+    estado_general = models.CharField(max_length=15, choices=ESTADO_GENERAL, default='ESTABLE', verbose_name="Estado General del Paciente")
+
+    peso_kg = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True, verbose_name="Peso (kg)")
+    temperatura_c = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True, verbose_name="Temp (°C)")
+    frecuencia_cardiaca = models.IntegerField(blank=True, null=True, verbose_name="FC (LPM)")
+    frecuencia_respiratoria = models.IntegerField(blank=True, null=True, verbose_name="FR (RPM)")
+
+    notas = models.TextField(verbose_name="Evolución Clínica / Novedades")
+    medicacion_administrada = models.CharField(max_length=255, blank=True, null=True, verbose_name="Medicación / Procedimiento Administrado")
+
+    class Meta:
+        verbose_name = "Evolución de Internación"
+        verbose_name_plural = "Evoluciones de Internación"
+        ordering = ['-fecha_hora']
+
+    def __str__(self):
+        return f"Evolución {self.fecha_hora.strftime('%d/%m/%Y %H:%M')} - {self.internacion.mascota.nombre}"
+
+
 # ==============================================================================
 # SEÑALES DE LIMPIEZA AUTOMÁTICA DE ARCHIVOS FÍSICOS (MEDIA CLEANUP)
 # ==============================================================================

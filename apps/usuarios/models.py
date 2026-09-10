@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 
 class Veterinaria(models.Model):
@@ -65,3 +66,125 @@ class MensajeContacto(models.Model):
     def __str__(self):
         estado = "Leído" if self.leido else "NUEVO"
         return f"[{estado}] {self.nombre} ({self.email}) - {self.fecha_envio.strftime('%d/%m/%Y %H:%M')}"
+
+
+# ==============================================================================
+# AUDITORÍA (REGISTRO DE ACCIONES)
+# ==============================================================================
+
+class RegistroAuditoria(models.Model):
+    ACCIONES = [
+        ('CREAR', 'Creación'),
+        ('EDITAR', 'Edición'),
+        ('ELIMINAR', 'Eliminación'),
+        ('LOGIN', 'Inicio de Sesión'),
+        ('LOGIN_FALLIDO', 'Intento de Login Fallido'),
+        ('LOGOUT', 'Cierre de Sesión'),
+        ('APROBACION', 'Aprobación de Acceso'),
+    ]
+
+    veterinaria = models.ForeignKey(
+        Veterinaria,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='auditorias',
+        verbose_name="Veterinaria"
+    )
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='acciones_auditoria',
+        verbose_name="Usuario"
+    )
+    accion = models.CharField(max_length=15, choices=ACCIONES, verbose_name="Acción")
+    modelo = models.CharField(max_length=100, blank=True, null=True, verbose_name="Entidad Afectada")
+    objeto_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="ID del Registro")
+    descripcion = models.CharField(max_length=255, verbose_name="Descripción")
+    ip_address = models.GenericIPAddressField(blank=True, null=True, verbose_name="Dirección IP")
+    fecha = models.DateTimeField(default=timezone.now, verbose_name="Fecha y Hora")
+
+    class Meta:
+        verbose_name = "Registro de Auditoría"
+        verbose_name_plural = "Registros de Auditoría"
+        ordering = ['-fecha']
+
+    def __str__(self):
+        quien = self.usuario.username if self.usuario else "Anónimo"
+        return f"[{self.get_accion_display()}] {quien} - {self.descripcion} ({self.fecha.strftime('%d/%m/%Y %H:%M')})"
+
+
+# ==============================================================================
+# PLANES Y SUSCRIPCIONES (BILLING)
+# ==============================================================================
+
+class Plan(models.Model):
+    nombre = models.CharField(max_length=50, verbose_name="Nombre del Plan")
+    precio_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Precio Mensual")
+    max_usuarios = models.PositiveIntegerField(default=3, verbose_name="Máximo de Usuarios")
+    max_mascotas = models.PositiveIntegerField(default=100, verbose_name="Máximo de Pacientes Activos")
+    permite_internacion = models.BooleanField(default=True, verbose_name="¿Incluye módulo de Internación?")
+    permite_multiples_veterinarios = models.BooleanField(default=True, verbose_name="¿Permite múltiples veterinarios?")
+    descripcion = models.TextField(blank=True, null=True, verbose_name="Descripción / Beneficios")
+    activo = models.BooleanField(default=True, verbose_name="¿Plan disponible para contratar?")
+    orden = models.PositiveIntegerField(default=0, verbose_name="Orden de Visualización")
+
+    class Meta:
+        verbose_name = "Plan"
+        verbose_name_plural = "Planes"
+        ordering = ['orden', 'precio_mensual']
+
+    def __str__(self):
+        return f"{self.nombre} (${self.precio_mensual}/mes)"
+
+
+class Suscripcion(models.Model):
+    ESTADOS = [
+        ('ACTIVA', 'Activa'),
+        ('VENCIDA', 'Vencida'),
+        ('CANCELADA', 'Cancelada'),
+        ('PRUEBA', 'Período de Prueba'),
+    ]
+
+    veterinaria = models.OneToOneField(
+        Veterinaria,
+        on_delete=models.CASCADE,
+        related_name='suscripcion',
+        verbose_name="Veterinaria"
+    )
+    plan = models.ForeignKey(
+        Plan,
+        on_delete=models.PROTECT,
+        related_name='suscripciones',
+        verbose_name="Plan Contratado"
+    )
+    estado = models.CharField(max_length=10, choices=ESTADOS, default='PRUEBA', verbose_name="Estado")
+    fecha_inicio = models.DateField(default=timezone.now, verbose_name="Fecha de Inicio")
+    fecha_vencimiento = models.DateField(verbose_name="Próximo Vencimiento / Renovación")
+    ultimo_pago_registrado = models.DateField(blank=True, null=True, verbose_name="Fecha del Último Pago Registrado")
+    notas = models.TextField(blank=True, null=True, verbose_name="Notas Internas de Facturación")
+
+    creado_el = models.DateTimeField(auto_now_add=True)
+    actualizado_el = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Suscripción"
+        verbose_name_plural = "Suscripciones"
+        ordering = ['fecha_vencimiento']
+
+    def __str__(self):
+        return f"Suscripción de {self.veterinaria.nombre} - {self.plan.nombre} [{self.get_estado_display()}]"
+
+    @property
+    def dias_para_vencer(self):
+        return (self.fecha_vencimiento - timezone.now().date()).days
+
+    @property
+    def esta_vencida(self):
+        return self.estado != 'CANCELADA' and self.fecha_vencimiento < timezone.now().date()
+
+    @property
+    def proxima_a_vencer(self):
+        return not self.esta_vencida and 0 <= self.dias_para_vencer <= 7

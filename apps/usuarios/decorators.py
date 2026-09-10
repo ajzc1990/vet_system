@@ -20,7 +20,7 @@ def es_veterinario_o_admin(user):
         return True
 
     # Verificación por perfil de usuario
-    if hasattr(user, 'perfil') and getattr(user.perfil, 'rol', None) in ['VETERINARIO', 'ADMIN']:
+    if hasattr(user, 'perfil') and getattr(user.perfil, 'rol', None) in ['VET', 'ADMIN']:
         return True
 
     return False

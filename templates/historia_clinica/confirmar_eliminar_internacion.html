@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Internación - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-danger text-white py-3 px-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                    <h5 class="fw-extrabold mb-0 fs-6 text-uppercase tracking-wider">Confirmar Eliminación</h5>
+                </div>
+
+                <div class="card-body text-center p-4 p-md-5">
+                    <div class="mb-3">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px;">
+                            <i class="bi bi-trash3-fill fs-1"></i>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-2">
+                        ¿Eliminar la internación de <span class="text-danger">{{ internacion.mascota.nombre }}</span>?
+                    </h5>
+                    <p class="text-muted small mb-4">
+                        Se eliminará permanentemente este registro de internación junto con todas sus evoluciones asociadas. Esta acción no se puede deshacer.
+                    </p>
+
+                    <div class="p-3 bg-light rounded-3 border text-start mb-4 shadow-sm">
+                        <div class="row g-2 extra-small text-secondary">
+                            <div class="col-6">
+                                <span class="d-block text-muted">Fecha de Ingreso:</span>
+                                <strong class="text-dark">{{ internacion.fecha_ingreso|date:"d/m/Y H:i" }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <span class="d-block text-muted">Estado:</span>
+                                <strong class="text-dark">{{ internacion.get_estado_display }}</strong>
+                            </div>
+                            <div class="col-12 pt-2 border-top">
+                                <span class="d-block text-muted">Paciente / Mascota:</span>
+                                <strong class="text-dark">{{ internacion.mascota.nombre }}</strong>
+                                <span class="text-muted">({{ internacion.mascota.cliente.nombre }} {{ internacion.mascota.cliente.apellido }})</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post" class="d-flex justify-content-center gap-2 pt-2">
+                        {% csrf_token %}
+                        <a href="{% url 'historia_clinica:detalle_internacion' internacion.id %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger px-4 fw-bold rounded-3 shadow">
+                            <i class="bi bi-trash-fill me-1"></i> Sí, Eliminar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

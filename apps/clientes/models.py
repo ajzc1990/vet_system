@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from apps.usuarios.models import Veterinaria
 
@@ -24,6 +25,14 @@ class Cliente(models.Model):
     email = models.EmailField(blank=True, null=True)
     direccion = models.CharField(max_length=255, blank=True, null=True, verbose_name="Dirección")
     activo = models.BooleanField(default=True, verbose_name="Cliente Activo")
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='cliente_portal',
+        verbose_name="Acceso al Portal del Cliente"
+    )
     creado_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:

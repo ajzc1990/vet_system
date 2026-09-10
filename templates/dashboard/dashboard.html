@@ -10,6 +10,9 @@
     </div>
     
     <div class="d-flex gap-2">
+        <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-warning text-dark fw-semibold shadow-sm">
+            <i class="bi bi-bell-fill me-1"></i> Recordatorios
+        </a>
         <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary fw-semibold shadow-sm">
             <i class="bi bi-calendar-plus me-1"></i> Agendar Turno
         </a>
@@ -51,6 +54,24 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Pacientes Internados -->
+    <div class="col-md-3 col-sm-6">
+        <a href="{% url 'historia_clinica:lista_internaciones' %}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-4 {% if cant_internados > 0 %}border-danger{% else %}border-secondary{% endif %}">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted small fw-semibold">Pacientes Internados</div>
+                        <div class="fs-3 fw-bold text-dark">{{ cant_internados }}</div>
+                        <div class="small {% if cant_internados > 0 %}text-danger{% else %}text-secondary{% endif %} fw-medium">Sala de Internación</div>
+                    </div>
+                    <div class="{% if cant_internados > 0 %}bg-danger{% else %}bg-secondary{% endif %} bg-opacity-10 {% if cant_internados > 0 %}text-danger{% else %}text-secondary{% endif %} p-3 rounded-circle">
+                        <i class="bi bi-hospital-fill fs-3"></i>
+                    </div>
+                </div>
+            </div>
+        </a>
     </div>
 
     <!-- Alertas de Stock Mínimo -->

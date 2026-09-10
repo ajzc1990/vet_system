@@ -17,4 +17,9 @@ urlpatterns = [
     
     # Cambio rápido de estado desde la interfaz
     path('<int:pk>/estado/<str:nuevo_estado>/', views.cambiar_estado_turno, name='cambiar_estado'),
+
+    # Reserva de Turnos Online (Público)
+    path('reservar/<int:veterinaria_id>/', views.solicitar_turno_publico, name='solicitar_turno_publico'),
+    path('solicitudes/', views.lista_solicitudes_turno, name='lista_solicitudes_turno'),
+    path('solicitudes/<int:solicitud_id>/estado/<str:nuevo_estado>/', views.actualizar_estado_solicitud, name='actualizar_estado_solicitud'),
 ]

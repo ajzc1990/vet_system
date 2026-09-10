@@ -139,6 +139,18 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <!-- Navegación Principal con detección de app activa -->
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
+                    {% if user.cliente_portal %}
+                        <li class="nav-item">
+                            <a class="nav-link-custom {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'portal:home' %}">
+                                <i class="bi bi-house-heart"></i> Mis Mascotas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link-custom {% if request.resolver_match.url_name == 'turnos' %}active{% endif %}" href="{% url 'portal:turnos' %}">
+                                <i class="bi bi-calendar-event"></i> Mis Turnos
+                            </a>
+                        </li>
+                    {% else %}
                     <li class="nav-item">
                         <a class="nav-link-custom {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
                             <i class="bi bi-speedometer2"></i> Dashboard
@@ -155,6 +167,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link-custom {% if request.resolver_match.url_name == 'lista_internaciones' or request.resolver_match.url_name == 'detalle_internacion' %}active{% endif %}" href="{% url 'historia_clinica:lista_internaciones' %}">
+                            <i class="bi bi-hospital"></i> Internación
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link-custom {% if request.resolver_match.app_name == 'inventario' %}active{% endif %}" href="{% url 'inventario:lista_productos' %}">
                             <i class="bi bi-box-seam"></i> Inventario
                         </a>
@@ -164,15 +181,19 @@
                             <i class="bi bi-cart-check"></i> Ventas
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
 
                 <!-- Acceso Rápido y Perfil/Tenant -->
                 <div class="d-flex align-items-center gap-2 flex-wrap">
+                    {% if not user.cliente_portal %}
                     <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
                     </a>
+                    {% endif %}
 
                     {% if user.is_authenticated %}
+                        {% if not user.cliente_portal %}
                         <!-- Tenant Badge -->
                         <span class="badge bg-light text-primary border px-3 py-2 rounded-pill small fw-bold d-inline-flex align-items-center gap-1">
                             <i class="bi bi-building text-secondary"></i>
@@ -184,6 +205,7 @@
                                 Súper Admin
                             {% endif %}
                         </span>
+                        {% endif %}
 
                         <!-- User Profile Dropdown -->
                         <div class="dropdown">
@@ -198,13 +220,32 @@
                                 <li class="px-3 py-2 border-bottom mb-1">
                                     <div class="fw-bold text-dark small">{{ user.get_full_name|default:user.username }}</div>
                                     <div class="text-muted extra-small" style="font-size: 0.75rem;">
-                                        {% if user.is_superuser %}Súper Administrador{% elif user.perfil %}{{ user.perfil.get_rol_display }}{% else %}Usuario{% endif %}
+                                        {% if user.is_superuser %}Súper Administrador{% elif user.perfil %}{{ user.perfil.get_rol_display }}{% elif user.cliente_portal %}Cliente / Tutor{% else %}Usuario{% endif %}
                                     </div>
                                 </li>
                                 {% if user.perfil and user.perfil.veterinaria %}
                                     <li>
                                         <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:configurar_veterinaria' %}">
                                             <i class="bi bi-gear me-2"></i> Configurar Clínica
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if user.is_superuser or user.perfil.rol == 'ADMIN' %}
+                                    <li>
+                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:mi_suscripcion' %}">
+                                            <i class="bi bi-credit-card-2-front me-2"></i> Mi Suscripción
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:auditoria' %}">
+                                            <i class="bi bi-shield-lock me-2"></i> Auditoría
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if user.is_superuser %}
+                                    <li>
+                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:panel_suscripciones' %}">
+                                            <i class="bi bi-building-gear me-2"></i> Panel de Suscripciones
                                         </a>
                                     </li>
                                 {% endif %}
@@ -229,6 +270,22 @@
 
     <!-- Contenedor Principal y Alertas Flash -->
     <div class="container main-container">
+        {% if suscripcion and suscripcion.esta_vencida %}
+        <div class="alert alert-danger border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} venció el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}. Regularizá el pago para evitar interrupciones del servicio.</span>
+            {% if user.perfil.rol == 'ADMIN' or user.is_superuser %}
+            <a href="{% url 'usuarios:mi_suscripcion' %}" class="btn btn-sm btn-danger fw-bold rounded-pill px-3">Ver Detalle</a>
+            {% endif %}
+        </div>
+        {% elif suscripcion and suscripcion.proxima_a_vencer %}
+        <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="fw-bold"><i class="bi bi-clock-history me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} vence el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }} ({{ suscripcion.dias_para_vencer }} día{{ suscripcion.dias_para_vencer|pluralize }}).</span>
+            {% if user.perfil.rol == 'ADMIN' or user.is_superuser %}
+            <a href="{% url 'usuarios:mi_suscripcion' %}" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3">Ver Detalle</a>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show shadow-sm border-0 rounded-3 mb-4" role="alert">

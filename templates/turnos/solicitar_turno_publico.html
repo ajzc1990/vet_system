@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar Turno - {{ veterinaria.nombre }}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d6efd 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 2.5rem 0;
+        }
+        .booking-card { border-radius: 24px; }
+        .clinic-logo { width: 64px; height: 64px; object-fit: contain; border-radius: 14px; background: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 640px;">
+        <div class="card border-0 shadow-lg booking-card overflow-hidden">
+            <div class="card-body p-4 p-md-5">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    {% if veterinaria.logo %}
+                        <img src="{{ veterinaria.logo.url }}" class="clinic-logo p-1 border" alt="{{ veterinaria.nombre }}">
+                    {% else %}
+                        <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center clinic-logo">
+                            <i class="bi bi-heart-pulse-fill fs-3"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h4 class="fw-extrabold text-dark mb-0">{{ veterinaria.nombre }}</h4>
+                        <p class="text-muted small mb-0">Reservá tu turno online</p>
+                    </div>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} border-0 rounded-3 shadow-sm">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Tu Nombre y Apellido *</label>
+                            <input type="text" name="nombre_tutor" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Teléfono / WhatsApp *</label>
+                            <input type="text" name="telefono" class="form-control" placeholder="Ej: 381 1234567" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Correo Electrónico</label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Especie</label>
+                            <input type="text" name="especie" class="form-control" placeholder="Ej: Perro, Gato">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Nombre de tu Mascota *</label>
+                            <input type="text" name="nombre_mascota" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Fecha Deseada *</label>
+                            <input type="date" name="fecha_deseada" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Horario Preferido</label>
+                            <select name="franja_preferida" class="form-select">
+                                <option value="CUALQUIERA">Cualquier horario</option>
+                                <option value="MANANA">Mañana</option>
+                                <option value="TARDE">Tarde</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small">Motivo de la Consulta *</label>
+                            <textarea name="motivo" class="form-control" rows="3" placeholder="Contanos brevemente qué le pasa a tu mascota..." required></textarea>
+                        </div>
+                        <div class="col-12 text-center mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-3 shadow">
+                                <i class="bi bi-calendar-check-fill me-2"></i> Solicitar Turno
+                            </button>
+                            <p class="text-muted small mt-3 mb-0">La clínica se comunicará para confirmar día y horario.</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

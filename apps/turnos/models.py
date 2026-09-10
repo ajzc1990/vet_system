@@ -93,3 +93,53 @@ class Turno(models.Model):
     def es_pasado(self):
         """Devuelve True si la fecha/hora del turno ya transcurrió."""
         return self.fecha_hora < timezone.now()
+
+
+class SolicitudTurnoWeb(models.Model):
+    """Pedido de turno enviado desde el formulario público de reserva online (sin necesidad
+    de que el tutor tenga cuenta). El staff lo revisa y agenda el Turno real manualmente,
+    evitando escribir datos de clientes/mascotas no validados directamente en el sistema."""
+
+    FRANJAS = [
+        ('MANANA', 'Mañana'),
+        ('TARDE', 'Tarde'),
+        ('CUALQUIERA', 'Cualquier horario'),
+    ]
+    ESTADOS = [
+        ('PENDIENTE', 'Pendiente de Revisión'),
+        ('CONTACTADO', 'Contactado / En Gestión'),
+        ('DESCARTADO', 'Descartado'),
+    ]
+
+    veterinaria = models.ForeignKey(
+        Veterinaria,
+        on_delete=models.CASCADE,
+        related_name='solicitudes_turno_web',
+        verbose_name="Veterinaria"
+    )
+    nombre_tutor = models.CharField(max_length=150, verbose_name="Nombre y Apellido")
+    telefono = models.CharField(max_length=30, verbose_name="Teléfono / WhatsApp")
+    email = models.EmailField(blank=True, null=True, verbose_name="Correo Electrónico")
+    nombre_mascota = models.CharField(max_length=100, verbose_name="Nombre de la Mascota")
+    especie = models.CharField(max_length=50, blank=True, null=True, verbose_name="Especie")
+    motivo = models.TextField(verbose_name="Motivo de la Consulta")
+    fecha_deseada = models.DateField(verbose_name="Fecha Deseada")
+    franja_preferida = models.CharField(max_length=15, choices=FRANJAS, default='CUALQUIERA', verbose_name="Horario Preferido")
+    estado = models.CharField(max_length=15, choices=ESTADOS, default='PENDIENTE', verbose_name="Estado")
+    turno_creado = models.ForeignKey(
+        Turno,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='solicitud_origen',
+        verbose_name="Turno Agendado"
+    )
+    creado_el = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Solicitud de Turno Web"
+        verbose_name_plural = "Solicitudes de Turno Web"
+        ordering = ['-creado_el']
+
+    def __str__(self):
+        return f"{self.nombre_tutor} - {self.nombre_mascota} ({self.fecha_deseada.strftime('%d/%m/%Y')}) [{self.get_estado_display()}]"

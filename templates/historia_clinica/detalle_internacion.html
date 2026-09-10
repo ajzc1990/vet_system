@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Internación: {{ mascota.nombre }} - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-2">
+    <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <a href="{% url 'historia_clinica:lista_internaciones' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Sala de Internación
+        </a>
+        <a href="{% url 'clientes:detalle_historia_clinica' mascota.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-journal-medical me-1"></i> Ver Historia Clínica Completa
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="card border-0 shadow-lg mb-4 bg-white rounded-4 overflow-hidden border-start border-4 {% if internacion.esta_activa %}border-danger{% else %}border-success{% endif %}">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-4 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="bi bi-hospital-fill fs-2"></i>
+                    </div>
+                    <div>
+                        <span class="badge {% if internacion.esta_activa %}bg-danger{% else %}bg-success{% endif %} bg-opacity-10 {% if internacion.esta_activa %}text-danger{% else %}text-success{% endif %} border px-2.5 py-1 rounded-pill extra-small fw-bold mb-1">
+                            {{ internacion.get_estado_display }}
+                        </span>
+                        <h3 class="fw-extrabold text-dark mb-0 fs-3">
+                            Internación: <span class="text-primary">{{ mascota.nombre }}</span>
+                        </h3>
+                        <p class="mb-0 text-muted small mt-1">
+                            <strong>Dueño:</strong> {{ mascota.cliente.apellido }}, {{ mascota.cliente.nombre }}
+                            {% if internacion.box %} &bull; <strong>Box:</strong> {{ internacion.box }}{% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <a href="{% url 'historia_clinica:descargar_informe_internacion_pdf' internacion.id %}" class="btn btn-outline-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Informe PDF
+                    </a>
+                    {% if internacion.esta_activa and user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
+                        {% if internacion.esta_activa %}
+                        <button class="btn btn-success fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="modal" data-bs-target="#modalAlta">
+                            <i class="bi bi-box-arrow-right"></i> Dar de Alta
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs de la internación -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-primary border-4">
+                <div class="text-muted small fw-semibold">Días Internado</div>
+                <div class="fs-3 fw-bold text-dark">{{ internacion.dias_internado }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-info border-4">
+                <div class="text-muted small fw-semibold">Ingreso</div>
+                <div class="fs-6 fw-bold text-dark">{{ internacion.fecha_ingreso|date:"d/m/Y H:i" }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-warning border-4">
+                <div class="text-muted small fw-semibold">Evoluciones</div>
+                <div class="fs-3 fw-bold text-dark">{{ evoluciones.count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-success border-4">
+                <div class="text-muted small fw-semibold">Costo Estimado Estadía</div>
+                <div class="fs-6 fw-bold text-dark">${{ internacion.costo_estimado_estadia|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalle clínico del ingreso -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-4">
+            <div class="mb-2"><strong class="text-dark">Motivo de Internación:</strong> <span class="text-secondary">{{ internacion.motivo_ingreso }}</span></div>
+            <div class="mb-2"><strong class="text-dark">Diagnóstico al Ingreso:</strong> <span class="text-secondary">{{ internacion.diagnostico_ingreso|default:"Sin registro" }}</span></div>
+            {% if internacion.dieta_indicaciones %}
+            <div><strong class="text-dark">Dieta / Indicaciones:</strong> <span class="text-secondary">{{ internacion.dieta_indicaciones }}</span></div>
+            {% endif %}
+            {% if internacion.resumen_alta %}
+            <div class="mt-3 pt-3 border-top">
+                <strong class="text-dark">Resumen / Epicrisis de Alta:</strong> <span class="text-secondary">{{ internacion.resumen_alta }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Registro rápido de nueva evolución -->
+    {% if internacion.esta_activa %}
+    {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
+    <div class="card border-primary border-opacity-25 shadow-lg mb-4 rounded-4 overflow-hidden">
+        <div class="card-header bg-primary text-white py-3 px-4">
+            <h5 class="fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
+                <i class="bi bi-plus-square-fill text-warning fs-5"></i> Registrar Nueva Evolución / Control
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="post" action="{% url 'historia_clinica:nueva_evolucion_internacion' internacion.id %}">
+                {% csrf_token %}
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Estado General</label>
+                        {{ evolucion_form.estado_general }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Veterinario</label>
+                        {{ evolucion_form.veterinario }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold text-dark small mb-1">Peso (kg)</label>
+                        {{ evolucion_form.peso_kg }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold text-dark small mb-1">Temp (°C)</label>
+                        {{ evolucion_form.temperatura_c }}
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label fw-bold text-dark small mb-1">FC</label>
+                        {{ evolucion_form.frecuencia_cardiaca }}
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label fw-bold text-dark small mb-1">FR</label>
+                        {{ evolucion_form.frecuencia_respiratoria }}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark small mb-1">{{ evolucion_form.notas.label }}</label>
+                    {{ evolucion_form.notas }}
+                </div>
+
+                <div class="row g-3 mb-3 bg-light p-3 rounded-3 border">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold text-dark extra-small mb-1">Medicación / Procedimiento (texto libre)</label>
+                        {{ evolucion_form.medicacion_administrada }}
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-bold text-dark extra-small mb-1"><i class="bi bi-box-seam me-1 text-primary"></i>Descontar Insumo de Inventario</label>
+                        {{ evolucion_form.producto_inventario }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold text-dark extra-small mb-1">Cantidad</label>
+                        {{ evolucion_form.cantidad_insumo }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow">
+                        <i class="bi bi-check-circle-fill me-1"></i> Guardar Evolución
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Timeline de Evoluciones -->
+    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-activity text-danger"></i> Línea de Tiempo de Evoluciones
+    </h5>
+
+    {% for e in evoluciones %}
+    <div class="card border-0 shadow-sm mb-3 rounded-4 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                <span class="fw-bold text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-fill text-primary"></i>{{ e.fecha_hora|date:"d/m/Y H:i" }} hs
+                </span>
+                <span class="badge {% if e.estado_general == 'CRITICO' %}bg-danger{% elif e.estado_general == 'EMPEORANDO' %}bg-warning text-dark{% elif e.estado_general == 'MEJORANDO' %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                    {{ e.get_estado_general_display }}
+                </span>
+            </div>
+
+            <div class="row g-2 mb-2 bg-light p-2 rounded-3 text-center border">
+                <div class="col-3"><small class="text-muted d-block extra-small text-uppercase fw-bold">Peso</small><span class="fw-bold text-dark small">{{ e.peso_kg|default:"-" }} kg</span></div>
+                <div class="col-3"><small class="text-muted d-block extra-small text-uppercase fw-bold">Temp</small><span class="fw-bold text-dark small">{{ e.temperatura_c|default:"-" }} °C</span></div>
+                <div class="col-3"><small class="text-muted d-block extra-small text-uppercase fw-bold">FC</small><span class="fw-bold text-dark small">{{ e.frecuencia_cardiaca|default:"-" }} LPM</span></div>
+                <div class="col-3"><small class="text-muted d-block extra-small text-uppercase fw-bold">FR</small><span class="fw-bold text-dark small">{{ e.frecuencia_respiratoria|default:"-" }} RPM</span></div>
+            </div>
+
+            <p class="mb-1 text-secondary">{{ e.notas }}</p>
+            {% if e.medicacion_administrada %}
+            <p class="mb-0 small text-primary fw-semibold"><i class="bi bi-capsule me-1"></i>{{ e.medicacion_administrada }}</p>
+            {% endif %}
+            <p class="mb-0 small text-muted mt-2">
+                <i class="bi bi-person-badge me-1"></i>Dr(a). {{ e.veterinario.apellido|default:"Equipo de Enfermería" }}
+            </p>
+        </div>
+    </div>
+    {% empty %}
+    <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+        <div class="py-4">
+            <i class="bi bi-journal-x display-4 text-secondary opacity-50 d-block mb-3"></i>
+            <p class="mb-0">Aún no se registraron evoluciones para esta internación.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal de Alta -->
+<div class="modal fade" id="modalAlta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form method="post" action="{% url 'historia_clinica:dar_alta_internacion' internacion.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white py-3 px-4">
+                    <h5 class="modal-title fw-bold fs-6"><i class="bi bi-box-arrow-right me-2"></i>Finalizar Internación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Motivo de Cierre *</label>
+                        {{ alta_form.estado }}
+                    </div>
+                    <div class="mb-1">
+                        <label class="form-label fw-bold text-dark small mb-1">{{ alta_form.resumen_alta.label }}</label>
+                        {{ alta_form.resumen_alta }}
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 px-4">
+                    <button type="button" class="btn btn-outline-secondary fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 rounded-3 shadow">Confirmar Cierre</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

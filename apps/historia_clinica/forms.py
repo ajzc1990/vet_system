@@ -1,7 +1,10 @@
 from django import forms
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from .models import ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico
+from .models import (
+    ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico,
+    Internacion, EvolucionInternacion,
+)
 from apps.inventario.models import Producto
 from apps.turnos.models import Veterinario, Turno
 
@@ -238,3 +241,105 @@ class EstudioMedicoForm(forms.ModelForm):
     def clean_archivo(self):
         archivo = self.cleaned_data.get('archivo')
         return validar_archivo_medico(archivo)
+
+
+class InternacionForm(forms.ModelForm):
+    class Meta:
+        model = Internacion
+        fields = [
+            'veterinario_responsable', 'box', 'motivo_ingreso', 'diagnostico_ingreso',
+            'dieta_indicaciones', 'fecha_alta_estimada', 'costo_dia_estadia',
+        ]
+        widgets = {
+            'veterinario_responsable': forms.Select(attrs={'class': 'form-select'}),
+            'box': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Box 3 / Jaula A'}),
+            'motivo_ingreso': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Ej: Politraumatismo por accidente automovilístico, requiere observación'}),
+            'diagnostico_ingreso': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Diagnóstico presuntivo al momento del ingreso'}),
+            'dieta_indicaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Dieta, reposo, indicaciones generales de enfermería'}),
+            'fecha_alta_estimada': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
+            'costo_dia_estadia': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'placeholder': 'Ej: 15000.00'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        veterinaria = kwargs.pop('veterinaria', None)
+        super().__init__(*args, **kwargs)
+
+        if veterinaria:
+            self.fields['veterinario_responsable'].queryset = Veterinario.objects.filter(
+                veterinaria=veterinaria,
+                activo=True
+            )
+
+        self.fields['motivo_ingreso'].label = "Motivo de Internación *"
+        self.fields['veterinario_responsable'].required = False
+
+
+class EvolucionInternacionForm(forms.ModelForm):
+    producto_inventario = forms.ModelChoiceField(
+        queryset=Producto.objects.none(),
+        required=False,
+        label="Insumo / Medicamento administrado",
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        empty_label="-- Descontar insumo del inventario (opcional) --"
+    )
+    cantidad_insumo = forms.IntegerField(
+        required=False,
+        initial=1,
+        min_value=1,
+        label="Cantidad utilizada",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 1})
+    )
+
+    class Meta:
+        model = EvolucionInternacion
+        fields = [
+            'veterinario', 'estado_general', 'peso_kg', 'temperatura_c',
+            'frecuencia_cardiaca', 'frecuencia_respiratoria', 'notas', 'medicacion_administrada',
+        ]
+        widgets = {
+            'veterinario': forms.Select(attrs={'class': 'form-select'}),
+            'estado_general': forms.Select(attrs={'class': 'form-select'}),
+            'peso_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'Ej: 14.5'}),
+            'temperatura_c': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'Ej: 38.5'}),
+            'frecuencia_cardiaca': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'LPM'}),
+            'frecuencia_respiratoria': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'RPM'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Evolución clínica, novedades, procedimientos realizados en este control...'}),
+            'medicacion_administrada': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Meloxicam 0.2mg/kg SC'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        veterinaria = kwargs.pop('veterinaria', None)
+        super().__init__(*args, **kwargs)
+
+        if veterinaria:
+            self.fields['producto_inventario'].queryset = Producto.objects.filter(
+                veterinaria=veterinaria,
+                stock_actual__gt=0
+            )
+            self.fields['veterinario'].queryset = Veterinario.objects.filter(
+                veterinaria=veterinaria,
+                activo=True
+            )
+        else:
+            self.fields['producto_inventario'].queryset = Producto.objects.filter(stock_actual__gt=0)
+
+        self.fields['notas'].label = "Evolución Clínica / Novedades *"
+        self.fields['veterinario'].required = False
+
+
+class AltaInternacionForm(forms.ModelForm):
+    class Meta:
+        model = Internacion
+        fields = ['estado', 'resumen_alta']
+        widgets = {
+            'estado': forms.Select(attrs={'class': 'form-select'}),
+            'resumen_alta': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Resumen de la evolución, indicaciones para el hogar y seguimiento post-alta...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['estado'].choices = [
+            c for c in Internacion.ESTADOS if c[0] != 'INTERNADO'
+        ]
+        self.fields['resumen_alta'].label = "Resumen / Epicrisis de Alta *"
+        self.fields['resumen_alta'].required = True

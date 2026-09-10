@@ -28,6 +28,7 @@ urlpatterns = [
     path('historia-clinica/', include(('apps.historia_clinica.urls', 'historia_clinica'), namespace='historia_clinica')),
     path('inventario/', include(('apps.inventario.urls', 'inventario'), namespace='inventario')),
     path('ventas/', include(('apps.ventas.urls', 'ventas'), namespace='ventas')),
+    path('portal/', include(('apps.portal.urls', 'portal'), namespace='portal')),
 ]
 
 # Servidor de archivos media en desarrollo (PDFs, ecografías, imágenes)

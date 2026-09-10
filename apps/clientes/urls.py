@@ -32,4 +32,7 @@ urlpatterns = [
     # Subida y Eliminación de Estudios (Reutilizando views de historia_clinica de forma directa)
     path('mascotas/<int:mascota_id>/subir-estudio/', historia_views.subir_estudio, name='subir_estudio'),
     path('estudio/<int:estudio_id>/eliminar/', historia_views.eliminar_estudio, name='eliminar_estudio'),
+
+    # Portal del Cliente
+    path('<int:cliente_id>/portal/otorgar/', views.otorgar_acceso_portal, name='otorgar_acceso_portal'),
 ]

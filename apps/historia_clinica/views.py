@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponse, Http404
+from django.utils import timezone
 
 # ReportLab Imports
 from reportlab.lib.pagesizes import letter
@@ -11,35 +12,33 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-from .forms import ConsultaMedicaForm, RegistroVacunaForm, RegistroDesparasitacionForm, EstudioMedicoForm
-from .models import Mascota, ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico
+from .forms import (
+    ConsultaMedicaForm, RegistroVacunaForm, RegistroDesparasitacionForm, EstudioMedicoForm,
+    InternacionForm, EvolucionInternacionForm, AltaInternacionForm,
+)
+from .models import (
+    Mascota, ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico,
+    Internacion, EvolucionInternacion,
+)
 from apps.inventario.models import MovimientoStock, Producto
 from apps.usuarios.decorators import requerir_rol_veterinario
 from apps.usuarios.utils import get_veterinaria_activa
+from apps.usuarios.audit import registrar_auditoria
 
 
 @login_required
 def expediente_mascota(request, mascota_id):
-    """Muestra la historia clínica completa de la mascota filtrada por veterinaria, incluyendo sus estudios."""
+    """Alias histórico de la ficha del paciente. La vista canónica es clientes:detalle_historia_clinica;
+    esta se conserva solo para no romper enlaces/URLs antiguos, pero delega el renderizado a esa vista
+    (evita mantener dos plantillas duplicadas del mismo expediente clínico)."""
     vet = get_veterinaria_activa(request)
-    
-    if request.user.is_superuser and not vet:
-        mascota = get_object_or_404(Mascota, pk=mascota_id)
-    else:
-        mascota = get_object_or_404(Mascota, pk=mascota_id, cliente__veterinaria=vet)
-    
-    consultas = ConsultaMedica.objects.filter(mascota=mascota).select_related('veterinario', 'turno').prefetch_related('estudios')
-    vacunas = RegistroVacuna.objects.filter(mascota=mascota).select_related('veterinario')
-    desparasitaciones = RegistroDesparasitacion.objects.filter(mascota=mascota).select_related('veterinario')
-    estudios = EstudioMedico.objects.filter(mascota=mascota).select_related('veterinario', 'consulta')
 
-    return render(request, 'historia_clinica/expediente_mascota.html', {
-        'mascota': mascota,
-        'consultas': consultas,
-        'vacunas': vacunas,
-        'desparasitaciones': desparasitaciones,
-        'estudios': estudios,
-    })
+    if request.user.is_superuser and not vet:
+        get_object_or_404(Mascota, pk=mascota_id)
+    else:
+        get_object_or_404(Mascota, pk=mascota_id, cliente__veterinaria=vet)
+
+    return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
 
 
 @login_required
@@ -315,15 +314,20 @@ def eliminar_estudio(request, estudio_id):
         estudio = get_object_or_404(EstudioMedico, pk=estudio_id, veterinaria=vet)
 
     mascota_id = estudio.mascota.id
-    
+
     if request.method == 'POST':
+        titulo_estudio = estudio.titulo
         if estudio.archivo and os.path.exists(estudio.archivo.path):
             try:
                 os.remove(estudio.archivo.path)
             except Exception:
                 pass
-        
+
         estudio.delete()
+        registrar_auditoria(
+            request, 'ELIMINAR', modelo='EstudioMedico', objeto_id=estudio_id,
+            descripcion=f"Eliminación del estudio '{titulo_estudio}' de {estudio.mascota.nombre}"
+        )
         messages.success(request, "Estudio médico eliminado correctamente.")
         return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
 
@@ -550,6 +554,306 @@ def descargar_carnet_vacunas_pdf(request, mascota_id):
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
     ]))
     story.append(t_vacunas)
+
+    doc.build(story)
+    return response
+
+
+# ==============================================================================
+# INTERNACIÓN / HOSPITALIZACIÓN
+# ==============================================================================
+
+def _get_mascota_tenant(request, mascota_id, vet):
+    if request.user.is_superuser and not vet:
+        return get_object_or_404(Mascota, pk=mascota_id)
+    return get_object_or_404(Mascota, pk=mascota_id, cliente__veterinaria=vet)
+
+
+def _get_internacion_tenant(request, internacion_id, vet):
+    if request.user.is_superuser and not vet:
+        return get_object_or_404(Internacion, pk=internacion_id)
+    return get_object_or_404(Internacion, pk=internacion_id, veterinaria=vet)
+
+
+@login_required
+def lista_internaciones(request):
+    """Sala de Internación: tablero con los pacientes actualmente internados y su historial reciente."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        qs = Internacion.objects.all()
+    else:
+        qs = Internacion.objects.filter(veterinaria=vet) if vet else Internacion.objects.none()
+
+    qs = qs.select_related('mascota', 'mascota__cliente', 'veterinario_responsable')
+
+    internaciones_activas = qs.filter(estado='INTERNADO').order_by('fecha_ingreso')
+    internaciones_historial = qs.exclude(estado='INTERNADO')[:20]
+
+    return render(request, 'historia_clinica/lista_internaciones.html', {
+        'internaciones_activas': internaciones_activas,
+        'internaciones_historial': internaciones_historial,
+    })
+
+
+@login_required
+@requerir_rol_veterinario
+@transaction.atomic
+def internar_mascota(request, mascota_id):
+    """Registra el ingreso de una mascota a internación."""
+    vet = get_veterinaria_activa(request)
+    mascota = _get_mascota_tenant(request, mascota_id, vet)
+
+    if request.method == 'POST':
+        form = InternacionForm(request.POST, veterinaria=vet)
+        if form.is_valid():
+            internacion = form.save(commit=False)
+            internacion.mascota = mascota
+            if vet:
+                internacion.veterinaria = vet
+            internacion.save()
+
+            registrar_auditoria(
+                request, 'CREAR', modelo='Internacion', objeto_id=internacion.id,
+                descripcion=f"Ingreso a internación de {mascota.nombre} (Box: {internacion.box or '-'})"
+            )
+
+            messages.success(request, f"{mascota.nombre} fue ingresado/a a internación correctamente.")
+            return redirect('historia_clinica:detalle_internacion', internacion_id=internacion.id)
+    else:
+        form = InternacionForm(veterinaria=vet)
+
+    return render(request, 'historia_clinica/form_internacion.html', {
+        'form': form,
+        'mascota': mascota,
+        'titulo': f'Ingreso a Internación: {mascota.nombre}'
+    })
+
+
+@login_required
+def detalle_internacion(request, internacion_id):
+    """Ficha de seguimiento de una internación: evoluciones, signos vitales y acciones de alta."""
+    vet = get_veterinaria_activa(request)
+    internacion = _get_internacion_tenant(request, internacion_id, vet)
+
+    evoluciones = internacion.evoluciones.select_related('veterinario')
+    evolucion_form = EvolucionInternacionForm(veterinaria=vet)
+    alta_form = AltaInternacionForm()
+
+    return render(request, 'historia_clinica/detalle_internacion.html', {
+        'internacion': internacion,
+        'mascota': internacion.mascota,
+        'evoluciones': evoluciones,
+        'evolucion_form': evolucion_form,
+        'alta_form': alta_form,
+    })
+
+
+@login_required
+@requerir_rol_veterinario
+@transaction.atomic
+def nueva_evolucion_internacion(request, internacion_id):
+    """Registra un nuevo control/evolución dentro de una internación en curso, con descuento opcional de inventario."""
+    vet = get_veterinaria_activa(request)
+    internacion = _get_internacion_tenant(request, internacion_id, vet)
+
+    if request.method == 'POST':
+        form = EvolucionInternacionForm(request.POST, veterinaria=vet)
+        if form.is_valid():
+            evolucion = form.save(commit=False)
+            evolucion.internacion = internacion
+            evolucion.save()
+
+            if evolucion.peso_kg:
+                internacion.mascota.peso_kg = evolucion.peso_kg
+                internacion.mascota.save(update_fields=['peso_kg'])
+
+            producto = form.cleaned_data.get('producto_inventario')
+            cantidad = form.cleaned_data.get('cantidad_insumo') or 1
+
+            if producto:
+                if producto.stock_actual >= cantidad:
+                    MovimientoStock.objects.create(
+                        producto=producto,
+                        tipo='SALIDA',
+                        cantidad=cantidad,
+                        motivo=f"Internación #{internacion.id} - Paciente: {internacion.mascota.nombre}"
+                    )
+                    producto.stock_actual -= cantidad
+                    producto.save(update_fields=['stock_actual'])
+                else:
+                    messages.warning(
+                        request,
+                        f"Evolución registrada, pero '{producto.nombre}' no tenía suficiente stock ({producto.stock_actual} disp.)."
+                    )
+
+            messages.success(request, "Evolución registrada correctamente.")
+        else:
+            messages.error(request, "No se pudo registrar la evolución. Revisa los campos obligatorios.")
+
+    return redirect('historia_clinica:detalle_internacion', internacion_id=internacion.id)
+
+
+@login_required
+@requerir_rol_veterinario
+@transaction.atomic
+def dar_alta_internacion(request, internacion_id):
+    """Cierra una internación activa (alta médica, fallecimiento o derivación)."""
+    vet = get_veterinaria_activa(request)
+    internacion = _get_internacion_tenant(request, internacion_id, vet)
+
+    if not internacion.esta_activa:
+        messages.warning(request, "Esta internación ya fue cerrada previamente.")
+        return redirect('historia_clinica:detalle_internacion', internacion_id=internacion.id)
+
+    if request.method == 'POST':
+        form = AltaInternacionForm(request.POST, instance=internacion)
+        if form.is_valid():
+            internacion = form.save(commit=False)
+            internacion.fecha_alta_real = timezone.now()
+            internacion.save()
+
+            registrar_auditoria(
+                request, 'EDITAR', modelo='Internacion', objeto_id=internacion.id,
+                descripcion=f"Cierre de internación de {internacion.mascota.nombre} ({internacion.get_estado_display()})"
+            )
+
+            messages.success(request, f"{internacion.mascota.nombre} fue dado/a de alta correctamente.")
+        else:
+            messages.error(request, "No se pudo procesar el alta. Revisa los campos obligatorios.")
+
+    return redirect('historia_clinica:detalle_internacion', internacion_id=internacion.id)
+
+
+@login_required
+@requerir_rol_veterinario
+def eliminar_internacion(request, internacion_id):
+    """Elimina un registro de internación (uso administrativo, ej. carga erronea)."""
+    vet = get_veterinaria_activa(request)
+    internacion = _get_internacion_tenant(request, internacion_id, vet)
+    mascota_id = internacion.mascota.id
+    mascota_nombre = internacion.mascota.nombre
+
+    if request.method == 'POST':
+        internacion.delete()
+        registrar_auditoria(
+            request, 'ELIMINAR', modelo='Internacion', objeto_id=internacion_id,
+            descripcion=f"Eliminación del registro de internación de {mascota_nombre}"
+        )
+        messages.success(request, "El registro de internación fue eliminado.")
+        return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
+
+    return render(request, 'historia_clinica/confirmar_eliminar_internacion.html', {
+        'internacion': internacion
+    })
+
+
+@login_required
+def descargar_informe_internacion_pdf(request, internacion_id):
+    """Genera el informe/epicrisis de internación en PDF con el detalle de evoluciones."""
+    vet = get_veterinaria_activa(request)
+    internacion = _get_internacion_tenant(request, internacion_id, vet)
+    mascota = internacion.mascota
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Informe_Internacion_{mascota.nombre}_{internacion.fecha_ingreso.strftime("%Y%m%d")}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    story = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#0d6efd'), spaceAfter=2)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#6c757d'), spaceAfter=3)
+
+    vet_obj = internacion.veterinaria or vet
+    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VetSoft"
+
+    logo_img = None
+    if vet_obj and vet_obj.logo and os.path.exists(vet_obj.logo.path):
+        try:
+            logo_img = Image(vet_obj.logo.path, width=75, height=75)
+            logo_img.hAlign = 'RIGHT'
+        except Exception:
+            logo_img = None
+
+    header_text = [
+        Paragraph(f"<b>{nombre_vet}</b>", title_style),
+        Paragraph("<b>Informe de Internación / Epicrisis</b>", subtitle_style),
+        Paragraph(f"Fecha de Emisión: {timezone.now().strftime('%d/%m/%Y %H:%M')} hs", subtitle_style),
+    ]
+
+    if logo_img:
+        header_table = Table([[header_text, logo_img]], colWidths=[430, 90])
+        header_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]))
+        story.append(header_table)
+    else:
+        for p in header_text:
+            story.append(p)
+
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0d6efd'), spaceBefore=8, spaceAfter=15))
+
+    datos_paciente = [
+        [
+            Paragraph(f"<b>Paciente:</b> {mascota.nombre}", styles['Normal']),
+            Paragraph(f"<b>Especie/Raza:</b> {mascota.get_especie_display()} / {mascota.raza or 'Mestizo'}", styles['Normal'])
+        ],
+        [
+            Paragraph(f"<b>Tutor/a:</b> {mascota.cliente.nombre} {mascota.cliente.apellido}", styles['Normal']),
+            Paragraph(f"<b>Box/Jaula:</b> {internacion.box or '-'}", styles['Normal'])
+        ],
+        [
+            Paragraph(f"<b>Ingreso:</b> {internacion.fecha_ingreso.strftime('%d/%m/%Y %H:%M')} hs", styles['Normal']),
+            Paragraph(f"<b>Alta:</b> {internacion.fecha_alta_real.strftime('%d/%m/%Y %H:%M') + ' hs' if internacion.fecha_alta_real else 'En curso'}", styles['Normal'])
+        ],
+    ]
+    t_paciente = Table(datos_paciente, colWidths=[260, 260])
+    t_paciente.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('PADDING', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+    ]))
+    story.append(t_paciente)
+    story.append(Spacer(1, 15))
+
+    story.append(Paragraph(f"<b>Motivo de Internación:</b> {internacion.motivo_ingreso}", styles['Normal']))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(f"<b>Diagnóstico al Ingreso:</b> {internacion.diagnostico_ingreso or 'Sin registro'}", styles['Normal']))
+    story.append(Spacer(1, 15))
+
+    story.append(Paragraph("<b>Evolución Diaria:</b>", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#198754'))))
+    story.append(Spacer(1, 6))
+
+    evoluciones_data = [["Fecha/Hora", "Estado", "Signos Vitales", "Notas / Medicación"]]
+    for ev in internacion.evoluciones.select_related('veterinario').order_by('fecha_hora'):
+        signos = f"P:{ev.peso_kg or '-'}kg T:{ev.temperatura_c or '-'}°C FC:{ev.frecuencia_cardiaca or '-'} FR:{ev.frecuencia_respiratoria or '-'}"
+        notas = ev.notas + (f" | Medicación: {ev.medicacion_administrada}" if ev.medicacion_administrada else "")
+        evoluciones_data.append([
+            ev.fecha_hora.strftime('%d/%m %H:%M'),
+            ev.get_estado_general_display(),
+            signos,
+            Paragraph(notas, styles['Normal']),
+        ])
+
+    if len(evoluciones_data) == 1:
+        evoluciones_data.append(["-", "-", "-", "Sin evoluciones registradas."])
+
+    t_evoluciones = Table(evoluciones_data, colWidths=[70, 70, 140, 240])
+    t_evoluciones.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+    ]))
+    story.append(t_evoluciones)
+    story.append(Spacer(1, 20))
+
+    if internacion.resumen_alta:
+        story.append(Paragraph(f"<b>Resumen de Alta ({internacion.get_estado_display()}):</b>", ParagraphStyle('H3', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#0d6efd'))))
+        story.append(Spacer(1, 6))
+        story.append(Paragraph(internacion.resumen_alta.replace('\n', '<br/>'), styles['Normal']))
 
     doc.build(story)
     return response

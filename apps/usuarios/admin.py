@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Veterinaria, PerfilUsuario, MensajeContacto
+from .models import Veterinaria, PerfilUsuario, MensajeContacto, RegistroAuditoria, Plan, Suscripcion
 
 
 @admin.register(Veterinaria)
@@ -65,3 +65,39 @@ class MensajeContactoAdmin(admin.ModelAdmin):
     readonly_fields = ('fecha_envio',)
     list_editable = ('leido',)
     ordering = ('-fecha_envio',)
+
+
+@admin.register(RegistroAuditoria)
+class RegistroAuditoriaAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'accion', 'usuario', 'veterinaria', 'modelo', 'descripcion', 'ip_address')
+    list_filter = ('accion', 'veterinaria', 'fecha')
+    search_fields = ('descripcion', 'usuario__username', 'modelo', 'ip_address')
+    readonly_fields = ('veterinaria', 'usuario', 'accion', 'modelo', 'objeto_id', 'descripcion', 'ip_address', 'fecha')
+    ordering = ('-fecha',)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Plan)
+class PlanAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'precio_mensual', 'max_usuarios', 'max_mascotas', 'permite_internacion', 'activo')
+    list_filter = ('activo', 'permite_internacion')
+    ordering = ('orden', 'precio_mensual')
+
+
+@admin.register(Suscripcion)
+class SuscripcionAdmin(admin.ModelAdmin):
+    list_display = ('veterinaria', 'plan', 'estado_badge', 'fecha_inicio', 'fecha_vencimiento', 'ultimo_pago_registrado')
+    list_filter = ('estado', 'plan')
+    search_fields = ('veterinaria__nombre',)
+    ordering = ('fecha_vencimiento',)
+
+    @admin.display(description="Estado")
+    def estado_badge(self, obj):
+        colores = {'ACTIVA': '#198754', 'VENCIDA': '#dc3545', 'CANCELADA': '#6c757d', 'PRUEBA': '#0d6efd'}
+        color = colores.get(obj.estado, '#6c757d')
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, obj.get_estado_display())

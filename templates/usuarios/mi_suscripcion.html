@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Suscripción - VetSoft{% endblock %}
+
+{% block content %}
+<div class="container py-2" style="max-width: 780px;">
+    <h2 class="h3 fw-extrabold text-dark mb-4 d-flex align-items-center gap-2">
+        <i class="bi bi-credit-card-2-front-fill text-primary"></i> Mi Suscripción
+    </h2>
+
+    {% if suscripcion %}
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
+        <div class="card-header py-3 px-4 {% if suscripcion.esta_vencida %}bg-danger{% elif suscripcion.estado == 'PRUEBA' %}bg-info{% else %}bg-success{% endif %} text-white d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 fs-6">Plan {{ suscripcion.plan.nombre }}</h5>
+            <span class="badge bg-white bg-opacity-25 px-3 py-1 rounded-pill fw-bold">{{ suscripcion.get_estado_display }}</span>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3 mb-3 text-center">
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Precio Mensual</small>
+                        <span class="fs-4 fw-bold text-dark">${{ suscripcion.plan.precio_mensual }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Vencimiento</small>
+                        <span class="fs-6 fw-bold text-dark">{{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Último Pago</small>
+                        <span class="fs-6 fw-bold text-dark">{{ suscripcion.ultimo_pago_registrado|date:"d/m/Y"|default:"Sin registrar" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="fw-bold text-dark mb-2">Límites del Plan</h6>
+            <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                <li><i class="bi bi-people-fill text-primary me-2"></i>Hasta <strong>{{ suscripcion.plan.max_usuarios }}</strong> usuarios del staff</li>
+                <li><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Hasta <strong>{{ suscripcion.plan.max_mascotas }}</strong> pacientes activos</li>
+                <li><i class="bi bi-hospital-fill me-2 {% if suscripcion.plan.permite_internacion %}text-success{% else %}text-secondary{% endif %}"></i>
+                    Módulo de Internación: <strong>{% if suscripcion.plan.permite_internacion %}Incluido{% else %}No incluido{% endif %}</strong>
+                </li>
+            </ul>
+
+            {% if suscripcion.esta_vencida %}
+            <div class="alert alert-danger border-0 rounded-3 mt-4 mb-0">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción venció. Contactá al equipo de VetSoft para regularizar el pago y continuar operando sin interrupciones.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+        <div class="py-4">
+            <i class="bi bi-credit-card display-4 text-secondary opacity-50 d-block mb-3"></i>
+            <h6 class="fw-bold text-dark">Todavía no tenés un plan de facturación asignado</h6>
+            <p class="small text-muted mb-0">Contactá al equipo de VetSoft para contratar un plan.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

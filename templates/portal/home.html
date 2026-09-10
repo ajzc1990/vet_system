@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Mascotas - Portal del Cliente{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-house-heart-fill text-primary"></i> Hola, {{ cliente.nombre }}!
+        </h2>
+        <p class="text-muted small mb-0">Consultá la historia clínica y los turnos de tus mascotas.</p>
+    </div>
+</div>
+
+<!-- Próximos Turnos -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold text-dark mb-0 fs-6"><i class="bi bi-calendar-event-fill me-2 text-primary"></i>Próximos Turnos</h5>
+        <a href="{% url 'portal:turnos' %}" class="btn btn-sm btn-outline-primary fw-semibold">Ver Todos</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Fecha / Hora</th>
+                        <th>Mascota</th>
+                        <th>Veterinario</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in proximos_turnos %}
+                    <tr>
+                        <td class="ps-3 fw-bold text-primary">{{ t.fecha_hora|date:"d/m/Y H:i" }} hs</td>
+                        <td class="fw-semibold text-dark">{{ t.mascota.nombre }}</td>
+                        <td class="small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}-{% endif %}</td>
+                        <td><span class="badge bg-primary bg-opacity-15 text-primary border px-3 py-1.5 rounded-pill fw-bold">{{ t.get_estado_display }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-4 text-muted">No tenés turnos programados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Mascotas -->
+<h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+    <i class="bi bi-heart-pulse-fill text-danger"></i> Mis Mascotas
+</h5>
+<div class="row g-3">
+    {% for mascota in mascotas %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-md h-100 rounded-4 overflow-hidden">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="h5 fw-bold mb-0 text-primary">🐾 {{ mascota.nombre }}</h4>
+                    <span class="badge bg-primary bg-opacity-10 text-primary border px-2.5 py-1 rounded-pill fw-bold extra-small">{{ mascota.get_especie_display }}</span>
+                </div>
+                <div class="p-3 bg-light rounded-3 border mb-3 extra-small text-secondary">
+                    <div><strong class="text-dark">Raza:</strong> {{ mascota.raza|default:"Mestizo" }}</div>
+                    <div><strong class="text-dark">Peso:</strong> {{ mascota.peso_kg|default:"-" }} kg</div>
+                </div>
+                <a href="{% url 'portal:mascota_detalle' mascota.id %}" class="btn btn-sm btn-primary fw-bold rounded-2 mt-auto">
+                    <i class="bi bi-journal-medical me-1"></i> Ver Historia Clínica
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5 text-muted card border-0 shadow-sm rounded-4">
+            <div class="py-4">
+                <i class="bi bi-heartbreak display-4 text-secondary opacity-50 d-block mb-3"></i>
+                <p class="mb-0">Todavía no tenés mascotas registradas.</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

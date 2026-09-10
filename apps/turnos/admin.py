@@ -1,6 +1,6 @@
 # apps/turnos/admin.py
 from django.contrib import admin
-from .models import Veterinario, Turno
+from .models import Veterinario, Turno, SolicitudTurnoWeb
 from apps.clientes.models import Mascota
 
 
@@ -70,3 +70,19 @@ class TurnoAdmin(admin.ModelAdmin):
                 elif db_field.name == "veterinario":
                     kwargs["queryset"] = Veterinario.objects.filter(veterinaria=vet, activo=True)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(SolicitudTurnoWeb)
+class SolicitudTurnoWebAdmin(admin.ModelAdmin):
+    list_display = ('nombre_tutor', 'nombre_mascota', 'veterinaria', 'fecha_deseada', 'franja_preferida', 'estado', 'creado_el')
+    list_filter = ('estado', 'veterinaria', 'franja_preferida')
+    search_fields = ('nombre_tutor', 'nombre_mascota', 'telefono', 'email')
+    date_hierarchy = 'fecha_deseada'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+
+        vet = _get_admin_veterinaria(request)
+        return qs.filter(veterinaria=vet) if vet else qs.none()

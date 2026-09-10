@@ -51,6 +51,15 @@
                     <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="btn btn-light border text-secondary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-pencil-fill text-primary"></i> Editar Tutor
                     </a>
+                    {% if cliente.usuario %}
+                        <span class="btn btn-light border text-success fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1" title="Usuario: {{ cliente.usuario.username }}">
+                            <i class="bi bi-patch-check-fill"></i> Portal Activo
+                        </span>
+                    {% else %}
+                        <a href="{% url 'clientes:otorgar_acceso_portal' cliente.id %}" class="btn btn-outline-primary fw-semibold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-person-vcard-fill"></i> Dar Acceso al Portal
+                        </a>
+                    {% endif %}
                     <a href="{% url 'clientes:agregar_mascota' cliente.id %}" class="btn btn-success fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-plus-circle-fill"></i> Nueva Mascota
                     </a>
