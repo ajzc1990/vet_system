@@ -1,9 +1,13 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.turnos.models import Veterinario
 from apps.usuarios.models import PerfilUsuario, Veterinaria
+from apps.historia_clinica.models import ConsultaMedica, RegistroVacuna, RegistroDesparasitacion
 from .models import Cliente, Mascota
 
 
@@ -76,3 +80,51 @@ class NuevaConsultaAsignacionVeterinarioTests(TestCase):
         consulta = self.mascota_a.consultas.get()
         self.assertNotEqual(consulta.veterinario_id, self.veterinario_de_otra_clinica.id)
         self.assertIsNone(consulta.veterinario)
+
+
+class HistoriaClinicaRenderTests(TestCase):
+    """Regresión: la plantilla usaba consulta.veterinario.user (el campo real es
+    'usuario') y encadenaba v.proxima_dosis (campo inexistente, es fecha_proxima_dosis)
+    como argumento del filtro 'default'. Django resuelve los argumentos de filtro sin
+    el manejo silencioso habitual, así que cualquier consulta con veterinario asignado,
+    o cualquier vacuna/desparasitación con fecha_proxima_dosis cargada, tiraba un 500
+    (VariableDoesNotExist) en vez de renderizar la página."""
+
+    def setUp(self):
+        vet = Veterinaria.objects.create(nombre="Clinica Render")
+        user = User.objects.create_user(username="admin_render", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=vet, rol="ADMIN", is_approved=True)
+
+        cliente = Cliente.objects.create(veterinaria=vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        self.mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+
+        self.veterinario = Veterinario.objects.create(veterinaria=vet, nombre="Sofía", apellido="Herrera", matricula="MP-1")
+
+        self.client.force_login(user)
+
+    def test_no_rompe_con_una_consulta_que_tiene_veterinario_asignado(self):
+        ConsultaMedica.objects.create(
+            veterinaria=None, mascota=self.mascota, veterinario=self.veterinario,
+            motivo_consulta="Control", diagnostico="Sano", tratamiento="Ninguno",
+        )
+        response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Herrera")
+
+    def test_no_rompe_con_una_vacuna_con_fecha_proxima_dosis_cargada(self):
+        RegistroVacuna.objects.create(
+            mascota=self.mascota, nombre_vacuna="Antirrábica",
+            fecha_aplicacion=timezone.now().date(),
+            fecha_proxima_dosis=timezone.now().date() + timedelta(days=365),
+        )
+        response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_no_rompe_con_una_desparasitacion_con_fecha_proxima_dosis_cargada(self):
+        RegistroDesparasitacion.objects.create(
+            mascota=self.mascota, producto="Simparica",
+            fecha_aplicacion=timezone.now().date(),
+            fecha_proxima_dosis=timezone.now().date() + timedelta(days=90),
+        )
+        response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
+        self.assertEqual(response.status_code, 200)

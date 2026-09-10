@@ -216,7 +216,7 @@
                                             <i class="bi bi-calendar-event-fill text-primary me-2"></i>{{ consulta.fecha_hora|date:"d/m/Y H:i" }} hs &bull; {{ consulta.motivo_consulta }}
                                         </span>
                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 rounded-pill px-3 py-1">
-                                            Dr(a). {{ consulta.veterinario.user.get_full_name|default:consulta.veterinario.user.username|default:"Atención Médica" }}
+                                            Dr(a). {{ consulta.veterinario.apellido|default:"Atención Médica" }}
                                         </span>
                                     </div>
                                 </button>
@@ -383,9 +383,9 @@
                                     </td>
                                     <td class="py-3"><code class="bg-light text-secondary border px-2 py-1 rounded small">{{ v.lote|default:"N/A" }}</code></td>
                                     <td class="py-3">
-                                        {% if v.proxima_dosis or v.fecha_proxima_dosis %}
+                                        {% if v.fecha_proxima_dosis %}
                                             <span class="badge {% if v.proxima_dosis_vencida %}bg-danger bg-opacity-15 text-danger border border-danger border-opacity-20{% else %}bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20{% endif %} px-3 py-1.5 rounded-pill fw-bold">
-                                                <i class="bi bi-calendar-event me-1"></i>{{ v.fecha_proxima_dosis|default:v.proxima_dosis|date:"d/m/Y" }}
+                                                <i class="bi bi-calendar-event me-1"></i>{{ v.fecha_proxima_dosis|date:"d/m/Y" }}
                                             </span>
                                         {% else %}
                                             <span class="text-muted small">--</span>
@@ -448,9 +448,9 @@
                                     <td class="py-3 fw-bold text-dark fs-6">{{ d.producto }}</td>
                                     <td class="py-3 text-secondary small fw-medium">{{ d.dosis|default:"-" }}</td>
                                     <td class="py-3">
-                                        {% if d.proxima_dosis or d.fecha_proxima_dosis %}
+                                        {% if d.fecha_proxima_dosis %}
                                             <span class="badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-20 px-3 py-1.5 rounded-pill fw-bold">
-                                                <i class="bi bi-calendar-event me-1"></i>{{ d.fecha_proxima_dosis|default:d.proxima_dosis|date:"d/m/Y" }}
+                                                <i class="bi bi-calendar-event me-1"></i>{{ d.fecha_proxima_dosis|date:"d/m/Y" }}
                                             </span>
                                         {% else %}
                                             <span class="text-muted small">--</span>
