@@ -123,14 +123,14 @@
                         <!-- Apertura -->
                         <td class="py-3">
                             <span class="small fw-semibold text-dark d-block"><i class="bi bi-calendar-event text-primary me-1"></i>{{ item.caja.fecha_apertura|date:"d/m/Y H:i" }} hs</span>
-                            <small class="text-muted extra-small">Por: {{ item.caja.usuario_apertura.get_full_name|default:item.caja.usuario_apertura.username }}</small>
+                            <small class="text-muted extra-small">Por: {% if item.caja.usuario_apertura %}{{ item.caja.usuario_apertura.get_full_name|default:item.caja.usuario_apertura.username }}{% else %}-{% endif %}</small>
                         </td>
 
                         <!-- Cierre -->
                         <td class="py-3">
                             {% if item.caja.fecha_cierre %}
                                 <span class="small fw-semibold text-dark d-block"><i class="bi bi-calendar-check text-success me-1"></i>{{ item.caja.fecha_cierre|date:"d/m/Y H:i" }} hs</span>
-                                <small class="text-muted extra-small">Por: {{ item.caja.usuario_cierre.get_full_name|default:item.caja.usuario_cierre.username }}</small>
+                                <small class="text-muted extra-small">Por: {% if item.caja.usuario_cierre %}{{ item.caja.usuario_cierre.get_full_name|default:item.caja.usuario_cierre.username }}{% else %}-{% endif %}</small>
                             {% else %}
                                 <span class="text-muted small italic"><i class="bi bi-hourglass-split me-1"></i>En curso...</span>
                             {% endif %}
