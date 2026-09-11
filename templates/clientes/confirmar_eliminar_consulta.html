@@ -34,7 +34,7 @@
                         <div class="row g-2 extra-small text-secondary">
                             <div class="col-6">
                                 <span class="d-block text-muted">Fecha de Atención:</span>
-                                <strong class="text-dark">{{ consulta.fecha_hora|default:consulta.fecha|date:"d/m/Y H:i" }} hs</strong>
+                                <strong class="text-dark">{{ consulta.fecha_hora|date:"d/m/Y H:i" }} hs</strong>
                             </div>
                             <div class="col-6">
                                 <span class="d-block text-muted">Paciente:</span>
@@ -42,7 +42,7 @@
                             </div>
                             <div class="col-12 pt-2 border-top">
                                 <span class="d-block text-muted">Motivo de Consulta:</span>
-                                <strong class="text-dark">{{ consulta.motivo_consulta|default:consulta.motivo|default:"Sin registro" }}</strong>
+                                <strong class="text-dark">{{ consulta.motivo_consulta|default:"Sin registro" }}</strong>
                             </div>
                             {% if mascota_actual.cliente %}
                             <div class="col-12 pt-1">

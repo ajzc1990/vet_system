@@ -68,15 +68,13 @@ def nueva_consulta(request, mascota_id):
 
             if producto:
                 if producto.stock_actual >= cantidad:
+                    # MovimientoStock.save() ya descuenta el stock del producto: no repetir el descuento acá.
                     MovimientoStock.objects.create(
                         producto=producto,
                         tipo='SALIDA',
                         cantidad=cantidad,
                         motivo=f"Consulta Médica - Paciente: {mascota.nombre}"
                     )
-                    # Actualización explícita del stock real del producto
-                    producto.stock_actual -= cantidad
-                    producto.save(update_fields=['stock_actual'])
                 else:
                     messages.warning(
                         request,
@@ -192,8 +190,6 @@ def registrar_vacuna(request, mascota_id):
                         cantidad=1,
                         motivo=f"Aplicación de Vacuna ({vacuna.nombre_vacuna}) - Paciente: {mascota.nombre}"
                     )
-                    producto.stock_actual -= 1
-                    producto.save(update_fields=['stock_actual'])
                 else:
                     messages.warning(
                         request,
@@ -244,8 +240,6 @@ def registrar_desparasitacion(request, mascota_id):
                         cantidad=1,
                         motivo=f"Desparasitación ({desparasitacion.producto}) - Paciente: {mascota.nombre}"
                     )
-                    producto.stock_actual -= 1
-                    producto.save(update_fields=['stock_actual'])
                 else:
                     messages.warning(
                         request,
@@ -679,8 +673,6 @@ def nueva_evolucion_internacion(request, internacion_id):
                         cantidad=cantidad,
                         motivo=f"Internación #{internacion.id} - Paciente: {internacion.mascota.nombre}"
                     )
-                    producto.stock_actual -= cantidad
-                    producto.save(update_fields=['stock_actual'])
                 else:
                     messages.warning(
                         request,

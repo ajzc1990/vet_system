@@ -77,7 +77,6 @@ class Command(BaseCommand):
                         'categoria': categoria_obj,
                         'tipo': tipo_p,
                         'codigo_barras': str(fake.unique.random_number(digits=12)),
-                        'stock_actual': stock_inicial,
                         'stock_minimo': random.choice([3, 5, 10]),
                         'precio_costo': costo,
                         'precio_venta': venta,
@@ -87,7 +86,8 @@ class Command(BaseCommand):
 
                 if created:
                     prods_creados += 1
-                    # Registrar movimiento de stock inicial
+                    # Producto se crea con stock_actual=0 (default del modelo); el movimiento
+                    # de ENTRADA es el que efectivamente carga el stock inicial vía su save().
                     MovimientoStock.objects.create(
                         producto=prod,
                         tipo='ENTRADA',

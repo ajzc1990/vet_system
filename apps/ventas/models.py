@@ -114,13 +114,9 @@ class DetalleVenta(models.Model):
         es_nuevo = self.pk is None
         super().save(*args, **kwargs)
 
-        # Si es una venta nueva, descontamos del inventario y registramos el movimiento
+        # Si es una venta nueva, registramos el movimiento de stock. MovimientoStock.save()
+        # ya descuenta self.producto.stock_actual: no hay que repetir el descuento acá.
         if es_nuevo and self.producto:
-            # Descuento directo en stock
-            self.producto.stock_actual = max(0, self.producto.stock_actual - self.cantidad)
-            self.producto.save(update_fields=['stock_actual'])
-
-            # Movimiento de auditoría
             cliente_str = f"{self.venta.cliente.nombre} {self.venta.cliente.apellido}" if self.venta.cliente else "Consumidor Final"
             MovimientoStock.objects.create(
                 producto=self.producto,

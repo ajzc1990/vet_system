@@ -128,3 +128,13 @@ class HistoriaClinicaRenderTests(TestCase):
         )
         response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
         self.assertEqual(response.status_code, 200)
+
+    def test_confirmar_eliminar_consulta_no_rompe(self):
+        """Regresión: la plantilla usaba consulta.fecha y consulta.motivo, campos que no
+        existen (son fecha_hora y motivo_consulta) — la página de confirmación de borrado
+        tiraba 500 siempre, para cualquier consulta."""
+        consulta = ConsultaMedica.objects.create(
+            mascota=self.mascota, motivo_consulta="Control", diagnostico="Sano", tratamiento="Ninguno",
+        )
+        response = self.client.get(reverse('clientes:eliminar_consulta', args=[consulta.id]))
+        self.assertEqual(response.status_code, 200)

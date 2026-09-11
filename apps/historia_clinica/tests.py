@@ -5,6 +5,7 @@ from django.urls import reverse
 from apps.clientes.models import Cliente, Mascota
 from apps.usuarios.models import PerfilUsuario, Veterinaria
 from apps.historia_clinica.models import Internacion
+from apps.inventario.models import Producto
 
 
 class ExpedienteMascotaTenantIsolationTests(TestCase):
@@ -94,3 +95,66 @@ class InternacionTenantIsolationTests(TestCase):
         internacion = Internacion.objects.get(mascota=self.mascota_a)
         self.assertRedirects(response, reverse('historia_clinica:detalle_internacion', args=[internacion.id]))
         self.assertEqual(internacion.veterinaria, self.vet_a)
+
+
+class DescuentoDeInventarioUnicaVezTests(TestCase):
+    """Regresión: varias vistas creaban un MovimientoStock('SALIDA') y ADEMÁS restaban
+    la cantidad a mano sobre el mismo objeto Producto en memoria; como MovimientoStock.save()
+    ya hace ese descuento, el stock terminaba bajando el doble de lo vendido/usado."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Stock")
+        self.user = User.objects.create_user(username="admin_stock", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+
+        cliente = Cliente.objects.create(veterinaria=self.vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        self.mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+
+        self.client.force_login(self.user)
+
+    def test_nueva_consulta_descuenta_el_insumo_una_sola_vez(self):
+        producto = Producto.objects.create(veterinaria=self.vet, nombre="Meloxicam", stock_actual=10)
+
+        self.client.post(reverse('historia_clinica:nueva_consulta', args=[self.mascota.id]), {
+            'motivo_consulta': 'Control', 'diagnostico': 'Sano', 'tratamiento': 'Ninguno',
+            'producto_inventario': producto.id, 'cantidad_insumo': 2,
+        })
+
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock_actual, 8)
+
+    def test_registrar_vacuna_descuenta_el_insumo_una_sola_vez(self):
+        producto = Producto.objects.create(veterinaria=self.vet, nombre="Vacuna Quintuple", tipo="VACUNA", stock_actual=10)
+
+        self.client.post(reverse('historia_clinica:registrar_vacuna', args=[self.mascota.id]), {
+            'nombre_vacuna': 'Quíntuple', 'fecha_aplicacion': '2026-01-01',
+            'producto_inventario': producto.id,
+        })
+
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock_actual, 9)
+
+    def test_registrar_desparasitacion_descuenta_el_insumo_una_sola_vez(self):
+        producto = Producto.objects.create(veterinaria=self.vet, nombre="Simparica", stock_actual=10)
+
+        self.client.post(reverse('historia_clinica:registrar_desparasitacion', args=[self.mascota.id]), {
+            'tipo': 'INTERNA', 'producto': 'Simparica', 'fecha_aplicacion': '2026-01-01',
+            'producto_inventario': producto.id,
+        })
+
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock_actual, 9)
+
+    def test_nueva_evolucion_internacion_descuenta_el_insumo_una_sola_vez(self):
+        from apps.historia_clinica.models import Internacion
+
+        producto = Producto.objects.create(veterinaria=self.vet, nombre="Meloxicam", stock_actual=10)
+        internacion = Internacion.objects.create(veterinaria=self.vet, mascota=self.mascota, motivo_ingreso="Observación")
+
+        self.client.post(reverse('historia_clinica:nueva_evolucion_internacion', args=[internacion.id]), {
+            'estado_general': 'ESTABLE', 'notas': 'Paciente estable',
+            'producto_inventario': producto.id, 'cantidad_insumo': 3,
+        })
+
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock_actual, 7)

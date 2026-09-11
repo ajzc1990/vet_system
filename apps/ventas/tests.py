@@ -3,7 +3,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from apps.usuarios.models import PerfilUsuario, Veterinaria
-from .models import Venta
+from apps.inventario.models import Producto
+from .models import Venta, DetalleVenta
 
 
 class VentasTenantIsolationTests(TestCase):
@@ -25,3 +26,30 @@ class VentasTenantIsolationTests(TestCase):
         ventas_listadas = list(response.context['ventas'])
         self.assertIn(self.venta_a, ventas_listadas)
         self.assertNotIn(self.venta_b, ventas_listadas)
+
+
+class DetalleVentaStockTests(TestCase):
+    """Regresión: DetalleVenta.save() descontaba el stock a mano y ADEMÁS creaba un
+    MovimientoStock('SALIDA'), cuyo propio save() vuelve a descontar el mismo producto.
+    Una venta de 3 unidades terminaba restando 6 del stock."""
+
+    def test_una_venta_descuenta_el_stock_una_sola_vez(self):
+        vet = Veterinaria.objects.create(nombre="Clinica Stock")
+        producto = Producto.objects.create(veterinaria=vet, nombre="Amoxicilina", stock_actual=10)
+        venta = Venta.objects.create(veterinaria=vet, total=0)
+
+        DetalleVenta.objects.create(venta=venta, producto=producto, cantidad=3, precio_unitario=100, subtotal=300)
+
+        producto.refresh_from_db()
+        self.assertEqual(producto.stock_actual, 7)
+
+    def test_registra_un_unico_movimiento_de_stock_por_venta(self):
+        from apps.inventario.models import MovimientoStock
+
+        vet = Veterinaria.objects.create(nombre="Clinica Stock 2")
+        producto = Producto.objects.create(veterinaria=vet, nombre="Vacuna Quintuple", stock_actual=5)
+        venta = Venta.objects.create(veterinaria=vet, total=0)
+
+        DetalleVenta.objects.create(venta=venta, producto=producto, cantidad=2, precio_unitario=100, subtotal=200)
+
+        self.assertEqual(MovimientoStock.objects.filter(producto=producto, tipo='SALIDA').count(), 1)
