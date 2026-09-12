@@ -138,3 +138,56 @@ class HistoriaClinicaRenderTests(TestCase):
         )
         response = self.client.get(reverse('clientes:eliminar_consulta', args=[consulta.id]))
         self.assertEqual(response.status_code, 200)
+
+
+class ModalRapidoProximaDosisTests(TestCase):
+    """Regresión: agregar_vacuna/agregar_desparasitacion (los modales de carga rápida)
+    buscaban hasattr(RegistroVacuna, 'proxima_dosis') / 'fecha_proxima' / 'proximo_refuerzo',
+    ninguno de los cuales existe (el campo real es fecha_proxima_dosis): la fecha de
+    refuerzo cargada por el usuario nunca se guardaba."""
+
+    def setUp(self):
+        vet = Veterinaria.objects.create(nombre="Clinica Modal")
+        user = User.objects.create_user(username="admin_modal", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=vet, rol="ADMIN", is_approved=True)
+        cliente = Cliente.objects.create(veterinaria=vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        self.mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+        self.client.force_login(user)
+
+    def test_agregar_vacuna_guarda_la_proxima_dosis(self):
+        self.client.post(reverse('clientes:agregar_vacuna', args=[self.mascota.id]), {
+            'nombre_vacuna': 'Antirrábica', 'fecha_aplicacion': '2026-01-01', 'proxima_dosis': '2027-01-01',
+        })
+        vacuna = self.mascota.vacunas.get()
+        self.assertEqual(str(vacuna.fecha_proxima_dosis), '2027-01-01')
+
+    def test_agregar_desparasitacion_guarda_la_proxima_dosis(self):
+        self.client.post(reverse('clientes:agregar_desparasitacion', args=[self.mascota.id]), {
+            'producto': 'Simparica', 'fecha_aplicacion': '2026-01-01', 'proxima_dosis': '2026-04-01',
+        })
+        registro = self.mascota.desparasitaciones.get()
+        self.assertEqual(str(registro.fecha_proxima_dosis), '2026-04-01')
+
+
+class AsignacionVeterinarioDetalleHistoriaClinicaTests(TestCase):
+    """La consulta creada desde clientes:detalle_historia_clinica debe asignar
+    automáticamente el Veterinario vinculado al usuario logueado, si existe uno."""
+
+    def test_asigna_el_veterinario_vinculado_al_usuario_logueado(self):
+        from apps.turnos.models import Veterinario
+
+        vet = Veterinaria.objects.create(nombre="Clinica Asignacion")
+        user = User.objects.create_user(username="vet_logueado", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=vet, rol="VET", is_approved=True)
+        veterinario = Veterinario.objects.create(veterinaria=vet, usuario=user, nombre="Sofía", apellido="Herrera", matricula="MP-1")
+
+        cliente = Cliente.objects.create(veterinaria=vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+
+        self.client.force_login(user)
+        self.client.post(reverse('clientes:detalle_historia_clinica', args=[mascota.id]), {
+            'motivo_consulta': 'Control', 'diagnostico': 'Sano', 'tratamiento': 'Ninguno',
+        })
+
+        consulta = mascota.consultas.get()
+        self.assertEqual(consulta.veterinario, veterinario)

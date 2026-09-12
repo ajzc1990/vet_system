@@ -198,17 +198,8 @@ def detalle_historia_clinica(request, mascota_id):
             consulta = form.save(commit=False)
             consulta.mascota = mascota
             
-            vet_instance = None
-            if hasattr(request.user, 'veterinario'):
-                vet_instance = request.user.veterinario
-            elif hasattr(request.user, 'perfil') and hasattr(request.user.perfil, 'veterinario'):
-                vet_instance = request.user.perfil.veterinario
-            else:
-                try:
-                    from apps.historia_clinica.models import Veterinario
-                    vet_instance = Veterinario.objects.filter(usuario=request.user).first()
-                except Exception:
-                    pass
+            from apps.turnos.models import Veterinario
+            vet_instance = Veterinario.objects.filter(usuario=request.user).first()
 
             if vet_instance:
                 consulta.veterinario = vet_instance
@@ -345,16 +336,11 @@ def agregar_vacuna(request, mascota_id):
                 'fecha_aplicacion': fecha_aplicacion,
             }
             
-            if hasattr(RegistroVacuna, 'lote') and lote:
+            if lote:
                 datos['lote'] = lote
 
             if proxima_dosis:
-                if hasattr(RegistroVacuna, 'proxima_dosis'):
-                    datos['proxima_dosis'] = proxima_dosis
-                elif hasattr(RegistroVacuna, 'fecha_proxima'):
-                    datos['fecha_proxima'] = proxima_dosis
-                elif hasattr(RegistroVacuna, 'proximo_refuerzo'):
-                    datos['proximo_refuerzo'] = proxima_dosis
+                datos['fecha_proxima_dosis'] = proxima_dosis
 
             RegistroVacuna.objects.create(**datos)
             messages.success(request, f"Vacuna '{nombre_vacuna}' registrada con éxito.")
@@ -410,16 +396,11 @@ def agregar_desparasitacion(request, mascota_id):
                 'fecha_aplicacion': fecha_aplicacion,
             }
 
-            if dosis and hasattr(RegistroDesparasitacion, 'dosis'):
+            if dosis:
                 datos['dosis'] = dosis
 
             if proxima_dosis:
-                if hasattr(RegistroDesparasitacion, 'proxima_dosis'):
-                    datos['proxima_dosis'] = proxima_dosis
-                elif hasattr(RegistroDesparasitacion, 'fecha_proxima'):
-                    datos['fecha_proxima'] = proxima_dosis
-                elif hasattr(RegistroDesparasitacion, 'proximo_refuerzo'):
-                    datos['proximo_refuerzo'] = proxima_dosis
+                datos['fecha_proxima_dosis'] = proxima_dosis
 
             RegistroDesparasitacion.objects.create(**datos)
             messages.success(request, f"Desparasitante '{producto}' registrado con éxito.")

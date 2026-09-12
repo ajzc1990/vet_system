@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from apps.clientes.models import Cliente, Mascota
 from apps.usuarios.models import PerfilUsuario, Veterinaria
-from apps.historia_clinica.models import Internacion
+from apps.historia_clinica.models import Internacion, ConsultaMedica
 from apps.inventario.models import Producto
 
 
@@ -158,3 +158,21 @@ class DescuentoDeInventarioUnicaVezTests(TestCase):
 
         producto.refresh_from_db()
         self.assertEqual(producto.stock_actual, 7)
+
+
+class ConsultaMedicaActualizaPesoTests(TestCase):
+    """Regresión: el save() chequeaba hasattr(self.mascota, 'peso'), un campo que no
+    existe (es peso_kg) — la sincronización de peso nunca se ejecutaba."""
+
+    def test_guardar_una_consulta_con_peso_actualiza_el_peso_de_la_mascota(self):
+        vet = Veterinaria.objects.create(nombre="Clinica Peso")
+        cliente = Cliente.objects.create(veterinaria=vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO", peso_kg=10)
+
+        ConsultaMedica.objects.create(
+            mascota=mascota, motivo_consulta="Control", diagnostico="Sano", tratamiento="Ninguno",
+            peso_actual_kg=12.5,
+        )
+
+        mascota.refresh_from_db()
+        self.assertEqual(mascota.peso_kg, 12.5)

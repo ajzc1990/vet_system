@@ -76,9 +76,9 @@ class ConsultaMedica(models.Model):
             self.veterinaria = self.mascota.cliente.veterinaria
 
         # Actualizar peso de la mascota si se proporcionó
-        if self.peso_actual_kg and hasattr(self.mascota, 'peso'):
-            self.mascota.peso = self.peso_actual_kg
-            self.mascota.save(update_fields=['peso'])
+        if self.peso_actual_kg and self.mascota:
+            self.mascota.peso_kg = self.peso_actual_kg
+            self.mascota.save(update_fields=['peso_kg'])
             
         # Marcar automáticamente el turno como COMPLETADO
         if self.turno and self.turno.estado != 'COMPLETADO':

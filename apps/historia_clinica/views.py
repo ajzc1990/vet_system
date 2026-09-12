@@ -436,8 +436,8 @@ def descargar_receta_pdf(request, consulta_id):
     story.append(Spacer(1, 40))
 
     vet_nombre = "Médico Veterinario"
-    if consulta.veterinario and hasattr(consulta.veterinario, 'user') and consulta.veterinario.user:
-        vet_nombre = consulta.veterinario.user.get_full_name() or consulta.veterinario.user.username
+    if consulta.veterinario:
+        vet_nombre = f"Dr(a). {consulta.veterinario.nombre} {consulta.veterinario.apellido}"
 
     datos_firma = [
         ["_______________________________________"],
@@ -518,14 +518,12 @@ def descargar_carnet_vacunas_pdf(request, mascota_id):
     tabla_data = [["Vacuna / Dosis", "Lote", "Fecha Aplicación", "Próx. Revacunación", "Veterinario"]]
     for v in vacunas:
         v_vet_nombre = "-"
-        if v.veterinario and hasattr(v.veterinario, 'user') and v.veterinario.user:
-            v_vet_nombre = v.veterinario.user.get_full_name() or v.veterinario.user.username
+        if v.veterinario:
+            v_vet_nombre = f"{v.veterinario.nombre} {v.veterinario.apellido}"
 
         prox_dosis = "-"
-        if hasattr(v, 'fecha_proxima_dosis') and v.fecha_proxima_dosis:
+        if v.fecha_proxima_dosis:
             prox_dosis = v.fecha_proxima_dosis.strftime('%d/%m/%Y')
-        elif hasattr(v, 'proxima_dosis') and v.proxima_dosis:
-            prox_dosis = v.proxima_dosis.strftime('%d/%m/%Y')
 
         tabla_data.append([
             v.nombre_vacuna,
