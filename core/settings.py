@@ -31,6 +31,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'rest_framework',
+    'rest_framework.authtoken',
+
     # Aplicaciones del proyecto VeterSystem
     'apps.clientes',
     'apps.turnos',
@@ -40,7 +43,20 @@ INSTALLED_APPS = [
     'apps.ventas',
     'apps.dashboard',
     'apps.portal',
+    'apps.api',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 25,
+}
 
 # Middlewares (Sin duplicados)
 MIDDLEWARE = [

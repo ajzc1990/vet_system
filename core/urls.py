@@ -47,6 +47,9 @@ urlpatterns = [
     path('inventario/', include(('apps.inventario.urls', 'inventario'), namespace='inventario')),
     path('ventas/', include(('apps.ventas.urls', 'ventas'), namespace='ventas')),
     path('portal/', include(('apps.portal.urls', 'portal'), namespace='portal')),
+
+    # API REST (lectura) para integraciones externas
+    path('api/', include(('apps.api.urls', 'api'), namespace='api')),
 ]
 
 # Servidor de archivos media en desarrollo (PDFs, ecografías, imágenes)
