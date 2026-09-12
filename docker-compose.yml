@@ -27,15 +27,15 @@ services:
       - .:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+    env_file:
+      - .env
     environment:
-      - DEBUG=${DEBUG:-0}
-      - SECRET_KEY=${SECRET_KEY}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      # Estas pisan lo que venga de .env porque son específicas de la red interna
+      # de docker-compose (el host de la base de datos es el nombre del servicio,
+      # no localhost). Todo lo demás (EMAIL_*, MP_*, SECRET_KEY, etc.) ya llega
+      # desde env_file arriba: no hace falta (ni conviene) listarlo acá también.
       - USE_POSTGRES=True
       - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=${DB_NAME:-vetersystem_db}
-      - DB_USER=${DB_USER:-vetersystem_user}
-      - DB_PASSWORD=${DB_PASSWORD:-vetersystem_pass_2026}
       - DB_HOST=db
       - DB_PORT=5432
     depends_on:

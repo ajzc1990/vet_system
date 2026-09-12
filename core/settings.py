@@ -14,8 +14,11 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 # Hosts permitidos y orígenes confiables para CSRF
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
+# En producción nginx sólo sirve HTTPS: el esquema tiene que matchear exacto con
+# el que ve el navegador o Django rechaza el CSRF de cualquier POST (login, formularios).
+_esquema_por_defecto = 'http://' if DEBUG else 'https://'
 CSRF_TRUSTED_ORIGINS = [
-    origin if origin.startswith(('http://', 'https://')) else f'http://{origin}'
+    origin if origin.startswith(('http://', 'https://')) else f'{_esquema_por_defecto}{origin}'
     for origin in ALLOWED_HOSTS if origin and origin != '*'
 ]
 
