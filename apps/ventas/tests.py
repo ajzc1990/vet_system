@@ -53,3 +53,23 @@ class DetalleVentaStockTests(TestCase):
         DetalleVenta.objects.create(venta=venta, producto=producto, cantidad=2, precio_unitario=100, subtotal=200)
 
         self.assertEqual(MovimientoStock.objects.filter(producto=producto, tipo='SALIDA').count(), 1)
+
+
+class ExportarVentasCsvTests(TestCase):
+    def test_exporta_csv_solo_con_las_ventas_del_tenant_activo(self):
+        vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        user = User.objects.create_user(username="admin_export", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=vet_a, rol="ADMIN", is_approved=True)
+
+        Venta.objects.create(veterinaria=vet_a, total=1500)
+        Venta.objects.create(veterinaria=vet_b, total=9999)
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('ventas:exportar_ventas_csv'))
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode('utf-8-sig')
+        self.assertIn('1500.00', contenido)
+        self.assertNotIn('9999.00', contenido)

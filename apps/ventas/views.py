@@ -1,4 +1,5 @@
 # apps/ventas/views.py
+import csv
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -36,6 +37,36 @@ def lista_ventas(request):
         'ventas': ventas,
         'caja_activa': caja_activa
     })
+
+
+@login_required
+def exportar_ventas_csv(request):
+    """Exporta a CSV el historial de ventas de la veterinaria activa."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        ventas = Venta.objects.all()
+    else:
+        ventas = Venta.objects.filter(veterinaria=vet) if vet else Venta.objects.none()
+
+    ventas = ventas.select_related('cliente', 'vendedor').prefetch_related('detalles__producto').order_by('-fecha_hora')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="ventas.csv"'
+    response.write('﻿')
+
+    writer = csv.writer(response)
+    writer.writerow(['Nº Venta', 'Fecha', 'Cliente', 'Vendedor', 'Medio de Pago', 'Productos', 'Total'])
+    for v in ventas:
+        cliente_str = f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Consumidor Final"
+        vendedor_str = (v.vendedor.get_full_name() or v.vendedor.username) if v.vendedor else '-'
+        productos_str = '; '.join(f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all())
+        writer.writerow([
+            v.id, v.fecha_hora.strftime('%d/%m/%Y %H:%M'), cliente_str, vendedor_str,
+            v.get_medio_pago_display(), productos_str, f"{v.total:.2f}",
+        ])
+
+    return response
 
 
 @login_required

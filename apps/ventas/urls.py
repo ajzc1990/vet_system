@@ -7,6 +7,7 @@ app_name = 'ventas'
 urlpatterns = [
     # Listado y Punto de Venta
     path('', views.lista_ventas, name='lista_ventas'),
+    path('exportar-csv/', views.exportar_ventas_csv, name='exportar_ventas_csv'),
     path('nueva/', views.registrar_venta, name='registrar_venta'),
     
     # Gestión de Caja Diaria

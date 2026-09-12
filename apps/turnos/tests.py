@@ -41,6 +41,55 @@ class TurnosTenantIsolationTests(TestCase):
         self.assertNotIn(self.turno_b, turnos_listados)
 
 
+class AgendaFiltroPorDefectoTests(TestCase):
+    """Regresión: sin ningún filtro, la agenda traía TODOS los turnos históricos de la
+    clínica. Por defecto ahora solo muestra los del día de hoy, salvo que se pida
+    explícitamente ?todos=1 o se filtre por otra fecha."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Agenda")
+        user = User.objects.create_user(username="admin_agenda", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+
+        cliente = Cliente.objects.create(veterinaria=self.vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+
+        hoy = timezone.now()
+        self.turno_hoy = Turno.objects.create(veterinaria=self.vet, mascota=mascota, fecha_hora=hoy)
+        self.turno_pasado = Turno.objects.create(veterinaria=self.vet, mascota=mascota, fecha_hora=hoy - timedelta(days=30))
+
+        self.client.force_login(user)
+
+    def test_sin_filtro_solo_muestra_los_turnos_de_hoy(self):
+        response = self.client.get(reverse('turnos:lista_turnos'))
+        turnos_listados = list(response.context['turnos'])
+        self.assertIn(self.turno_hoy, turnos_listados)
+        self.assertNotIn(self.turno_pasado, turnos_listados)
+
+    def test_ver_todos_incluye_el_historial_completo(self):
+        response = self.client.get(reverse('turnos:lista_turnos'), {'todos': '1'})
+        turnos_listados = list(response.context['turnos'])
+        self.assertIn(self.turno_hoy, turnos_listados)
+        self.assertIn(self.turno_pasado, turnos_listados)
+
+    def test_filtrar_por_una_fecha_especifica_funciona(self):
+        fecha = self.turno_pasado.fecha_hora.date().isoformat()
+        response = self.client.get(reverse('turnos:lista_turnos'), {'fecha': fecha})
+        turnos_listados = list(response.context['turnos'])
+        self.assertIn(self.turno_pasado, turnos_listados)
+        self.assertNotIn(self.turno_hoy, turnos_listados)
+
+    def test_la_agenda_pagina_de_a_25_turnos(self):
+        mascota = self.turno_hoy.mascota
+        hoy = timezone.now()
+        for _ in range(30):
+            Turno.objects.create(veterinaria=self.vet, mascota=mascota, fecha_hora=hoy)
+
+        response = self.client.get(reverse('turnos:lista_turnos'), {'todos': '1'})
+        self.assertEqual(len(response.context['turnos']), 25)
+        self.assertEqual(response.context['turnos'].paginator.count, 32)
+
+
 class SolicitudTurnoWebTests(TestCase):
     def setUp(self):
         self.vet_a = Veterinaria.objects.create(nombre="Clinica A")

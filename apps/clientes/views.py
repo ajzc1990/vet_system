@@ -1,3 +1,4 @@
+import csv
 import re
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -6,6 +7,7 @@ from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.utils.crypto import get_random_string
 
 # Importaciones locales de Clientes
@@ -54,6 +56,43 @@ def lista_clientes(request):
 
     clientes = clientes.prefetch_related('mascotas')
     return render(request, 'clientes/lista_clientes.html', {'clientes': clientes, 'query': query})
+
+
+@login_required
+def exportar_clientes_csv(request):
+    """Exporta a CSV el listado de clientes (respeta el mismo filtro de búsqueda de la lista)."""
+    query = request.GET.get('q', '')
+    user_vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser:
+        clientes = Cliente.objects.all()
+    else:
+        clientes = Cliente.objects.filter(veterinaria=user_vet) if user_vet else Cliente.objects.none()
+
+    if query:
+        clientes = clientes.filter(
+            Q(nombre__icontains=query) |
+            Q(apellido__icontains=query) |
+            Q(dni__icontains=query) |
+            Q(telefono__icontains=query)
+        )
+
+    clientes = clientes.prefetch_related('mascotas').order_by('apellido', 'nombre')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="clientes.csv"'
+    response.write('﻿')  # BOM para que Excel detecte UTF-8 correctamente
+
+    writer = csv.writer(response)
+    writer.writerow(['Apellido', 'Nombre', 'DNI', 'Teléfono', 'Email', 'Dirección', 'Activo', 'Mascotas', 'Fecha de Alta'])
+    for c in clientes:
+        mascotas_str = ', '.join(m.nombre for m in c.mascotas.all())
+        writer.writerow([
+            c.apellido, c.nombre, c.dni, c.telefono, c.email or '', c.direccion or '',
+            'Sí' if c.activo else 'No', mascotas_str, c.creado_en.strftime('%d/%m/%Y'),
+        ])
+
+    return response
 
 
 @login_required

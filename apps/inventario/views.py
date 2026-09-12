@@ -1,9 +1,11 @@
 # apps/inventario/views.py
+import csv
 from datetime import timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import F
+from django.http import HttpResponse
 from django.utils import timezone
 
 from .models import Producto, Categoria, MovimientoStock
@@ -58,6 +60,45 @@ def lista_productos(request):
         'cant_vencidos': cant_vencidos,
         'cant_proximo_vencer': cant_proximo_vencer,
     })
+
+
+@login_required
+def exportar_productos_csv(request):
+    """Exporta a CSV el inventario de la veterinaria activa (respeta el filtro de alertas aplicado)."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        productos = Producto.objects.select_related('categoria')
+    else:
+        productos = Producto.objects.filter(veterinaria=vet).select_related('categoria') if vet else Producto.objects.none()
+
+    hoy = timezone.now().date()
+    limite_vencimiento = hoy + timedelta(days=30)
+    filtro = request.GET.get('filtro')
+    if filtro == 'bajo_stock':
+        productos = productos.filter(stock_actual__lte=F('stock_minimo'))
+    elif filtro == 'vencidos':
+        productos = productos.filter(fecha_vencimiento__lt=hoy)
+    elif filtro == 'proximo_vencer':
+        productos = productos.filter(fecha_vencimiento__gte=hoy, fecha_vencimiento__lte=limite_vencimiento)
+
+    productos = productos.order_by('nombre')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="inventario.csv"'
+    response.write('﻿')
+
+    writer = csv.writer(response)
+    writer.writerow(['Producto', 'Categoría', 'Tipo', 'Código de Barras', 'Stock Actual', 'Stock Mínimo', 'Precio Costo', 'Precio Venta', 'Vencimiento'])
+    for p in productos:
+        writer.writerow([
+            p.nombre, p.categoria.nombre if p.categoria else '', p.get_tipo_display(),
+            p.codigo_barras or '', p.stock_actual, p.stock_minimo,
+            f"{p.precio_costo:.2f}", f"{p.precio_venta:.2f}",
+            p.fecha_vencimiento.strftime('%d/%m/%Y') if p.fecha_vencimiento else '',
+        ])
+
+    return response
 
 
 @login_required

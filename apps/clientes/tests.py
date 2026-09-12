@@ -191,3 +191,26 @@ class AsignacionVeterinarioDetalleHistoriaClinicaTests(TestCase):
 
         consulta = mascota.consultas.get()
         self.assertEqual(consulta.veterinario, veterinario)
+
+
+class ExportarClientesCsvTests(TestCase):
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        user = User.objects.create_user(username="admin_export", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        Cliente.objects.create(veterinaria=self.vet_a, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        Cliente.objects.create(veterinaria=vet_b, nombre="Ana", apellido="Gomez", dni="222", telefono="2")
+
+        self.client.force_login(user)
+
+    def test_exporta_csv_solo_con_los_clientes_del_tenant_activo(self):
+        response = self.client.get(reverse('clientes:exportar_clientes_csv'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8')
+        contenido = response.content.decode('utf-8-sig')
+        self.assertIn('Perez', contenido)
+        self.assertNotIn('Gomez', contenido)

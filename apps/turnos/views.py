@@ -1,4 +1,5 @@
 import os
+from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -11,7 +12,10 @@ from apps.usuarios.utils import get_veterinaria_activa
 
 @login_required
 def lista_turnos(request):
-    """Muestra la agenda de turnos filtrada por la veterinaria activa y fecha/estado seleccionados."""
+    """Muestra la agenda de turnos filtrada por la veterinaria activa y fecha/estado seleccionados.
+
+    Por defecto (sin filtro de fecha ni "ver todos") solo se muestra la agenda del día de hoy,
+    para no traer el historial completo de turnos de la clínica en una sola consulta/página."""
     vet = get_veterinaria_activa(request)
 
     if request.user.is_superuser:
@@ -24,19 +28,27 @@ def lista_turnos(request):
     if estado_filter:
         turnos = turnos.filter(estado=estado_filter)
 
-    # 2. Filtro por Fecha (Captura el input de la agenda)
+    # 2. Filtro por Fecha / "Ver todos"
     fecha_filter = request.GET.get('fecha')
+    ver_todos = request.GET.get('todos') == '1'
+    hoy = timezone.now().date()
+
     if fecha_filter:
-        # Filtra exactamente los turnos del día seleccionado
         turnos = turnos.filter(fecha_hora__date=fecha_filter)
+    elif not ver_todos:
+        turnos = turnos.filter(fecha_hora__date=hoy)
 
     turnos = turnos.select_related('mascota', 'mascota__cliente', 'veterinario').order_by('fecha_hora')
 
+    paginator = Paginator(turnos, 25)
+    turnos_pagina = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'turnos/agenda.html', {
-        'turnos': turnos,
+        'turnos': turnos_pagina,
         'estado_filter': estado_filter,
         'fecha_filter': fecha_filter,  # Retorna el string enviado para mantener la fecha en el input
-        'hoy': timezone.now().date()
+        'ver_todos': ver_todos,
+        'hoy': hoy,
     })
 
 @login_required

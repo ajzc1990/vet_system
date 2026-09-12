@@ -17,6 +17,9 @@
         <a href="{% url 'ventas:reporte_cajas' %}" class="btn btn-outline-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
             <i class="bi bi-file-earmark-bar-graph-fill"></i> Control de Arqueos
         </a>
+        <a href="{% url 'ventas:exportar_ventas_csv' %}" class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-file-earmark-spreadsheet-fill"></i> Exportar CSV
+        </a>
 
         {% if caja_activa %}
             <a href="{% url 'ventas:registrar_venta' %}" class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">

@@ -60,3 +60,23 @@ class CargarInventarioCommandTests(TestCase):
             total=Sum('cantidad')
         )['total']
         self.assertEqual(producto.stock_actual, total_entradas)
+
+
+class ExportarProductosCsvTests(TestCase):
+    def test_exporta_csv_solo_con_los_productos_del_tenant_activo(self):
+        vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        user = User.objects.create_user(username="admin_export", password="testpass123")
+        PerfilUsuario.objects.create(user=user, veterinaria=vet_a, rol="ADMIN", is_approved=True)
+
+        Producto.objects.create(veterinaria=vet_a, nombre="Amoxicilina")
+        Producto.objects.create(veterinaria=vet_b, nombre="Antiparasitario")
+
+        self.client.force_login(user)
+        response = self.client.get(reverse('inventario:exportar_productos_csv'))
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode('utf-8-sig')
+        self.assertIn('Amoxicilina', contenido)
+        self.assertNotIn('Antiparasitario', contenido)

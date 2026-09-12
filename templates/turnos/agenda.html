@@ -9,20 +9,32 @@
         <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
             <i class="bi bi-calendar-week-fill text-primary"></i> Agenda Diaria de Turnos
         </h2>
-        <p class="text-muted small mb-0">Gestión y control de citas médicas programadas</p>
+        <p class="text-muted small mb-0">
+            {% if ver_todos %}
+                Mostrando el historial completo de turnos
+            {% elif fecha_filter %}
+                Turnos del {{ fecha_filter|date:"d/m/Y" }}
+            {% else %}
+                Turnos de hoy, {{ hoy|date:"d/m/Y" }}
+            {% endif %}
+        </p>
     </div>
-    
+
     <div class="d-flex align-items-center gap-2 flex-wrap">
         <!-- Filtro por Fecha -->
         <form method="GET" class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border gap-2">
             <label for="fecha" class="form-label me-1 mb-0 fw-bold text-secondary small text-nowrap">
                 <i class="bi bi-funnel-fill text-primary me-1"></i>Fecha:
             </label>
-            <input type="date" id="fecha" name="fecha" class="form-control form-control-sm border-0 bg-light fw-semibold" value="{{ fecha_seleccionada|date:'Y-m-d' }}">
+            <input type="date" id="fecha" name="fecha" class="form-control form-control-sm border-0 bg-light fw-semibold" value="{{ fecha_filter|default:hoy|date:'Y-m-d' }}">
             <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold rounded-2">
                 <i class="bi bi-search me-1"></i> Ver
             </button>
         </form>
+
+        <a href="?todos=1" class="btn btn-sm {% if ver_todos %}btn-secondary{% else %}btn-outline-secondary{% endif %} fw-bold px-3 rounded-2" title="Ver el historial completo, sin filtrar por fecha">
+            <i class="bi bi-infinity me-1"></i> Ver Todos
+        </a>
 
         <a href="{% url 'turnos:lista_solicitudes_turno' %}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
             <i class="bi bi-envelope-paper-heart-fill"></i> Solicitudes Online
@@ -183,4 +195,22 @@
         </div>
     </div>
 </div>
+
+{% if turnos.paginator.num_pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3">
+    <span class="small text-muted">Página {{ turnos.number }} de {{ turnos.paginator.num_pages }} &bull; {{ turnos.paginator.count }} turno{{ turnos.paginator.count|pluralize }} en total</span>
+    <ul class="pagination pagination-sm mb-0">
+        {% if turnos.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ turnos.previous_page_number }}{% if fecha_filter %}&fecha={{ fecha_filter }}{% endif %}{% if estado_filter %}&estado={{ estado_filter }}{% endif %}{% if ver_todos %}&todos=1{% endif %}"><i class="bi bi-chevron-left"></i></a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+        {% endif %}
+        {% if turnos.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ turnos.next_page_number }}{% if fecha_filter %}&fecha={{ fecha_filter }}{% endif %}{% if estado_filter %}&estado={{ estado_filter }}{% endif %}{% if ver_todos %}&todos=1{% endif %}"><i class="bi bi-chevron-right"></i></a></li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% endblock %}
