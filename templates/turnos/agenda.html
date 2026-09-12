@@ -50,11 +50,11 @@
                 </thead>
                 <tbody>
                     {% for turno in turnos %}
-                    <tr class="{% if turno.estado == 'ATENDIENDO' %}table-info bg-opacity-10{% elif turno.estado == 'COMPLETADO' %}opacity-75{% endif %}">
+                    <tr class="{% if turno.estado == 'ATENDIENDO' %}table-info {% elif turno.estado == 'COMPLETADO' %}opacity-75{% endif %}">
                         <!-- Hora y Fecha -->
                         <td class="ps-4 py-3">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 text-center" style="min-width: 48px;">
+                                <div class="p-2 bg-primary-subtle text-primary-emphasis rounded-3 text-center" style="min-width: 48px;">
                                     <i class="bi bi-clock-fill d-block mb-0 fs-6"></i>
                                 </div>
                                 <div>
@@ -99,23 +99,23 @@
                         <!-- Estado del Turno -->
                         <td class="py-3">
                             {% if turno.estado == 'PENDIENTE' %}
-                                <span class="badge bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill fw-bold">
                                     <i class="bi bi-hourglass-split me-1"></i> Pendiente
                                 </span>
                             {% elif turno.estado == 'CONFIRMADO' %}
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-2 rounded-pill fw-bold">
                                     <i class="bi bi-check-circle-fill me-1"></i> Confirmado
                                 </span>
                             {% elif turno.estado == 'ATENDIENDO' %}
-                                <span class="badge bg-info bg-opacity-20 text-info-emphasis border border-info border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-bold">
                                     <i class="bi bi-activity me-1"></i> Atendiendo
                                 </span>
                             {% elif turno.estado == 'COMPLETADO' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-2 rounded-pill fw-bold">
                                     <i class="bi bi-check-all me-1"></i> Completado
                                 </span>
                             {% elif turno.estado == 'CANCELADO' %}
-                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-3 py-2 rounded-pill fw-bold">
+                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-2 rounded-pill fw-bold">
                                     <i class="bi bi-x-circle-fill me-1"></i> Cancelado
                                 </span>
                             {% else %}

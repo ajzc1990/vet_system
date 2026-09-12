@@ -35,7 +35,7 @@
                         <td class="ps-4 py-3 fw-bold text-dark">{{ s.veterinaria.nombre }}</td>
                         <td class="py-3 text-secondary small">{{ s.plan.nombre }}</td>
                         <td class="py-3">
-                            <span class="badge {% if s.esta_vencida %}bg-danger{% elif s.estado == 'PRUEBA' %}bg-info{% else %}bg-success{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                            <span class="badge {% if s.esta_vencida %}bg-danger-subtle{% elif s.estado == 'PRUEBA' %}bg-info-subtle{% else %}bg-success-subtle{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
                                 {% if s.esta_vencida %}VENCIDA{% else %}{{ s.get_estado_display }}{% endif %}
                             </span>
                         </td>

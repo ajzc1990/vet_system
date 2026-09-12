@@ -86,7 +86,7 @@
         <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="card-header bg-warning text-dark py-3 px-4 d-flex justify-content-between align-items-center">
                 <h5 class="fw-bold mb-0 fs-6"><i class="bi bi-syringe me-2"></i>Vacunas por Vencer (7 días)</h5>
-                <span class="badge bg-dark bg-opacity-25 text-dark px-3 py-1 rounded-pill fw-bold">{{ vacunas_proximas_data|length }}</span>
+                <span class="badge bg-dark text-white px-3 py-1 rounded-pill fw-bold">{{ vacunas_proximas_data|length }}</span>
             </div>
             <div class="list-group list-group-flush">
                 {% for row in vacunas_proximas_data %}
@@ -133,7 +133,7 @@
         <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="card-header bg-warning text-dark py-3 px-4 d-flex justify-content-between align-items-center">
                 <h5 class="fw-bold mb-0 fs-6"><i class="bi bi-capsule me-2"></i>Desparasitaciones por Vencer (7 días)</h5>
-                <span class="badge bg-dark bg-opacity-25 text-dark px-3 py-1 rounded-pill fw-bold">{{ despara_proximas_data|length }}</span>
+                <span class="badge bg-dark text-white px-3 py-1 rounded-pill fw-bold">{{ despara_proximas_data|length }}</span>
             </div>
             <div class="list-group list-group-flush">
                 {% for row in despara_proximas_data %}

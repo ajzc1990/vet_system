@@ -30,7 +30,7 @@
                     <div class="fs-3 fw-extrabold text-success mt-1">${{ total_efectivo_acumulado|floatformat:2 }}</div>
                     <div class="small text-muted fw-medium mt-1"><i class="bi bi-cash me-1"></i>Abonado en billetes (Arqueado)</div>
                 </div>
-                <div class="bg-success bg-opacity-10 text-success p-3 rounded-4">
+                <div class="bg-success-subtle text-success-emphasis p-3 rounded-4">
                     <i class="bi bi-cash-stack fs-3"></i>
                 </div>
             </div>
@@ -46,7 +46,7 @@
                     <div class="fs-3 fw-extrabold text-primary mt-1">${{ total_digital_acumulado|floatformat:2 }}</div>
                     <div class="small text-muted fw-medium mt-1"><i class="bi bi-credit-card me-1"></i>Mercado Pago / Posnet / Transf.</div>
                 </div>
-                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4">
+                <div class="bg-primary-subtle text-primary-emphasis p-3 rounded-4">
                     <i class="bi bi-credit-card-2-front-fill fs-3"></i>
                 </div>
             </div>
@@ -55,7 +55,7 @@
 
     <!-- Balance / Desfasaje Global -->
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm rounded-4 p-3 border-start {% if total_diferencia_acumulada < 0 %}border-danger bg-danger bg-opacity-10{% elif total_diferencia_acumulada > 0 %}border-success bg-success bg-opacity-10{% else %}border-secondary bg-white{% endif %} border-4 h-100">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start {% if total_diferencia_acumulada < 0 %}border-danger-subtle bg-danger-subtle {% elif total_diferencia_acumulada > 0 %}border-success-subtle bg-success-subtle {% else %}border-secondary-subtle bg-white{% endif %} border-4 h-100">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
                     <div class="extra-small fw-bold text-uppercase tracking-wider {% if total_diferencia_acumulada < 0 %}text-danger{% elif total_diferencia_acumulada > 0 %}text-success{% else %}text-muted{% endif %}">
@@ -74,7 +74,7 @@
                         {% endif %}
                     </div>
                 </div>
-                <div class="p-3 rounded-4 {% if total_diferencia_acumulada < 0 %}bg-danger bg-opacity-20 text-danger{% elif total_diferencia_acumulada > 0 %}bg-success bg-opacity-20 text-success{% else %}bg-secondary bg-opacity-10 text-secondary{% endif %}">
+                <div class="p-3 rounded-4 {% if total_diferencia_acumulada < 0 %}bg-danger-subtle text-danger-emphasis{% elif total_diferencia_acumulada > 0 %}bg-success-subtle text-success-emphasis{% else %}bg-secondary-subtle text-secondary-emphasis{% endif %}">
                     <i class="bi bi-calculator-fill fs-3"></i>
                 </div>
             </div>
@@ -113,9 +113,9 @@
                             <strong class="text-dark d-block">Caja #{{ item.caja.id }}</strong>
                             <div>
                                 {% if item.caja.estado == 'ABIERTA' %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-2.5 py-1 rounded-pill fw-bold small">Abierta</span>
+                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2.5 py-1 rounded-pill fw-bold small">Abierta</span>
                                 {% else %}
-                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2.5 py-1 rounded-pill fw-bold small">Cerrada</span>
+                                    <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-2.5 py-1 rounded-pill fw-bold small">Cerrada</span>
                                 {% endif %}
                             </div>
                         </td>
@@ -159,11 +159,11 @@
                         <td class="py-3">
                             {% if item.caja.estado == 'CERRADA' %}
                                 {% if item.diferencia == 0 %}
-                                    <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-20 px-2.5 py-1.5 rounded-pill fw-bold" title="Sin diferencias"><i class="bi bi-check-lg me-1"></i>$0.00</span>
+                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2.5 py-1.5 rounded-pill fw-bold" title="Sin diferencias"><i class="bi bi-check-lg me-1"></i>$0.00</span>
                                 {% elif item.diferencia < 0 %}
-                                    <span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-20 px-2.5 py-1.5 rounded-pill fw-bold" title="Faltante en caja"><i class="bi bi-arrow-down-right me-1"></i>-${{ item.diferencia|stringformat:".2f"|slice:"1:" }}</span>
+                                    <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2.5 py-1.5 rounded-pill fw-bold" title="Faltante en caja"><i class="bi bi-arrow-down-right me-1"></i>-${{ item.diferencia|stringformat:".2f"|slice:"1:" }}</span>
                                 {% else %}
-                                    <span class="badge bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20 px-2.5 py-1.5 rounded-pill fw-bold" title="Sobrante en caja"><i class="bi bi-arrow-up-right me-1"></i>+${{ item.diferencia|floatformat:2 }}</span>
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1.5 rounded-pill fw-bold" title="Sobrante en caja"><i class="bi bi-arrow-up-right me-1"></i>+${{ item.diferencia|floatformat:2 }}</span>
                                 {% endif %}
                             {% else %}
                                 <span class="text-muted small">-</span>

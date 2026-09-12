@@ -34,7 +34,7 @@
                         <td class="py-3 small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}-{% endif %}</td>
                         <td class="py-3 small text-secondary">{{ t.motivo|default:"-"|truncatewords:10 }}</td>
                         <td class="py-3">
-                            <span class="badge {% if t.estado == 'CANCELADO' %}bg-secondary{% elif t.estado == 'COMPLETADO' %}bg-success{% else %}bg-primary{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                            <span class="badge {% if t.estado == 'CANCELADO' %}bg-secondary-subtle{% elif t.estado == 'COMPLETADO' %}bg-success-subtle{% else %}bg-primary-subtle{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
                                 {{ t.get_estado_display }}
                             </span>
                         </td>

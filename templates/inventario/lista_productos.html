@@ -30,7 +30,7 @@
                         <div class="text-muted extra-small fw-bold text-uppercase tracking-wider">Total Insumos</div>
                         <div class="fs-3 fw-extrabold text-dark mt-1">{{ total_productos }}</div>
                     </div>
-                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4">
+                    <div class="bg-primary-subtle text-primary-emphasis p-3 rounded-4">
                         <i class="bi bi-boxes fs-4"></i>
                     </div>
                 </div>
@@ -41,13 +41,13 @@
     <!-- Bajo Stock -->
     <div class="col-md-3 col-sm-6">
         <a href="{% url 'inventario:lista_productos' %}?filtro=bajo_stock" class="text-decoration-none">
-            <div class="card border-0 shadow-sm rounded-4 p-3 transition-all h-100 {% if filtro_activo == 'bajo_stock' %}border-start border-danger border-4 bg-danger bg-opacity-10 shadow{% else %}bg-white opacity-75{% endif %}">
+            <div class="card border-0 shadow-sm rounded-4 p-3 transition-all h-100 {% if filtro_activo == 'bajo_stock' %}border-start border-danger-subtle border-4 bg-danger-subtle shadow{% else %}bg-white opacity-75{% endif %}">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-danger extra-small fw-bold text-uppercase tracking-wider">Bajo Stock Mínimo</div>
                         <div class="fs-3 fw-extrabold text-danger mt-1">{{ cant_bajo_stock }}</div>
                     </div>
-                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-4">
+                    <div class="bg-danger-subtle text-danger-emphasis p-3 rounded-4">
                         <i class="bi bi-exclamation-triangle-fill fs-4"></i>
                     </div>
                 </div>
@@ -58,13 +58,13 @@
     <!-- Próximos a Vencer -->
     <div class="col-md-3 col-sm-6">
         <a href="{% url 'inventario:lista_productos' %}?filtro=proximo_vencer" class="text-decoration-none">
-            <div class="card border-0 shadow-sm rounded-4 p-3 transition-all h-100 {% if filtro_activo == 'proximo_vencer' %}border-start border-warning border-4 bg-warning bg-opacity-10 shadow{% else %}bg-white opacity-75{% endif %}">
+            <div class="card border-0 shadow-sm rounded-4 p-3 transition-all h-100 {% if filtro_activo == 'proximo_vencer' %}border-start border-warning-subtle border-4 bg-warning-subtle shadow{% else %}bg-white opacity-75{% endif %}">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-warning-emphasis extra-small fw-bold text-uppercase tracking-wider">Vencen &lt; 30 Días</div>
                         <div class="fs-3 fw-extrabold text-warning-emphasis mt-1">{{ cant_proximo_vencer }}</div>
                     </div>
-                    <div class="bg-warning bg-opacity-10 text-warning-emphasis p-3 rounded-4">
+                    <div class="bg-warning-subtle text-warning-emphasis p-3 rounded-4">
                         <i class="bi bi-hourglass-split fs-4"></i>
                     </div>
                 </div>
@@ -75,13 +75,13 @@
     <!-- Vencidos -->
     <div class="col-md-3 col-sm-6">
         <a href="{% url 'inventario:lista_productos' %}?filtro=vencidos" class="text-decoration-none">
-            <div class="card border-0 shadow-sm rounded-4 p-3 transition-all h-100 {% if filtro_activo == 'vencidos' %}border-start border-secondary border-4 bg-secondary bg-opacity-10 shadow{% else %}bg-white opacity-75{% endif %}">
+            <div class="card border-0 shadow-sm rounded-4 p-3 transition-all h-100 {% if filtro_activo == 'vencidos' %}border-start border-secondary-subtle border-4 bg-secondary-subtle shadow{% else %}bg-white opacity-75{% endif %}">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-secondary extra-small fw-bold text-uppercase tracking-wider">Productos Vencidos</div>
                         <div class="fs-3 fw-extrabold text-secondary mt-1">{{ cant_vencidos }}</div>
                     </div>
-                    <div class="bg-secondary bg-opacity-10 text-secondary p-3 rounded-4">
+                    <div class="bg-secondary-subtle text-secondary-emphasis p-3 rounded-4">
                         <i class="bi bi-calendar-x-fill fs-4"></i>
                     </div>
                 </div>
@@ -150,11 +150,11 @@
                         <!-- Stock Actual -->
                         <td class="py-3">
                             {% if p.bajo_stock %}
-                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-3 py-1.5 rounded-pill fw-bold" title="Stock por debajo o igual al mínimo (Mín: {{ p.stock_minimo }})">
+                                <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-1.5 rounded-pill fw-bold" title="Stock por debajo o igual al mínimo (Mín: {{ p.stock_minimo }})">
                                     <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ p.stock_actual }} (Bajo)
                                 </span>
                             {% else %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3 py-1.5 rounded-pill fw-bold">
+                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1.5 rounded-pill fw-bold">
                                     <i class="bi bi-check-circle-fill me-1"></i>{{ p.stock_actual }}
                                 </span>
                             {% endif %}
@@ -169,11 +169,11 @@
                         <td class="py-3">
                             {% if p.fecha_vencimiento %}
                                 {% if p.esta_vencido %}
-                                    <span class="badge bg-danger bg-opacity-20 text-danger border border-danger border-opacity-20 px-3 py-1.5 rounded-pill fw-bold" title="Producto vencido el {{ p.fecha_vencimiento|date:'d/m/Y' }}">
+                                    <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-3 py-1.5 rounded-pill fw-bold" title="Producto vencido el {{ p.fecha_vencimiento|date:'d/m/Y' }}">
                                         <i class="bi bi-calendar-x-fill me-1"></i>{{ p.fecha_vencimiento|date:"d/m/Y" }}
                                     </span>
                                 {% elif p.proximo_a_vencer %}
-                                    <span class="badge bg-warning bg-opacity-20 text-warning-emphasis border border-warning border-opacity-20 px-3 py-1.5 rounded-pill fw-bold" title="Vence pronto (en {{ p.dias_para_vencer }} días)">
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1.5 rounded-pill fw-bold" title="Vence pronto (en {{ p.dias_para_vencer }} días)">
                                         <i class="bi bi-hourglass-split me-1"></i>{{ p.fecha_vencimiento|date:"d/m/Y" }}
                                     </span>
                                 {% else %}

@@ -59,7 +59,7 @@
                             <!-- Nombre del Cliente -->
                             <td class="ps-4 py-3">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar-circle-sm bg-primary bg-opacity-10 text-primary fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                                    <div class="avatar-circle-sm bg-primary-subtle text-primary-emphasis fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 0.85rem;">
                                         {{ cliente.apellido|slice:":1"|upper }}{{ cliente.nombre|slice:":1"|upper }}
                                     </div>
                                     <div>
@@ -92,7 +92,7 @@
                                 <div class="d-flex flex-wrap gap-1">
                                     {% for mascota in cliente.mascotas.all %}
                                         <a href="{% url 'clientes:detalle_historia_clinica' mascota.id %}" 
-                                           class="badge bg-info bg-opacity-15 text-info-emphasis border border-info border-opacity-20 text-decoration-none px-2.5 py-1.5 rounded-pill fw-bold small" 
+                                           class="badge bg-info-subtle text-info-emphasis border border-info-subtle text-decoration-none px-2.5 py-1.5 rounded-pill fw-bold small" 
                                            title="Ver Historia Clínica de {{ mascota.nombre }}">
                                             🐾 {{ mascota.nombre }}
                                         </a>

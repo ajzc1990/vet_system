@@ -56,12 +56,13 @@
             color: #64748b;
             font-weight: 600;
             font-size: 0.92rem;
-            padding: 0.5rem 0.85rem !important;
+            padding: 0.5rem 0.7rem !important;
             border-radius: 8px;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
+            white-space: nowrap;
         }
 
         .nav-link-custom:hover {
@@ -112,6 +113,13 @@
             border-radius: 16px;
         }
 
+        /* Encabezados de tabla: nunca partir el texto en varias líneas. Si la tabla no
+           entra en pantallas angostas, que aparezca el scroll horizontal de
+           .table-responsive en vez de comprimir/quebrar las columnas. */
+        .table-responsive thead th {
+            white-space: nowrap;
+        }
+
         .footer {
             background-color: #ffffff;
             border-top: 1px solid var(--vs-border);
@@ -122,7 +130,7 @@
 <body>
 
     <!-- Navbar Superior -->
-    <nav class="navbar navbar-expand-lg navbar-main sticky-top shadow-sm">
+    <nav class="navbar navbar-expand-xl navbar-main sticky-top shadow-sm">
         <div class="container-fluid px-3 px-lg-4">
             <!-- Brand Logo -->
             <a class="navbar-brand fw-extrabold text-dark d-flex align-items-center gap-2 me-4" href="{% url 'dashboard:index' %}">
@@ -162,8 +170,8 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'clientes' or request.resolver_match.app_name == 'historia_clinica' %}active{% endif %}" href="{% url 'clientes:lista_clientes' %}">
-                            <i class="bi bi-people"></i> Clientes & Pacientes
+                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'clientes' or request.resolver_match.app_name == 'historia_clinica' and request.resolver_match.url_name != 'lista_internaciones' and request.resolver_match.url_name != 'detalle_internacion' %}active{% endif %}" href="{% url 'clientes:lista_clientes' %}">
+                            <i class="bi bi-people"></i> Pacientes
                         </a>
                     </li>
                     <li class="nav-item">
@@ -193,27 +201,27 @@
                     {% endif %}
 
                     {% if user.is_authenticated %}
-                        {% if not user.cliente_portal %}
-                        <!-- Tenant Badge -->
-                        <span class="badge bg-light text-primary border px-3 py-2 rounded-pill small fw-bold d-inline-flex align-items-center gap-1">
-                            <i class="bi bi-building text-secondary"></i>
-                            {% if request.veterinaria %}
-                                {{ request.veterinaria.nombre }}
-                            {% elif user.perfil and user.perfil.veterinaria %}
-                                {{ user.perfil.veterinaria.nombre }}
-                            {% else %}
-                                Súper Admin
-                            {% endif %}
-                        </span>
-                        {% endif %}
-
-                        <!-- User Profile Dropdown -->
+                        <!-- User Profile Dropdown (incluye la veterinaria activa como subtítulo) -->
                         <div class="dropdown">
                             <button class="btn user-dropdown-btn d-flex align-items-center gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="avatar-circle">
                                     {{ user.username|slice:":1"|upper }}
                                 </div>
-                                <span class="fw-bold small text-dark d-none d-md-inline">{{ user.username }}</span>
+                                <div class="d-none d-md-flex flex-column align-items-start lh-sm">
+                                    <span class="fw-bold small text-dark">{{ user.username }}</span>
+                                    {% if not user.cliente_portal %}
+                                        <span class="text-muted d-inline-flex align-items-center gap-1" style="font-size: 0.7rem;">
+                                            <i class="bi bi-building"></i>
+                                            {% if request.veterinaria %}
+                                                {{ request.veterinaria.nombre }}
+                                            {% elif user.perfil and user.perfil.veterinaria %}
+                                                {{ user.perfil.veterinaria.nombre }}
+                                            {% else %}
+                                                Súper Admin
+                                            {% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
                                 <i class="bi bi-chevron-down small text-muted"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2 mt-2" aria-labelledby="userMenu" style="min-width: 200px;">

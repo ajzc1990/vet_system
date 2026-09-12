@@ -18,11 +18,11 @@
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-4 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <div class="bg-danger-subtle text-danger-emphasis p-3 rounded-4 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
                         <i class="bi bi-hospital-fill fs-2"></i>
                     </div>
                     <div>
-                        <span class="badge {% if internacion.esta_activa %}bg-danger{% else %}bg-success{% endif %} bg-opacity-10 {% if internacion.esta_activa %}text-danger{% else %}text-success{% endif %} border px-2.5 py-1 rounded-pill extra-small fw-bold mb-1">
+                        <span class="badge {% if internacion.esta_activa %}bg-danger-subtle{% else %}bg-success-subtle{% endif %} {% if internacion.esta_activa %}text-danger-emphasis{% else %}text-success-emphasis{% endif %} border px-2.5 py-1 rounded-pill extra-small fw-bold mb-1">
                             {{ internacion.get_estado_display }}
                         </span>
                         <h3 class="fw-extrabold text-dark mb-0 fs-3">
@@ -98,7 +98,7 @@
     <!-- Registro rápido de nueva evolución -->
     {% if internacion.esta_activa %}
     {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
-    <div class="card border-primary border-opacity-25 shadow-lg mb-4 rounded-4 overflow-hidden">
+    <div class="card border-primary-subtle shadow-lg mb-4 rounded-4 overflow-hidden">
         <div class="card-header bg-primary text-white py-3 px-4">
             <h5 class="fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
                 <i class="bi bi-plus-square-fill text-warning fs-5"></i> Registrar Nueva Evolución / Control
@@ -177,7 +177,7 @@
                 <span class="fw-bold text-dark d-flex align-items-center gap-2">
                     <i class="bi bi-clock-fill text-primary"></i>{{ e.fecha_hora|date:"d/m/Y H:i" }} hs
                 </span>
-                <span class="badge {% if e.estado_general == 'CRITICO' %}bg-danger{% elif e.estado_general == 'EMPEORANDO' %}bg-warning text-dark{% elif e.estado_general == 'MEJORANDO' %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                <span class="badge {% if e.estado_general == 'CRITICO' %}bg-danger-subtle{% elif e.estado_general == 'EMPEORANDO' %}bg-warning-subtle text-dark{% elif e.estado_general == 'MEJORANDO' %}bg-success-subtle{% else %}bg-secondary-subtle{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
                     {{ e.get_estado_general_display }}
                 </span>
             </div>

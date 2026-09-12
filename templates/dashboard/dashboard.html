@@ -3,13 +3,13 @@
 {% block title %}Dashboard General - VeterSystem{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
     <div>
         <h2 class="h3 fw-bold text-dark mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Panel de Control Operativo</h2>
         <p class="text-muted small mb-0">Resumen del día {{ hoy|date:"d/m/Y" }}</p>
     </div>
-    
-    <div class="d-flex gap-2">
+
+    <div class="d-flex flex-wrap gap-2">
         <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-warning text-dark fw-semibold shadow-sm">
             <i class="bi bi-bell-fill me-1"></i> Recordatorios
         </a>
@@ -23,9 +23,9 @@
 </div>
 
 <!-- Tarjetas de KPIs Principales -->
-<div class="row g-3 mb-4">
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-5 g-3 mb-4">
     <!-- Turnos del día -->
-    <div class="col-md-3 col-sm-6">
+    <div class="col">
         <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-primary border-4">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
@@ -33,7 +33,7 @@
                     <div class="fs-3 fw-bold text-dark">{{ cant_turnos_hoy }}</div>
                     <div class="small text-primary fw-medium">{{ cant_turnos_pendientes }} pendientes</div>
                 </div>
-                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                <div class="bg-primary-subtle text-primary-emphasis p-3 rounded-circle">
                     <i class="bi bi-calendar-check fs-3"></i>
                 </div>
             </div>
@@ -41,7 +41,7 @@
     </div>
 
     <!-- Consultas Hoy -->
-    <div class="col-md-3 col-sm-6">
+    <div class="col">
         <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-success border-4">
             <div class="d-flex align-items-center justify-content-between">
                 <div>
@@ -49,7 +49,7 @@
                     <div class="fs-3 fw-bold text-dark">{{ cant_consultas_hoy }}</div>
                     <div class="small text-success fw-medium">Consultas cerradas</div>
                 </div>
-                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle">
+                <div class="bg-success-subtle text-success-emphasis p-3 rounded-circle">
                     <i class="bi bi-stethoscope fs-3"></i>
                 </div>
             </div>
@@ -57,7 +57,7 @@
     </div>
 
     <!-- Pacientes Internados -->
-    <div class="col-md-3 col-sm-6">
+    <div class="col">
         <a href="{% url 'historia_clinica:lista_internaciones' %}" class="text-decoration-none">
             <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-4 {% if cant_internados > 0 %}border-danger{% else %}border-secondary{% endif %}">
                 <div class="d-flex align-items-center justify-content-between">
@@ -66,7 +66,7 @@
                         <div class="fs-3 fw-bold text-dark">{{ cant_internados }}</div>
                         <div class="small {% if cant_internados > 0 %}text-danger{% else %}text-secondary{% endif %} fw-medium">Sala de Internación</div>
                     </div>
-                    <div class="{% if cant_internados > 0 %}bg-danger{% else %}bg-secondary{% endif %} bg-opacity-10 {% if cant_internados > 0 %}text-danger{% else %}text-secondary{% endif %} p-3 rounded-circle">
+                    <div class="{% if cant_internados > 0 %}bg-danger-subtle{% else %}bg-secondary-subtle{% endif %} {% if cant_internados > 0 %}text-danger-emphasis{% else %}text-secondary-emphasis{% endif %} p-3 rounded-circle">
                         <i class="bi bi-hospital-fill fs-3"></i>
                     </div>
                 </div>
@@ -75,16 +75,16 @@
     </div>
 
     <!-- Alertas de Stock Mínimo -->
-    <div class="col-md-3 col-sm-6">
+    <div class="col">
         <a href="{% url 'inventario:lista_productos' %}?filtro=bajo_stock" class="text-decoration-none">
-            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-danger border-4 bg-danger bg-opacity-10">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-danger-subtle border-4 bg-danger-subtle">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-danger small fw-semibold">Insumos Bajo Stock</div>
                         <div class="fs-3 fw-bold text-danger">{{ cant_bajo_stock }}</div>
                         <div class="small text-danger">Reposición requerida</div>
                     </div>
-                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle">
+                    <div class="bg-danger-subtle text-danger-emphasis p-3 rounded-circle">
                         <i class="bi bi-exclamation-triangle-fill fs-3"></i>
                     </div>
                 </div>
@@ -93,16 +93,16 @@
     </div>
 
     <!-- Alerta de Vencimientos -->
-    <div class="col-md-3 col-sm-6">
+    <div class="col">
         <a href="{% url 'inventario:lista_productos' %}?filtro=proximo_vencer" class="text-decoration-none">
-            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-warning border-4 bg-warning bg-opacity-10">
+            <div class="card border-0 shadow-sm rounded-3 p-3 border-start border-warning-subtle border-4 bg-warning-subtle">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-warning-emphasis small fw-semibold">Vencen &lt; 30 días</div>
                         <div class="fs-3 fw-bold text-warning-emphasis">{{ cant_proximo_vencer }}</div>
                         <div class="small text-warning-emphasis">{{ cant_vencidos }} ya vencidos</div>
                     </div>
-                    <div class="bg-warning bg-opacity-10 text-warning-emphasis p-3 rounded-circle">
+                    <div class="bg-warning-subtle text-warning-emphasis p-3 rounded-circle">
                         <i class="bi bi-hourglass-split fs-3"></i>
                     </div>
                 </div>
@@ -193,7 +193,7 @@
                 </thead>
                 <tbody>
                     {% for m in mensajes_contacto %}
-                    <tr class="{% if not m.leido %}table-warning bg-opacity-10 fw-semibold{% endif %}">
+                    <tr class="{% if not m.leido %}table-warning fw-semibold{% endif %}">
                         <td class="ps-3">
                             {% if not m.leido %}
                                 <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle-fill me-1"></i>NUEVO</span>

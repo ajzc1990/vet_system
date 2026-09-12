@@ -10,7 +10,7 @@
         </h2>
         <p class="text-muted small mb-0">Pacientes hospitalizados y seguimiento de evoluciones en tiempo real.</p>
     </div>
-    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-3 py-2 rounded-pill fw-bold fs-6">
+    <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-3 py-2 rounded-pill fw-bold fs-6">
         <i class="bi bi-clipboard2-pulse-fill me-1"></i> {{ internaciones_activas.count }} internado(s) activo(s)
     </span>
 </div>
@@ -27,7 +27,7 @@
                         <span class="small text-muted">{{ i.mascota.cliente.apellido }}, {{ i.mascota.cliente.nombre }}</span>
                     </div>
                     {% if i.box %}
-                    <span class="badge bg-dark bg-opacity-75 text-white px-2.5 py-1 rounded-pill fw-bold extra-small">
+                    <span class="badge bg-dark text-white px-2.5 py-1 rounded-pill fw-bold extra-small">
                         <i class="bi bi-door-closed-fill me-1"></i>{{ i.box }}
                     </span>
                     {% endif %}
@@ -96,7 +96,7 @@
                         <td class="py-3 text-secondary small">{{ i.fecha_ingreso|date:"d/m/Y H:i" }}</td>
                         <td class="py-3 text-secondary small">{{ i.fecha_alta_real|date:"d/m/Y H:i"|default:"-" }}</td>
                         <td class="py-3">
-                            <span class="badge {% if i.estado == 'ALTA' %}bg-success bg-opacity-15 text-success{% elif i.estado == 'FALLECIDO' %}bg-secondary bg-opacity-15 text-secondary{% else %}bg-warning bg-opacity-15 text-warning-emphasis{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
+                            <span class="badge {% if i.estado == 'ALTA' %}bg-success-subtle text-success-emphasis{% elif i.estado == 'FALLECIDO' %}bg-secondary-subtle text-secondary-emphasis{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
                                 {{ i.get_estado_display }}
                             </span>
                         </td>

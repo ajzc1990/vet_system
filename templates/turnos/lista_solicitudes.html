@@ -40,7 +40,7 @@
                         <td class="py-3 fw-semibold text-dark small">{{ s.fecha_deseada|date:"d/m/Y" }}</td>
                         <td class="py-3 small text-secondary">{{ s.get_franja_preferida_display }}</td>
                         <td class="py-3">
-                            <span class="badge {% if s.estado == 'PENDIENTE' %}bg-warning text-dark{% elif s.estado == 'CONTACTADO' %}bg-primary{% else %}bg-secondary{% endif %} bg-opacity-15 border px-3 py-1.5 rounded-pill fw-bold">
+                            <span class="badge {% if s.estado == 'PENDIENTE' %}bg-warning-subtle text-dark{% elif s.estado == 'CONTACTADO' %}bg-primary-subtle{% else %}bg-secondary-subtle{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
                                 {{ s.get_estado_display }}
                             </span>
                         </td>

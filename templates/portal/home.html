@@ -35,7 +35,7 @@
                         <td class="ps-3 fw-bold text-primary">{{ t.fecha_hora|date:"d/m/Y H:i" }} hs</td>
                         <td class="fw-semibold text-dark">{{ t.mascota.nombre }}</td>
                         <td class="small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}-{% endif %}</td>
-                        <td><span class="badge bg-primary bg-opacity-15 text-primary border px-3 py-1.5 rounded-pill fw-bold">{{ t.get_estado_display }}</span></td>
+                        <td><span class="badge bg-primary-subtle text-primary-emphasis border px-3 py-1.5 rounded-pill fw-bold">{{ t.get_estado_display }}</span></td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="4" class="text-center py-4 text-muted">No tenés turnos programados.</td></tr>
@@ -57,7 +57,7 @@
             <div class="card-body p-4 d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="h5 fw-bold mb-0 text-primary">🐾 {{ mascota.nombre }}</h4>
-                    <span class="badge bg-primary bg-opacity-10 text-primary border px-2.5 py-1 rounded-pill fw-bold extra-small">{{ mascota.get_especie_display }}</span>
+                    <span class="badge bg-primary-subtle text-primary-emphasis border px-2.5 py-1 rounded-pill fw-bold extra-small">{{ mascota.get_especie_display }}</span>
                 </div>
                 <div class="p-3 bg-light rounded-3 border mb-3 extra-small text-secondary">
                     <div><strong class="text-dark">Raza:</strong> {{ mascota.raza|default:"Mestizo" }}</div>

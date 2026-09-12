@@ -16,7 +16,7 @@
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="avatar-circle bg-primary bg-opacity-10 text-primary fw-extrabold rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; font-size: 1.3rem;">
+                    <div class="avatar-circle bg-primary-subtle text-primary-emphasis fw-extrabold rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 58px; height: 58px; font-size: 1.3rem;">
                         {{ cliente.apellido|slice:":1"|upper }}{{ cliente.nombre|slice:":1"|upper }}
                     </div>
                     <div>
@@ -25,9 +25,9 @@
                                 {{ cliente.nombre }} {{ cliente.apellido }}
                             </h2>
                             {% if cliente.activo %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-2.5 py-1 rounded-pill extra-small fw-bold">Activo</span>
+                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2.5 py-1 rounded-pill extra-small fw-bold">Activo</span>
                             {% else %}
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-20 px-2.5 py-1 rounded-pill extra-small fw-bold">Inactivo</span>
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle px-2.5 py-1 rounded-pill extra-small fw-bold">Inactivo</span>
                             {% endif %}
                         </div>
                         <p class="text-muted small mb-0 d-flex flex-wrap gap-3 align-items-center">
@@ -86,7 +86,7 @@
                                 <h4 class="h5 fw-bold mb-0 text-primary d-flex align-items-center gap-2">
                                     🐾 {{ mascota.nombre }}
                                 </h4>
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1 rounded-pill fw-bold extra-small">
+                                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2.5 py-1 rounded-pill fw-bold extra-small">
                                     {{ mascota.get_especie_display }}
                                 </span>
                             </div>

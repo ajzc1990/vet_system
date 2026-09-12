@@ -35,7 +35,7 @@
 
 <!-- Banner Estado de Caja -->
 {% if caja_activa %}
-    <div class="alert alert-success bg-success bg-opacity-10 border border-success border-opacity-20 shadow-sm rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 gap-3">
+    <div class="alert alert-success bg-success-subtle border border-success-subtle shadow-sm rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 gap-3">
         <div class="d-flex align-items-center gap-3">
             <div class="bg-success text-white p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                 <i class="bi bi-check-circle-fill fs-4"></i>
@@ -48,13 +48,13 @@
             </div>
         </div>
         <div>
-            <span class="badge bg-white text-success border border-success border-opacity-30 px-3 py-2 rounded-pill fw-extrabold fs-6 shadow-sm">
+            <span class="badge bg-white text-success-emphasis border border-success-subtle px-3 py-2 rounded-pill fw-extrabold fs-6 shadow-sm">
                 <i class="bi bi-cash-stack me-1"></i> Efectivo en Caja: ${{ caja_activa.total_efectivo|floatformat:2 }}
             </span>
         </div>
     </div>
 {% else %}
-    <div class="alert alert-warning bg-warning bg-opacity-15 border border-warning border-opacity-30 shadow-sm rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 gap-3">
+    <div class="alert alert-warning bg-warning-subtle border border-warning-subtle shadow-sm rounded-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 gap-3">
         <div class="d-flex align-items-center gap-3">
             <div class="bg-warning text-dark p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
                 <i class="bi bi-exclamation-triangle-fill fs-4"></i>
@@ -91,7 +91,7 @@
                         <!-- ID Venta y Fecha -->
                         <td class="ps-4 py-3">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-2.5 py-1.5 rounded-3 fw-mono fw-bold">
+                                <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle px-2.5 py-1.5 rounded-3 fw-mono fw-bold">
                                     #{{ v.id }}
                                 </span>
                                 <div>
@@ -121,7 +121,7 @@
 
                         <!-- Medio de Pago -->
                         <td class="py-3">
-                            <span class="badge bg-info bg-opacity-15 text-info-emphasis border border-info border-opacity-20 px-3 py-1.5 rounded-pill fw-bold">
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-1.5 rounded-pill fw-bold">
                                 <i class="bi bi-credit-card-2-front me-1"></i>{{ v.get_medio_pago_display }}
                             </span>
                         </td>
