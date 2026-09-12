@@ -2,7 +2,7 @@ import json
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth import logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView
 from django.contrib.auth.decorators import login_required
@@ -54,6 +54,37 @@ def landing_page(request):
             messages.error(request, "Por favor completa los campos obligatorios (Nombre, Email y Mensaje).")
 
     return render(request, 'landing.html')
+
+
+def entrar_a_demo(request):
+    """Acceso público de un solo clic a la demo en vivo: loguea directamente como el
+    administrador de la veterinaria demo (creada por el comando seed_demo), sin pedirle
+    usuario/clave a un prospecto. Es un entorno compartido entre todos los visitantes
+    -no se crea un tenant nuevo por cada uno- que se resetea periódicamente corriendo
+    'python manage.py seed_demo --reset' (por ejemplo, vía cron)."""
+    from .management.commands.seed_demo import DEMO_VET_NOMBRE, DEMO_ADMIN_USERNAME
+
+    if request.user.is_authenticated:
+        logout(request)
+
+    demo_admin = User.objects.filter(
+        username=DEMO_ADMIN_USERNAME, perfil__veterinaria__nombre=DEMO_VET_NOMBRE,
+    ).first()
+
+    if not demo_admin:
+        messages.error(
+            request,
+            "La demo en vivo no está disponible en este momento. Escribinos y te la mostramos personalmente."
+        )
+        return redirect('landing')
+
+    login(request, demo_admin, backend='django.contrib.auth.backends.ModelBackend')
+    messages.info(
+        request,
+        "Estás en un entorno de demostración compartido con datos de ejemplo: se reinicia "
+        "periódicamente, así que no cargues información real."
+    )
+    return redirect('dashboard:index')
 
 
 # ==============================================================================

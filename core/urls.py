@@ -13,7 +13,10 @@ urlpatterns = [
     
     # Vista Principal / Landing Page
     path('', usuario_views.landing_page, name='landing'),
-    
+
+    # Demo pública de un clic (loguea directo como el admin de la veterinaria demo)
+    path('demo/', usuario_views.entrar_a_demo, name='entrar_a_demo'),
+
     # Dashboard Operativo Centralizado
     path('dashboard/', include(('apps.dashboard.urls', 'dashboard'), namespace='dashboard')),
     

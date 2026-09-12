@@ -254,3 +254,38 @@ class PagoSuscripcionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_obtener.assert_not_called()
+
+
+class EntrarADemoTests(TestCase):
+    """El botón público 'Ver Demo en Vivo' debe loguear directo al admin de la
+    veterinaria demo (creada por seed_demo) sin pedir usuario/clave."""
+
+    def test_loguea_directamente_como_el_admin_de_la_veterinaria_demo(self):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE, DEMO_ADMIN_USERNAME
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        admin_demo = User.objects.create_user(username=DEMO_ADMIN_USERNAME, password="lo-que-sea")
+        PerfilUsuario.objects.create(user=admin_demo, veterinaria=vet_demo, rol="ADMIN", is_approved=True)
+
+        response = self.client.get(reverse('entrar_a_demo'), follow=True)
+
+        self.assertEqual(response.wsgi_request.user, admin_demo)
+        self.assertRedirects(response, reverse('dashboard:index'))
+
+    def test_sin_tenant_demo_creado_redirige_a_landing_con_error(self):
+        response = self.client.get(reverse('entrar_a_demo'), follow=True)
+
+        self.assertRedirects(response, reverse('landing'))
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    def test_banner_de_demo_publica_aparece_dentro_del_dashboard(self):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE, DEMO_ADMIN_USERNAME
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        admin_demo = User.objects.create_user(username=DEMO_ADMIN_USERNAME, password="lo-que-sea")
+        PerfilUsuario.objects.create(user=admin_demo, veterinaria=vet_demo, rol="ADMIN", is_approved=True)
+        self.client.force_login(admin_demo)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertContains(response, "demo pública")

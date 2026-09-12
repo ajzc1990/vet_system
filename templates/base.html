@@ -278,6 +278,13 @@
 
     <!-- Contenedor Principal y Alertas Flash -->
     <div class="container main-container">
+        {% if es_demo_publica %}
+        <div class="alert alert-info border-0 rounded-3 shadow-sm mb-4 d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle-fill fs-5"></i>
+            <span class="fw-medium">Estás en el entorno de <strong>demo pública</strong>, compartido con otros visitantes: los datos se reinician periódicamente. No cargues información real acá.</span>
+        </div>
+        {% endif %}
+
         {% if suscripcion and suscripcion.esta_vencida %}
         <div class="alert alert-danger border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span class="fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} venció el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}. Regularizá el pago para evitar interrupciones del servicio.</span>
