@@ -180,64 +180,59 @@ def cancelar_turno(request, pk):
 
 
 # ==============================================================================
-# RESERVA DE TURNOS ONLINE (PÚBLICO, SIN LOGIN)
+# RESERVA DE TURNOS ONLINE (SOLO CLIENTES CON CUENTA EN EL PORTAL)
 # ==============================================================================
 
+@login_required
 def solicitar_turno_publico(request, veterinaria_id):
-    """Formulario de reserva online. Si quien entra ya es un cliente del Portal de ESTA
-    veterinaria, se lo reconoce automáticamente: no vuelve a tipear su nombre/teléfono y
-    elige su mascota de una lista en vez de escribirla de nuevo. Si no, funciona como
-    formulario público clásico (sin login), pensado para un tutor nuevo.
+    """Formulario de reserva online, reservado a clientes que ya tienen cuenta en el
+    Portal de ESTA veterinaria: se los reconoce automáticamente (nombre/teléfono
+    autocompletados, mascota elegida de una lista) y no hace falta re-tipear nada.
 
-    En ambos casos genera una SolicitudTurnoWeb pendiente de revisión; el staff la
-    convierte en Turno real."""
+    Quien no esté logueado, o esté logueado pero no sea cliente de esta veterinaria,
+    no puede generar el pedido: tiene que pedirle a la clínica que lo cargue como
+    cliente y le dé acceso al Portal primero. Genera una SolicitudTurnoWeb pendiente
+    de revisión; el staff la convierte en Turno real."""
     veterinaria = get_object_or_404(Veterinaria, pk=veterinaria_id, activo=True)
 
-    cliente_portal = getattr(request.user, 'cliente_portal', None) if request.user.is_authenticated else None
-    if cliente_portal and cliente_portal.veterinaria_id != veterinaria.id:
-        cliente_portal = None  # Es cliente de otra veterinaria: se lo trata como visitante nuevo.
-    mascotas_cliente = cliente_portal.mascotas.all() if cliente_portal else None
+    cliente_portal = getattr(request.user, 'cliente_portal', None)
+    if not cliente_portal or cliente_portal.veterinaria_id != veterinaria.id:
+        messages.error(
+            request,
+            f"Para solicitar un turno online necesitás una cuenta de cliente en {veterinaria.nombre}. "
+            "Si ya sos paciente, pedile a la clínica que te dé acceso al Portal."
+        )
+        if cliente_portal:
+            return redirect('portal:home')
+        return redirect('landing')
+
+    mascotas_cliente = cliente_portal.mascotas.all()
 
     if request.method == 'POST':
         motivo = request.POST.get('motivo')
         fecha_deseada = request.POST.get('fecha_deseada')
         franja_preferida = request.POST.get('franja_preferida') or 'CUALQUIERA'
+        mascota = mascotas_cliente.filter(pk=request.POST.get('mascota_id')).first()
 
-        if cliente_portal:
-            mascota = mascotas_cliente.filter(pk=request.POST.get('mascota_id')).first()
-            nombre_tutor = f"{cliente_portal.nombre} {cliente_portal.apellido}"
-            telefono = cliente_portal.telefono
-            email = cliente_portal.email
-            nombre_mascota = mascota.nombre if mascota else None
-            especie = mascota.get_especie_display() if mascota else None
-        else:
-            nombre_tutor = request.POST.get('nombre_tutor')
-            telefono = request.POST.get('telefono')
-            email = request.POST.get('email') or None
-            nombre_mascota = request.POST.get('nombre_mascota')
-            especie = request.POST.get('especie') or None
-
-        if nombre_tutor and telefono and nombre_mascota and motivo and fecha_deseada:
+        if mascota and motivo and fecha_deseada:
             SolicitudTurnoWeb.objects.create(
                 veterinaria=veterinaria,
-                nombre_tutor=nombre_tutor,
-                telefono=telefono,
-                email=email,
-                nombre_mascota=nombre_mascota,
-                especie=especie,
+                nombre_tutor=f"{cliente_portal.nombre} {cliente_portal.apellido}",
+                telefono=cliente_portal.telefono,
+                email=cliente_portal.email,
+                nombre_mascota=mascota.nombre,
+                especie=mascota.get_especie_display(),
                 motivo=motivo,
                 fecha_deseada=fecha_deseada,
                 franja_preferida=franja_preferida,
             )
             messages.success(
                 request,
-                f"¡Gracias {nombre_tutor}! Recibimos tu pedido de turno para {nombre_mascota}. "
+                f"¡Gracias {cliente_portal.nombre}! Recibimos tu pedido de turno para {mascota.nombre}. "
                 "El equipo de la clínica se va a comunicar para confirmarlo."
             )
-            if cliente_portal:
-                return redirect('portal:turnos')
-            return redirect('turnos:solicitar_turno_publico', veterinaria_id=veterinaria.id)
-        elif cliente_portal and not nombre_mascota:
+            return redirect('portal:turnos')
+        elif not mascota:
             messages.error(request, "Seleccioná para cuál de tus mascotas es el turno.")
         else:
             messages.error(request, "Por favor completá todos los campos obligatorios.")

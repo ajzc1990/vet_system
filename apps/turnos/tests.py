@@ -107,17 +107,6 @@ class SolicitudTurnoWebTests(TestCase):
             motivo="Control", fecha_deseada=timezone.now().date() + timedelta(days=2),
         )
 
-    def test_formulario_publico_no_requiere_login_y_crea_la_solicitud(self):
-        response = self.client.post(reverse('turnos:solicitar_turno_publico', args=[self.vet_a.id]), {
-            'nombre_tutor': 'Maria Lopez',
-            'telefono': '3811234567',
-            'nombre_mascota': 'Rocky',
-            'motivo': 'Chequeo general',
-            'fecha_deseada': (timezone.now().date() + timedelta(days=3)).isoformat(),
-        })
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(SolicitudTurnoWeb.objects.filter(nombre_mascota='Rocky', veterinaria=self.vet_a).exists())
-
     def test_bandeja_de_solicitudes_solo_muestra_las_del_tenant_activo(self):
         self.client.force_login(self.user_a)
         response = self.client.get(reverse('turnos:lista_solicitudes_turno'))
@@ -136,9 +125,10 @@ class SolicitudTurnoWebTests(TestCase):
 
 
 class SolicitarTurnoClientePortalTests(TestCase):
-    """Un tutor que ya tiene cuenta en el Portal no debería tener que re-tipear su
-    nombre/teléfono ni el nombre de su mascota: se autocompletan desde su cuenta y
-    elige la mascota de una lista."""
+    """La reserva de turno online está reservada a clientes con cuenta en el Portal: no
+    vuelven a tipear su nombre/teléfono ni el nombre de su mascota, se autocompletan
+    desde su cuenta y elige la mascota de una lista. Quien no sea cliente de esa
+    veterinaria (o no esté logueado) no puede generar el pedido."""
 
     def setUp(self):
         self.vet = Veterinaria.objects.create(nombre="Clinica Portal")
@@ -180,17 +170,29 @@ class SolicitarTurnoClientePortalTests(TestCase):
 
         self.assertFalse(SolicitudTurnoWeb.objects.filter(nombre_mascota='Toby').exists())
 
-    def test_cliente_de_otra_veterinaria_no_ve_sus_datos_autocompletados(self):
-        """Si entra al link de reserva de una veterinaria que no es la suya, se lo trata
-        como visitante nuevo (no se autocompleta con los datos de su otra clínica)."""
+    def test_cliente_de_otra_veterinaria_no_puede_reservar_ahi(self):
+        """Si entra al link de reserva de una veterinaria que no es la suya, se lo
+        rechaza en vez de mostrarle el formulario (no es cliente de esa clínica)."""
         self.client.force_login(self.user_portal)
 
         response = self.client.get(reverse('turnos:solicitar_turno_publico', args=[self.otra_vet.id]))
 
-        self.assertIsNone(response.context['cliente_portal'])
+        self.assertRedirects(response, reverse('portal:home'))
 
-    def test_usuario_anonimo_sigue_viendo_el_formulario_clasico(self):
+    def test_usuario_anonimo_debe_loguearse_para_reservar(self):
         response = self.client.get(reverse('turnos:solicitar_turno_publico', args=[self.vet.id]))
 
-        self.assertIsNone(response.context['cliente_portal'])
-        self.assertContains(response, 'name="nombre_tutor"')
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next={reverse('turnos:solicitar_turno_publico', args=[self.vet.id])}",
+        )
+
+    def test_usuario_logueado_sin_cuenta_de_cliente_no_puede_reservar(self):
+        staff = User.objects.create_user(username="staff_sin_cliente", password="testpass123")
+        PerfilUsuario.objects.create(user=staff, veterinaria=self.vet, rol="RECEPCION", is_approved=True)
+        self.client.force_login(staff)
+
+        response = self.client.get(reverse('turnos:solicitar_turno_publico', args=[self.vet.id]))
+
+        # No se sigue el redirect: landing() a su vez redirige de nuevo (staff logueado -> dashboard).
+        self.assertRedirects(response, reverse('landing'), fetch_redirect_response=False)

@@ -29,7 +29,7 @@
                         <label class="form-label fw-bold text-dark small d-block mb-1">
                             <i class="bi bi-calendar-heart-fill text-primary me-1"></i> Enlace Público de Reserva de Turnos
                         </label>
-                        <small class="text-muted d-block mb-2">Compartí este enlace con tus clientes (WhatsApp, Instagram, etc.) para que puedan pedir un turno online.</small>
+                        <small class="text-muted d-block mb-2">Compartí este enlace con tus clientes (WhatsApp, Instagram, etc.) para que pidan un turno online. Requiere que ya tengan acceso al Portal del Cliente (se lo das desde la ficha del cliente).</small>
                         <div class="input-group">
                             <input type="text" id="enlaceReserva" class="form-control bg-white" readonly value="{{ request.scheme }}://{{ request.get_host }}{% url 'turnos:solicitar_turno_publico' veterinaria.id %}">
                             <button class="btn btn-primary fw-bold" type="button" onclick="navigator.clipboard.writeText(document.getElementById('enlaceReserva').value); this.innerHTML='<i class=\'bi bi-check-lg\'></i> Copiado';">
