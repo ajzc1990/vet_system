@@ -123,6 +123,7 @@ class RegistroAuditoria(models.Model):
 class Plan(models.Model):
     nombre = models.CharField(max_length=50, verbose_name="Nombre del Plan")
     precio_mensual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Precio Mensual")
+    precio_anual = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Precio Anual")
     max_usuarios = models.PositiveIntegerField(default=3, verbose_name="Máximo de Usuarios")
     max_mascotas = models.PositiveIntegerField(default=100, verbose_name="Máximo de Pacientes Activos")
     permite_internacion = models.BooleanField(default=True, verbose_name="¿Incluye módulo de Internación?")
@@ -147,6 +148,10 @@ class Suscripcion(models.Model):
         ('CANCELADA', 'Cancelada'),
         ('PRUEBA', 'Período de Prueba'),
     ]
+    CICLOS = [
+        ('MENSUAL', 'Mensual'),
+        ('ANUAL', 'Anual'),
+    ]
 
     veterinaria = models.OneToOneField(
         Veterinaria,
@@ -159,6 +164,9 @@ class Suscripcion(models.Model):
         on_delete=models.PROTECT,
         related_name='suscripciones',
         verbose_name="Plan Contratado"
+    )
+    ciclo_facturacion = models.CharField(
+        max_length=10, choices=CICLOS, default='MENSUAL', verbose_name="Ciclo de Facturación"
     )
     estado = models.CharField(max_length=10, choices=ESTADOS, default='PRUEBA', verbose_name="Estado")
     fecha_inicio = models.DateField(default=timezone.now, verbose_name="Fecha de Inicio")
@@ -188,3 +196,8 @@ class Suscripcion(models.Model):
     @property
     def proxima_a_vencer(self):
         return not self.esta_vencida and 0 <= self.dias_para_vencer <= 7
+
+    @property
+    def precio_ciclo_actual(self):
+        """Precio del plan correspondiente al ciclo de facturación contratado (mensual o anual)."""
+        return self.plan.precio_anual if self.ciclo_facturacion == 'ANUAL' else self.plan.precio_mensual

@@ -23,10 +23,11 @@
                     <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
                         <th class="ps-4 py-3">Veterinaria</th>
                         <th class="py-3">Plan</th>
+                        <th class="py-3">Ciclo</th>
                         <th class="py-3">Estado</th>
                         <th class="py-3">Vencimiento</th>
                         <th class="py-3">Último Pago</th>
-                        <th class="text-end pe-4 py-3">Acción</th>
+                        <th class="text-end pe-4 py-3">Registrar Pago</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,6 +35,7 @@
                     <tr>
                         <td class="ps-4 py-3 fw-bold text-dark">{{ s.veterinaria.nombre }}</td>
                         <td class="py-3 text-secondary small">{{ s.plan.nombre }}</td>
+                        <td class="py-3 text-secondary small">{{ s.get_ciclo_facturacion_display }}</td>
                         <td class="py-3">
                             <span class="badge {% if s.esta_vencida %}bg-danger-subtle{% elif s.estado == 'PRUEBA' %}bg-info-subtle{% else %}bg-success-subtle{% endif %} border px-3 py-1.5 rounded-pill fw-bold">
                                 {% if s.esta_vencida %}VENCIDA{% else %}{{ s.get_estado_display }}{% endif %}
@@ -42,16 +44,26 @@
                         <td class="py-3 text-secondary small">{{ s.fecha_vencimiento|date:"d/m/Y" }}</td>
                         <td class="py-3 text-secondary small">{{ s.ultimo_pago_registrado|date:"d/m/Y"|default:"-" }}</td>
                         <td class="text-end pe-4 py-3">
-                            <form method="post" action="{% url 'usuarios:extender_suscripcion' s.id %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-success fw-bold rounded-2 px-3" title="Registrar pago y extender 30 días">
-                                    <i class="bi bi-plus-circle-fill me-1"></i> +30 días
-                                </button>
-                            </form>
+                            <div class="d-inline-flex gap-1">
+                                <form method="post" action="{% url 'usuarios:extender_suscripcion' s.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="ciclo" value="MENSUAL">
+                                    <button type="submit" class="btn btn-sm btn-success fw-bold rounded-2 px-3" title="Registrar pago mensual (${{ s.plan.precio_mensual }}) y extender 30 días">
+                                        <i class="bi bi-plus-circle-fill me-1"></i> +30 días
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'usuarios:extender_suscripcion' s.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="ciclo" value="ANUAL">
+                                    <button type="submit" class="btn btn-sm btn-outline-success fw-bold rounded-2 px-3" title="Registrar pago anual (${{ s.plan.precio_anual }}) y extender 365 días">
+                                        <i class="bi bi-plus-circle-fill me-1"></i> +365 días
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center py-5 text-muted">No hay suscripciones registradas todavía.</td></tr>
+                    <tr><td colspan="7" class="text-center py-5 text-muted">No hay suscripciones registradas todavía.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

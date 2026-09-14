@@ -53,7 +53,15 @@ def landing_page(request):
         else:
             messages.error(request, "Por favor completa los campos obligatorios (Nombre, Email y Mensaje).")
 
-    return render(request, 'landing.html')
+    plan_destacado = Plan.objects.filter(activo=True).order_by('orden', 'precio_mensual').first()
+    ahorro_anual = None
+    if plan_destacado:
+        ahorro_anual = (plan_destacado.precio_mensual * 12) - plan_destacado.precio_anual
+
+    return render(request, 'landing.html', {
+        'plan_destacado': plan_destacado,
+        'ahorro_anual': ahorro_anual,
+    })
 
 
 def entrar_a_demo(request):
@@ -249,7 +257,8 @@ def mi_suscripcion(request):
 
 @login_required
 def iniciar_pago_suscripcion(request):
-    """Redirige al Checkout Pro de Mercado Pago para pagar el mes en curso del plan contratado."""
+    """Redirige al Checkout Pro de Mercado Pago para pagar el plan contratado, en el
+    ciclo elegido (?ciclo=MENSUAL o ANUAL; por defecto el ciclo actual de la suscripción)."""
     vet = get_veterinaria_activa(request)
     suscripcion = getattr(vet, 'suscripcion', None) if vet else None
 
@@ -264,8 +273,11 @@ def iniciar_pago_suscripcion(request):
         )
         return redirect('usuarios:mi_suscripcion')
 
+    ciclo = request.GET.get('ciclo')
+    ciclo = ciclo if ciclo in ('MENSUAL', 'ANUAL') else None
+
     try:
-        preferencia = crear_preferencia_pago(suscripcion, request)
+        preferencia = crear_preferencia_pago(suscripcion, request, ciclo=ciclo)
     except Exception:
         messages.error(request, "No se pudo iniciar el pago en este momento. Intentá nuevamente más tarde.")
         return redirect('usuarios:mi_suscripcion')
@@ -304,9 +316,13 @@ def webhook_mercadopago(request):
     if pago.get('status') == 'approved':
         suscripcion = Suscripcion.objects.filter(pk=pago.get('external_reference')).select_related('veterinaria').first()
         if suscripcion:
+            ciclo = str((pago.get('metadata') or {}).get('ciclo', 'MENSUAL')).upper()
+            dias = 365 if ciclo == 'ANUAL' else 30
+
             hoy = timezone.now().date()
             base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy else hoy
-            suscripcion.fecha_vencimiento = base + timedelta(days=30)
+            suscripcion.fecha_vencimiento = base + timedelta(days=dias)
+            suscripcion.ciclo_facturacion = ciclo if ciclo in ('MENSUAL', 'ANUAL') else 'MENSUAL'
             suscripcion.estado = 'ACTIVA'
             suscripcion.ultimo_pago_registrado = hoy
             suscripcion.save()
@@ -314,7 +330,7 @@ def webhook_mercadopago(request):
             registrar_auditoria(
                 None, 'EDITAR', modelo='Suscripcion', objeto_id=suscripcion.id,
                 descripcion=(
-                    f"Pago aprobado vía Mercado Pago (payment_id={payment_id}). "
+                    f"Pago aprobado vía Mercado Pago (payment_id={payment_id}, ciclo={ciclo}). "
                     f"Suscripción extendida hasta {suscripcion.fecha_vencimiento.strftime('%d/%m/%Y')}."
                 ),
                 veterinaria=suscripcion.veterinaria,
@@ -341,7 +357,8 @@ def panel_suscripciones(request):
 
 @login_required
 def extender_suscripcion(request, suscripcion_id):
-    """Extiende 30 días la suscripción y la marca como ACTIVA (registro manual de pago)."""
+    """Extiende la suscripción (30 o 365 días según el ciclo elegido) y la marca como
+    ACTIVA (registro manual de un pago coordinado fuera de Mercado Pago)."""
     if not request.user.is_superuser:
         messages.error(request, "No tenés permisos para esta acción.")
         return redirect('dashboard:index')
@@ -349,8 +366,13 @@ def extender_suscripcion(request, suscripcion_id):
     suscripcion = get_object_or_404(Suscripcion, pk=suscripcion_id)
 
     if request.method == 'POST':
+        ciclo = request.POST.get('ciclo')
+        ciclo = ciclo if ciclo in ('MENSUAL', 'ANUAL') else 'MENSUAL'
+        dias = 365 if ciclo == 'ANUAL' else 30
+
         base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= timezone.now().date() else timezone.now().date()
-        suscripcion.fecha_vencimiento = base + timedelta(days=30)
+        suscripcion.fecha_vencimiento = base + timedelta(days=dias)
+        suscripcion.ciclo_facturacion = ciclo
         suscripcion.estado = 'ACTIVA'
         suscripcion.ultimo_pago_registrado = timezone.now().date()
         suscripcion.save()

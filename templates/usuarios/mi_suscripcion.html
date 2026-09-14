@@ -24,19 +24,25 @@
         </div>
         <div class="card-body p-4">
             <div class="row g-3 mb-3 text-center">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="p-3 bg-light rounded-3 border">
-                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Precio Mensual</small>
-                        <span class="fs-4 fw-bold text-dark">${{ suscripcion.plan.precio_mensual }}</span>
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Ciclo Actual</small>
+                        <span class="fs-6 fw-bold text-dark">{{ suscripcion.get_ciclo_facturacion_display }}</span>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded-3 border">
+                        <small class="text-muted d-block extra-small text-uppercase fw-bold">Precio del Ciclo</small>
+                        <span class="fs-4 fw-bold text-dark">${{ suscripcion.precio_ciclo_actual }}</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="p-3 bg-light rounded-3 border">
                         <small class="text-muted d-block extra-small text-uppercase fw-bold">Vencimiento</small>
                         <span class="fs-6 fw-bold text-dark">{{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}</span>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="p-3 bg-light rounded-3 border">
                         <small class="text-muted d-block extra-small text-uppercase fw-bold">Último Pago</small>
                         <span class="fs-6 fw-bold text-dark">{{ suscripcion.ultimo_pago_registrado|date:"d/m/Y"|default:"Sin registrar" }}</span>
@@ -60,10 +66,19 @@
             {% endif %}
 
             {% if mp_configurado %}
-                <div class="d-flex justify-content-end mt-3">
-                    <a href="{% url 'usuarios:iniciar_pago_suscripcion' %}" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-credit-card-fill"></i> Pagar ${{ suscripcion.plan.precio_mensual }} con Mercado Pago
-                    </a>
+                <div class="row g-2 justify-content-end mt-3">
+                    <div class="col-sm-6 col-lg-5">
+                        <a href="{% url 'usuarios:iniciar_pago_suscripcion' %}?ciclo=MENSUAL" class="btn btn-outline-primary fw-bold w-100 py-2 rounded-3 shadow-sm d-flex flex-column align-items-center gap-1">
+                            <span><i class="bi bi-credit-card-fill me-1"></i> Pagar Mensual</span>
+                            <span class="fs-6">${{ suscripcion.plan.precio_mensual }}</span>
+                        </a>
+                    </div>
+                    <div class="col-sm-6 col-lg-5">
+                        <a href="{% url 'usuarios:iniciar_pago_suscripcion' %}?ciclo=ANUAL" class="btn btn-primary fw-bold w-100 py-2 rounded-3 shadow d-flex flex-column align-items-center gap-1">
+                            <span><i class="bi bi-credit-card-fill me-1"></i> Pagar Anual</span>
+                            <span class="fs-6">${{ suscripcion.plan.precio_anual }}</span>
+                        </a>
+                    </div>
                 </div>
             {% else %}
                 <div class="alert alert-secondary border-0 rounded-3 mt-3 mb-0 small">

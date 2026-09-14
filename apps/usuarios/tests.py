@@ -189,6 +189,33 @@ class SuscripcionTests(TestCase):
         vet.suscripcion.refresh_from_db()
         self.assertEqual(vet.suscripcion.estado, 'PRUEBA')
 
+    def test_extender_suscripcion_con_ciclo_anual_extiende_365_dias(self):
+        Plan.objects.create(nombre="Básico", precio_mensual=5000, precio_anual=50000, orden=0)
+        vet = Veterinaria.objects.create(nombre="Clinica Anual")
+        vencimiento_original = vet.suscripcion.fecha_vencimiento
+
+        super_user = User.objects.create_superuser(username="super_x", password="testpass123", email="s@s.com")
+        self.client.force_login(super_user)
+
+        response = self.client.post(reverse('usuarios:extender_suscripcion', args=[vet.suscripcion.id]), {'ciclo': 'ANUAL'})
+
+        self.assertRedirects(response, reverse('usuarios:panel_suscripciones'))
+        vet.suscripcion.refresh_from_db()
+        self.assertEqual(vet.suscripcion.ciclo_facturacion, 'ANUAL')
+        self.assertEqual(vet.suscripcion.estado, 'ACTIVA')
+        self.assertEqual((vet.suscripcion.fecha_vencimiento - vencimiento_original).days, 365)
+
+    def test_precio_ciclo_actual_refleja_el_ciclo_contratado(self):
+        plan = Plan.objects.create(nombre="Básico", precio_mensual=5000, precio_anual=50000, orden=0)
+        vet = Veterinaria.objects.create(nombre="Clinica Precio")
+        suscripcion = vet.suscripcion
+
+        self.assertEqual(suscripcion.precio_ciclo_actual, plan.precio_mensual)
+
+        suscripcion.ciclo_facturacion = 'ANUAL'
+        suscripcion.save()
+        self.assertEqual(suscripcion.precio_ciclo_actual, plan.precio_anual)
+
 
 class PagoSuscripcionTests(TestCase):
     """Los tests mockean el SDK de Mercado Pago: no hay credenciales reales disponibles
@@ -197,7 +224,7 @@ class PagoSuscripcionTests(TestCase):
     aprobado, sin depender de la red."""
 
     def setUp(self):
-        self.plan = Plan.objects.create(nombre="Básico", precio_mensual=5000, orden=0)
+        self.plan = Plan.objects.create(nombre="Básico", precio_mensual=5000, precio_anual=50000, orden=0)
         self.vet = Veterinaria.objects.create(nombre="Clinica Pagos")
         self.admin = User.objects.create_user(username="admin_pagos", password="testpass123")
         PerfilUsuario.objects.create(user=self.admin, veterinaria=self.vet, rol="ADMIN", is_approved=True)
@@ -213,6 +240,20 @@ class PagoSuscripcionTests(TestCase):
              patch('apps.usuarios.views.crear_preferencia_pago', return_value={'init_point': 'https://mp.example/checkout/abc'}):
             response = self.client.get(reverse('usuarios:iniciar_pago_suscripcion'))
         self.assertRedirects(response, 'https://mp.example/checkout/abc', fetch_redirect_response=False)
+
+    def test_ciclo_elegido_en_la_url_se_pasa_a_la_preferencia(self):
+        with patch('apps.usuarios.views.mp_configurado', return_value=True), \
+             patch('apps.usuarios.views.crear_preferencia_pago', return_value={'init_point': 'https://mp.example/checkout/abc'}) as mock_crear:
+            self.client.get(reverse('usuarios:iniciar_pago_suscripcion'), {'ciclo': 'ANUAL'})
+
+        self.assertEqual(mock_crear.call_args.kwargs.get('ciclo'), 'ANUAL')
+
+    def test_un_ciclo_invalido_en_la_url_se_ignora(self):
+        with patch('apps.usuarios.views.mp_configurado', return_value=True), \
+             patch('apps.usuarios.views.crear_preferencia_pago', return_value={'init_point': 'https://mp.example/checkout/abc'}) as mock_crear:
+            self.client.get(reverse('usuarios:iniciar_pago_suscripcion'), {'ciclo': 'QUINCENAL'})
+
+        self.assertIsNone(mock_crear.call_args.kwargs.get('ciclo'))
 
     def test_error_al_crear_preferencia_no_rompe_la_vista(self):
         with patch('apps.usuarios.views.mp_configurado', return_value=True), \
@@ -234,6 +275,38 @@ class PagoSuscripcionTests(TestCase):
         self.assertEqual(suscripcion.estado, 'ACTIVA')
         self.assertEqual(suscripcion.ultimo_pago_registrado, timezone.now().date())
         self.assertGreater(suscripcion.fecha_vencimiento, vencimiento_original)
+
+    def test_webhook_de_pago_anual_extiende_365_dias_y_guarda_el_ciclo(self):
+        suscripcion = self.vet.suscripcion
+        self.assertEqual(suscripcion.ciclo_facturacion, 'MENSUAL')
+        vencimiento_original = suscripcion.fecha_vencimiento
+
+        pago_mock = {
+            'status': 'approved', 'external_reference': str(suscripcion.id),
+            'metadata': {'ciclo': 'ANUAL'},
+        }
+        with patch('apps.usuarios.views.mp_configurado', return_value=True), \
+             patch('apps.usuarios.views.obtener_pago', return_value=pago_mock):
+            self.client.get(reverse('usuarios:webhook_mercadopago'), {'type': 'payment', 'id': '123457'})
+
+        suscripcion.refresh_from_db()
+        self.assertEqual(suscripcion.ciclo_facturacion, 'ANUAL')
+        self.assertEqual((suscripcion.fecha_vencimiento - vencimiento_original).days, 365)
+
+    def test_webhook_sin_metadata_de_ciclo_extiende_30_dias_por_compatibilidad(self):
+        """Preferencias creadas antes de que existiera el campo metadata.ciclo no lo
+        traen: debe seguir tratándose como mensual (30 días), no romper."""
+        suscripcion = self.vet.suscripcion
+        vencimiento_original = suscripcion.fecha_vencimiento
+
+        pago_mock = {'status': 'approved', 'external_reference': str(suscripcion.id)}
+        with patch('apps.usuarios.views.mp_configurado', return_value=True), \
+             patch('apps.usuarios.views.obtener_pago', return_value=pago_mock):
+            self.client.get(reverse('usuarios:webhook_mercadopago'), {'type': 'payment', 'id': '123458'})
+
+        suscripcion.refresh_from_db()
+        self.assertEqual(suscripcion.ciclo_facturacion, 'MENSUAL')
+        self.assertEqual((suscripcion.fecha_vencimiento - vencimiento_original).days, 30)
 
     def test_webhook_de_pago_pendiente_no_modifica_la_suscripcion(self):
         suscripcion = self.vet.suscripcion
@@ -289,3 +362,72 @@ class EntrarADemoTests(TestCase):
         response = self.client.get(reverse('dashboard:index'))
 
         self.assertContains(response, "demo pública")
+
+
+class CrearPreferenciaPagoTests(TestCase):
+    """Confirma que el precio enviado a Mercado Pago corresponde al ciclo elegido,
+    mockeando el SDK (no hay credenciales reales en este entorno)."""
+
+    def setUp(self):
+        self.plan = Plan.objects.create(nombre="Básico", precio_mensual=5000, precio_anual=50000, orden=0)
+        self.vet = Veterinaria.objects.create(nombre="Clinica Preferencia")
+        self.suscripcion = self.vet.suscripcion
+
+    def _mock_sdk(self):
+        sdk = type('FakeSDK', (), {})()
+        preferencias_creadas = []
+
+        class FakePreferenceClient:
+            def create(self, data):
+                preferencias_creadas.append(data)
+                return {'response': {'init_point': 'https://mp.example/checkout/abc'}}
+
+        sdk.preference = lambda: FakePreferenceClient()
+        return sdk, preferencias_creadas
+
+    def test_ciclo_mensual_cobra_el_precio_mensual(self):
+        from apps.usuarios.pagos import crear_preferencia_pago
+        sdk, creadas = self._mock_sdk()
+
+        with patch('apps.usuarios.pagos.get_sdk', return_value=sdk):
+            crear_preferencia_pago(self.suscripcion, RequestFactory().get('/'), ciclo='MENSUAL')
+
+        self.assertEqual(creadas[0]['items'][0]['unit_price'], 5000.0)
+        self.assertEqual(creadas[0]['metadata']['ciclo'], 'MENSUAL')
+
+    def test_ciclo_anual_cobra_el_precio_anual(self):
+        from apps.usuarios.pagos import crear_preferencia_pago
+        sdk, creadas = self._mock_sdk()
+
+        with patch('apps.usuarios.pagos.get_sdk', return_value=sdk):
+            crear_preferencia_pago(self.suscripcion, RequestFactory().get('/'), ciclo='ANUAL')
+
+        self.assertEqual(creadas[0]['items'][0]['unit_price'], 50000.0)
+        self.assertEqual(creadas[0]['metadata']['ciclo'], 'ANUAL')
+
+    def test_sin_ciclo_explicito_usa_el_de_la_suscripcion(self):
+        from apps.usuarios.pagos import crear_preferencia_pago
+        sdk, creadas = self._mock_sdk()
+        self.suscripcion.ciclo_facturacion = 'ANUAL'
+        self.suscripcion.save()
+
+        with patch('apps.usuarios.pagos.get_sdk', return_value=sdk):
+            crear_preferencia_pago(self.suscripcion, RequestFactory().get('/'))
+
+        self.assertEqual(creadas[0]['items'][0]['unit_price'], 50000.0)
+
+
+class LandingPricingTests(TestCase):
+    def test_muestra_el_precio_mensual_y_anual_del_plan_activo(self):
+        Plan.objects.create(nombre="Profesional", precio_mensual=20000, precio_anual=200000, activo=True, orden=0)
+
+        response = self.client.get(reverse('landing'))
+
+        self.assertContains(response, '20000')
+        self.assertContains(response, '200000')
+
+    def test_sin_plan_activo_no_rompe_ni_muestra_la_seccion(self):
+        response = self.client.get(reverse('landing'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'id="precios"')

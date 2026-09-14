@@ -84,15 +84,15 @@ class RegistroAuditoriaAdmin(admin.ModelAdmin):
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'precio_mensual', 'max_usuarios', 'max_mascotas', 'permite_internacion', 'activo')
+    list_display = ('nombre', 'precio_mensual', 'precio_anual', 'max_usuarios', 'max_mascotas', 'permite_internacion', 'activo')
     list_filter = ('activo', 'permite_internacion')
     ordering = ('orden', 'precio_mensual')
 
 
 @admin.register(Suscripcion)
 class SuscripcionAdmin(admin.ModelAdmin):
-    list_display = ('veterinaria', 'plan', 'estado_badge', 'fecha_inicio', 'fecha_vencimiento', 'ultimo_pago_registrado')
-    list_filter = ('estado', 'plan')
+    list_display = ('veterinaria', 'plan', 'ciclo_facturacion', 'estado_badge', 'fecha_inicio', 'fecha_vencimiento', 'ultimo_pago_registrado')
+    list_filter = ('estado', 'ciclo_facturacion', 'plan')
     search_fields = ('veterinaria__nombre',)
     ordering = ('fecha_vencimiento',)
 

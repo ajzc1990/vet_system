@@ -129,6 +129,7 @@
                     <li class="nav-item"><a class="nav-link px-3" href="#nosotros">Nosotros</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#mision-vision">Misión & Visión</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#caracteristicas">Módulos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#precios">Precios</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#contacto">Contacto</a></li>
                 </ul>
                 <div class="d-flex gap-2 align-items-center">
@@ -393,6 +394,64 @@
             </div>
         </div>
     </section>
+
+    <!-- Precios -->
+    {% if plan_destacado %}
+    <section id="precios" class="py-5 bg-light scroll-margin">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <span class="text-primary fw-bold text-uppercase small">Sin Sorpresas</span>
+                <h2 class="fw-extrabold display-6 text-dark mt-1">Un Precio Simple y Transparente</h2>
+                <p class="text-muted">Todos los módulos incluidos, sin costos ocultos. Elegí el ciclo que más te convenga.</p>
+            </div>
+
+            <div class="row g-4 justify-content-center">
+                <div class="col-md-5 col-lg-4">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-4 bg-white">
+                        <div class="text-center mb-3">
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis fw-bold px-3 py-2 rounded-pill">Mensual</span>
+                        </div>
+                        <div class="text-center mb-4">
+                            <span class="display-5 fw-extrabold text-dark">${{ plan_destacado.precio_mensual|floatformat:0 }}</span>
+                            <span class="text-muted fw-semibold">/mes</span>
+                        </div>
+                        <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los módulos incluidos</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_usuarios }} usuarios del staff</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_mascotas }} pacientes activos</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte por WhatsApp/Email</li>
+                        </ul>
+                        <a href="{% url 'usuarios:registro' %}" class="btn btn-outline-primary fw-bold py-2 rounded-3 mt-auto">Empezar Ahora</a>
+                    </div>
+                </div>
+
+                <div class="col-md-5 col-lg-4">
+                    <div class="card h-100 border-0 shadow-lg rounded-4 p-4 bg-white position-relative" style="border-top: 4px solid #0d6efd !important;">
+                        {% if ahorro_anual > 0 %}
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-2 rounded-pill position-absolute top-0 start-50 translate-middle shadow-sm">
+                            Ahorrás ${{ ahorro_anual|floatformat:0 }} al año
+                        </span>
+                        {% endif %}
+                        <div class="text-center mb-3 mt-2">
+                            <span class="badge bg-primary-subtle text-primary-emphasis fw-bold px-3 py-2 rounded-pill">Anual</span>
+                        </div>
+                        <div class="text-center mb-4">
+                            <span class="display-5 fw-extrabold text-dark">${{ plan_destacado.precio_anual|floatformat:0 }}</span>
+                            <span class="text-muted fw-semibold">/año</span>
+                        </div>
+                        <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los módulos incluidos</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_usuarios }} usuarios del staff</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_mascotas }} pacientes activos</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte prioritario</li>
+                        </ul>
+                        <a href="{% url 'usuarios:registro' %}" class="btn btn-primary fw-bold py-2 rounded-3 mt-auto shadow-sm">Empezar Ahora</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
 
     <!-- Formulario de Contacto -->
     <section id="contacto" class="py-5 bg-light scroll-margin">
