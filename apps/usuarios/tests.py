@@ -431,3 +431,26 @@ class LandingPricingTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'id="precios"')
+
+
+class LandingLlamadoAContactoTests(TestCase):
+    """El formulario de 'usuarios:registro' es para que el STAFF de una veterinaria YA
+    dada de alta en el sistema se sume a su propia cuenta (el form obliga a elegir una
+    veterinaria existente de un desplegable). No sirve como alta de un prospecto nuevo:
+    lo expondría a la lista de clínicas ya registradas y no crea una Veterinaria nueva.
+    Por eso los llamados a la acción públicos de la landing tienen que apuntar al
+    formulario de contacto, no al de registro."""
+
+    def test_ningun_cta_publico_de_la_landing_apunta_al_formulario_de_registro(self):
+        response = self.client.get(reverse('landing'))
+
+        self.assertNotContains(response, reverse('usuarios:registro'))
+
+    def test_los_cta_principales_apuntan_al_formulario_de_contacto(self):
+        Plan.objects.create(nombre="Profesional", precio_mensual=20000, precio_anual=200000, activo=True, orden=0)
+
+        response = self.client.get(reverse('landing'))
+
+        # 5 = el link "Contacto" del nav + los 4 botones de llamado a la acción
+        # (Quiero Sumarme, Probar Gratis, y los dos "Empezar Ahora" de precios).
+        self.assertContains(response, 'href="#contacto"', count=5)
