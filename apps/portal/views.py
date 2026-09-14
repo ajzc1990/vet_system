@@ -58,4 +58,4 @@ def portal_turnos(request):
     cliente = request.user.cliente_portal
     turnos = Turno.objects.filter(mascota__cliente=cliente).select_related('mascota', 'veterinario').order_by('-fecha_hora')
 
-    return render(request, 'portal/turnos.html', {'turnos': turnos})
+    return render(request, 'portal/turnos.html', {'turnos': turnos, 'cliente': cliente})

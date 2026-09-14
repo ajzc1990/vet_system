@@ -184,39 +184,69 @@ def cancelar_turno(request, pk):
 # ==============================================================================
 
 def solicitar_turno_publico(request, veterinaria_id):
-    """Formulario público (sin login) para que un tutor pida un turno. Genera una
-    SolicitudTurnoWeb pendiente de revisión; el staff la convierte en Turno real."""
+    """Formulario de reserva online. Si quien entra ya es un cliente del Portal de ESTA
+    veterinaria, se lo reconoce automáticamente: no vuelve a tipear su nombre/teléfono y
+    elige su mascota de una lista en vez de escribirla de nuevo. Si no, funciona como
+    formulario público clásico (sin login), pensado para un tutor nuevo.
+
+    En ambos casos genera una SolicitudTurnoWeb pendiente de revisión; el staff la
+    convierte en Turno real."""
     veterinaria = get_object_or_404(Veterinaria, pk=veterinaria_id, activo=True)
 
+    cliente_portal = getattr(request.user, 'cliente_portal', None) if request.user.is_authenticated else None
+    if cliente_portal and cliente_portal.veterinaria_id != veterinaria.id:
+        cliente_portal = None  # Es cliente de otra veterinaria: se lo trata como visitante nuevo.
+    mascotas_cliente = cliente_portal.mascotas.all() if cliente_portal else None
+
     if request.method == 'POST':
-        nombre_tutor = request.POST.get('nombre_tutor')
-        telefono = request.POST.get('telefono')
-        nombre_mascota = request.POST.get('nombre_mascota')
         motivo = request.POST.get('motivo')
         fecha_deseada = request.POST.get('fecha_deseada')
+        franja_preferida = request.POST.get('franja_preferida') or 'CUALQUIERA'
+
+        if cliente_portal:
+            mascota = mascotas_cliente.filter(pk=request.POST.get('mascota_id')).first()
+            nombre_tutor = f"{cliente_portal.nombre} {cliente_portal.apellido}"
+            telefono = cliente_portal.telefono
+            email = cliente_portal.email
+            nombre_mascota = mascota.nombre if mascota else None
+            especie = mascota.get_especie_display() if mascota else None
+        else:
+            nombre_tutor = request.POST.get('nombre_tutor')
+            telefono = request.POST.get('telefono')
+            email = request.POST.get('email') or None
+            nombre_mascota = request.POST.get('nombre_mascota')
+            especie = request.POST.get('especie') or None
 
         if nombre_tutor and telefono and nombre_mascota and motivo and fecha_deseada:
             SolicitudTurnoWeb.objects.create(
                 veterinaria=veterinaria,
                 nombre_tutor=nombre_tutor,
                 telefono=telefono,
-                email=request.POST.get('email') or None,
+                email=email,
                 nombre_mascota=nombre_mascota,
-                especie=request.POST.get('especie') or None,
+                especie=especie,
                 motivo=motivo,
                 fecha_deseada=fecha_deseada,
-                franja_preferida=request.POST.get('franja_preferida') or 'CUALQUIERA',
+                franja_preferida=franja_preferida,
             )
             messages.success(
                 request,
                 f"¡Gracias {nombre_tutor}! Recibimos tu pedido de turno para {nombre_mascota}. "
                 "El equipo de la clínica se va a comunicar para confirmarlo."
             )
+            if cliente_portal:
+                return redirect('portal:turnos')
             return redirect('turnos:solicitar_turno_publico', veterinaria_id=veterinaria.id)
+        elif cliente_portal and not nombre_mascota:
+            messages.error(request, "Seleccioná para cuál de tus mascotas es el turno.")
         else:
             messages.error(request, "Por favor completá todos los campos obligatorios.")
 
-    return render(request, 'turnos/solicitar_turno_publico.html', {'veterinaria': veterinaria})
+    return render(request, 'turnos/solicitar_turno_publico.html', {
+        'veterinaria': veterinaria,
+        'cliente_portal': cliente_portal,
+        'mascotas_cliente': mascotas_cliente,
+    })
 
 
 @login_required

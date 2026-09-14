@@ -26,6 +26,11 @@
 </head>
 <body>
     <div class="container" style="max-width: 640px;">
+        {% if cliente_portal %}
+        <a href="{% url 'portal:home' %}" class="d-inline-flex align-items-center gap-1 text-white-50 text-decoration-none small fw-semibold mb-3">
+            <i class="bi bi-arrow-left"></i> Volver al Portal
+        </a>
+        {% endif %}
         <div class="card border-0 shadow-lg booking-card overflow-hidden">
             <div class="card-body p-4 p-md-5">
                 <div class="d-flex align-items-center gap-3 mb-4">
@@ -49,6 +54,60 @@
                         </div>
                     {% endfor %}
                 {% endif %}
+
+                {% if cliente_portal %}
+                <div class="alert alert-primary border-0 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                    <i class="bi bi-person-check-fill fs-5"></i>
+                    <span>Hola <strong>{{ cliente_portal.nombre }}</strong>, ya identificamos tus datos. Elegí para cuál de tus mascotas es el turno.</span>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small">¿Para cuál de tus mascotas? *</label>
+                            {% if mascotas_cliente %}
+                            <select name="mascota_id" class="form-select" required>
+                                <option value="" selected disabled>Elegí una mascota...</option>
+                                {% for m in mascotas_cliente %}
+                                <option value="{{ m.id }}">{{ m.nombre }} ({{ m.get_especie_display }})</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <div class="alert alert-warning border-0 rounded-3 mb-0 small">
+                                Todavía no tenés mascotas cargadas en el sistema. Pedile a la clínica que la registre antes de reservar un turno online.
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Fecha Deseada *</label>
+                            <input type="date" name="fecha_deseada" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Horario Preferido</label>
+                            <select name="franja_preferida" class="form-select">
+                                <option value="CUALQUIERA">Cualquier horario</option>
+                                <option value="MANANA">Mañana</option>
+                                <option value="TARDE">Tarde</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small">Motivo de la Consulta *</label>
+                            <textarea name="motivo" class="form-control" rows="3" placeholder="Contanos brevemente qué le pasa a tu mascota..." required></textarea>
+                        </div>
+                        <div class="col-12 text-center mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-3 shadow" {% if not mascotas_cliente %}disabled{% endif %}>
+                                <i class="bi bi-calendar-check-fill me-2"></i> Solicitar Turno
+                            </button>
+                            <p class="text-muted small mt-3 mb-0">La clínica se comunicará para confirmar día y horario.</p>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <div class="alert alert-light border small d-flex align-items-center justify-content-between flex-wrap gap-2 rounded-3">
+                    <span><i class="bi bi-info-circle-fill me-1 text-primary"></i> ¿Ya sos cliente de {{ veterinaria.nombre }}?</span>
+                    <a href="{% url 'login' %}?next={{ request.path|urlencode }}" class="fw-bold text-decoration-none">Iniciá sesión para agilizar tu pedido &raquo;</a>
+                </div>
 
                 <form method="post">
                     {% csrf_token %}
@@ -97,6 +156,7 @@
                         </div>
                     </div>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>

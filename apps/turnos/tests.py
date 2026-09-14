@@ -133,3 +133,64 @@ class SolicitudTurnoWebTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.solicitud_b.refresh_from_db()
         self.assertEqual(self.solicitud_b.estado, 'PENDIENTE')
+
+
+class SolicitarTurnoClientePortalTests(TestCase):
+    """Un tutor que ya tiene cuenta en el Portal no debería tener que re-tipear su
+    nombre/teléfono ni el nombre de su mascota: se autocompletan desde su cuenta y
+    elige la mascota de una lista."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Portal")
+        self.otra_vet = Veterinaria.objects.create(nombre="Otra Clinica")
+
+        self.user_portal = User.objects.create_user(username="tutor_portal", password="testpass123")
+        self.cliente = Cliente.objects.create(
+            veterinaria=self.vet, nombre="Laura", apellido="Diaz", dni="333", telefono="3811112222",
+            usuario=self.user_portal,
+        )
+        self.mascota = Mascota.objects.create(cliente=self.cliente, nombre="Rocky", especie="CANINO")
+
+    def test_cliente_logueado_no_necesita_re_tipear_sus_datos(self):
+        self.client.force_login(self.user_portal)
+
+        response = self.client.post(reverse('turnos:solicitar_turno_publico', args=[self.vet.id]), {
+            'mascota_id': self.mascota.id,
+            'motivo': 'Chequeo anual',
+            'fecha_deseada': (timezone.now().date() + timedelta(days=3)).isoformat(),
+        })
+
+        self.assertRedirects(response, reverse('portal:turnos'))
+        solicitud = SolicitudTurnoWeb.objects.get(nombre_mascota='Rocky', veterinaria=self.vet)
+        self.assertEqual(solicitud.nombre_tutor, 'Laura Diaz')
+        self.assertEqual(solicitud.telefono, '3811112222')
+
+    def test_no_puede_pedir_turno_para_una_mascota_ajena(self):
+        cliente_ajeno = Cliente.objects.create(
+            veterinaria=self.vet, nombre="Pedro", apellido="Ruiz", dni="444", telefono="1",
+        )
+        mascota_ajena = Mascota.objects.create(cliente=cliente_ajeno, nombre="Toby", especie="CANINO")
+        self.client.force_login(self.user_portal)
+
+        self.client.post(reverse('turnos:solicitar_turno_publico', args=[self.vet.id]), {
+            'mascota_id': mascota_ajena.id,
+            'motivo': 'Chequeo anual',
+            'fecha_deseada': (timezone.now().date() + timedelta(days=3)).isoformat(),
+        })
+
+        self.assertFalse(SolicitudTurnoWeb.objects.filter(nombre_mascota='Toby').exists())
+
+    def test_cliente_de_otra_veterinaria_no_ve_sus_datos_autocompletados(self):
+        """Si entra al link de reserva de una veterinaria que no es la suya, se lo trata
+        como visitante nuevo (no se autocompleta con los datos de su otra clínica)."""
+        self.client.force_login(self.user_portal)
+
+        response = self.client.get(reverse('turnos:solicitar_turno_publico', args=[self.otra_vet.id]))
+
+        self.assertIsNone(response.context['cliente_portal'])
+
+    def test_usuario_anonimo_sigue_viendo_el_formulario_clasico(self):
+        response = self.client.get(reverse('turnos:solicitar_turno_publico', args=[self.vet.id]))
+
+        self.assertIsNone(response.context['cliente_portal'])
+        self.assertContains(response, 'name="nombre_tutor"')

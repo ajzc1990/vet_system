@@ -56,6 +56,19 @@ class PortalClienteIsolationTests(TestCase):
         response = self.client.post(reverse('login'), {'username': 'portal_a', 'password': 'testpass123'})
         self.assertRedirects(response, reverse('portal:home'))
 
+    def test_home_y_turnos_muestran_el_boton_de_solicitar_turno(self):
+        """Regresión: portal_turnos no pasaba 'cliente' al contexto, así que el botón
+        de Solicitar Turno (que depende de cliente.veterinaria_id) nunca se mostraba."""
+        self.client.force_login(self.user_a)
+
+        url_reserva = reverse('turnos:solicitar_turno_publico', args=[self.vet.id])
+
+        response_home = self.client.get(reverse('portal:home'))
+        self.assertContains(response_home, url_reserva)
+
+        response_turnos = self.client.get(reverse('portal:turnos'))
+        self.assertContains(response_turnos, url_reserva)
+
 
 class OtorgarAccesoPortalTests(TestCase):
     def setUp(self):
