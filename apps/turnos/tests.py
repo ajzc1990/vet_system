@@ -196,3 +196,36 @@ class SolicitarTurnoClientePortalTests(TestCase):
 
         # No se sigue el redirect: landing() a su vez redirige de nuevo (staff logueado -> dashboard).
         self.assertRedirects(response, reverse('landing'), fetch_redirect_response=False)
+
+
+class LinkRecordatorioWhatsappTests(TestCase):
+    """El link de WhatsApp debe traer un mensaje pre-cargado con la mascota, fecha y hora
+    del turno, listo para que el staff se lo mande al tutor con un clic."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Recordatorios")
+        self.cliente = Cliente.objects.create(
+            veterinaria=self.vet, nombre="Laura", apellido="Diaz", dni="333", telefono="381 111-2222",
+        )
+        self.mascota = Mascota.objects.create(cliente=self.cliente, nombre="Rocky", especie="CANINO")
+        self.fecha_hora = timezone.now().replace(hour=15, minute=30, second=0, microsecond=0) + timedelta(days=2)
+
+    def test_arma_el_link_con_telefono_limpio_y_mensaje_con_fecha_y_hora(self):
+        from urllib.parse import unquote
+
+        turno = Turno.objects.create(veterinaria=self.vet, mascota=self.mascota, fecha_hora=self.fecha_hora)
+
+        link = turno.link_recordatorio_whatsapp
+        mensaje = unquote(link.split("?text=")[1])
+
+        self.assertTrue(link.startswith("https://wa.me/3811112222?text="))
+        self.assertIn("Rocky", mensaje)
+        self.assertIn(self.fecha_hora.strftime("%d/%m/%Y"), mensaje)
+        self.assertIn(self.fecha_hora.strftime("%H:%M"), mensaje)
+
+    def test_sin_telefono_cargado_no_genera_link(self):
+        self.cliente.telefono = ""
+        self.cliente.save()
+        turno = Turno.objects.create(veterinaria=self.vet, mascota=self.mascota, fecha_hora=self.fecha_hora)
+
+        self.assertIsNone(turno.link_recordatorio_whatsapp)

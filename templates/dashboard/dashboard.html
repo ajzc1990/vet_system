@@ -135,7 +135,14 @@
                         <td class="ps-3 fw-bold text-primary">{{ turno.fecha_hora|date:"H:i" }} hs</td>
                         <td>
                             <strong>{{ turno.mascota.nombre }}</strong>
-                            <div class="small text-muted">{{ turno.mascota.cliente.nombre }} {{ turno.mascota.cliente.apellido }}</div>
+                            <div class="small text-muted d-flex align-items-center gap-1">
+                                {{ turno.mascota.cliente.nombre }} {{ turno.mascota.cliente.apellido }}
+                                {% if turno.link_recordatorio_whatsapp %}
+                                    <a href="{{ turno.link_recordatorio_whatsapp }}" target="_blank" class="text-success text-decoration-none ms-1" title="Enviar recordatorio del turno por WhatsApp">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="small text-secondary">
                             {% if turno.veterinario %}Dr(a). {{ turno.veterinario.apellido }}{% else %}-{% endif %}

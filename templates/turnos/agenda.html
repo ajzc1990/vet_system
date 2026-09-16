@@ -85,8 +85,8 @@
                                 {% if turno.mascota.cliente %}
                                     <div class="small text-muted d-flex align-items-center gap-1">
                                         <i class="bi bi-person-circle"></i> {{ turno.mascota.cliente.apellido }}, {{ turno.mascota.cliente.nombre }}
-                                        {% if turno.mascota.cliente.telefono %}
-                                            <a href="https://wa.me/{{ turno.mascota.cliente.telefono }}" target="_blank" class="text-success text-decoration-none ms-1" title="Contactar por WhatsApp">
+                                        {% if turno.link_recordatorio_whatsapp %}
+                                            <a href="{{ turno.link_recordatorio_whatsapp }}" target="_blank" class="text-success text-decoration-none ms-1" title="Enviar recordatorio del turno por WhatsApp">
                                                 <i class="bi bi-whatsapp"></i>
                                             </a>
                                         {% endif %}

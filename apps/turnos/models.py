@@ -94,6 +94,29 @@ class Turno(models.Model):
         """Devuelve True si la fecha/hora del turno ya transcurrió."""
         return self.fecha_hora < timezone.now()
 
+    @property
+    def link_recordatorio_whatsapp(self):
+        """Link de WhatsApp (wa.me) con un mensaje de recordatorio del turno ya redactado
+        -incluye mascota, fecha y hora-, listo para que el staff se lo mande al tutor con
+        un clic. None si no hay mascota/cliente o el cliente no tiene teléfono cargado."""
+        if not self.mascota_id or not self.mascota.cliente or not self.mascota.cliente.telefono:
+            return None
+
+        from urllib.parse import quote
+
+        cliente = self.mascota.cliente
+        clinica = self.veterinaria.nombre if self.veterinaria else "la clínica"
+        telefono = "".join(ch for ch in cliente.telefono if ch.isdigit())
+        if not telefono:
+            return None
+
+        mensaje = (
+            f"Hola {cliente.nombre}! Te escribimos de {clinica} para recordarte el turno de "
+            f"{self.mascota.nombre} el {self.fecha_hora.strftime('%d/%m/%Y')} a las "
+            f"{self.fecha_hora.strftime('%H:%M')} hs. ¡Te esperamos!"
+        )
+        return f"https://wa.me/{telefono}?text={quote(mensaje)}"
+
 
 class SolicitudTurnoWeb(models.Model):
     """Pedido de turno enviado desde el formulario público de reserva online (sin necesidad
