@@ -56,8 +56,8 @@ class NuevaConsultaAsignacionVeterinarioTests(TestCase):
             veterinaria=self.vet_b, nombre="Ajena", apellido="Otra", matricula="B-1",
         )
 
-        self.user_a = User.objects.create_user(username="recepcion_a", password="testpass123")
-        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="RECEPCION", is_approved=True)
+        self.user_a = User.objects.create_user(username="vet_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="VET", is_approved=True)
 
         cliente_a = Cliente.objects.create(
             veterinaria=self.vet_a, nombre="Juan", apellido="Perez", dni="111", telefono="1",
@@ -214,3 +214,69 @@ class ExportarClientesCsvTests(TestCase):
         contenido = response.content.decode('utf-8-sig')
         self.assertIn('Perez', contenido)
         self.assertNotIn('Gomez', contenido)
+
+
+class RecepcionNoPuedeEscribirHistoriaClinicaTests(TestCase):
+    """Antes, estas acciones solo estaban ocultas en la plantilla (el botón no se
+    mostraba), pero un RECEPCION que entrara directo a la URL igual podía cargar/editar/
+    borrar historia clínica. Ahora también están bloqueadas del lado del servidor."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Permisos")
+        self.recepcion = User.objects.create_user(username="recepcion_permisos", password="testpass123")
+        PerfilUsuario.objects.create(user=self.recepcion, veterinaria=self.vet, rol="RECEPCION", is_approved=True)
+
+        cliente = Cliente.objects.create(veterinaria=self.vet, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        self.mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+        self.consulta = ConsultaMedica.objects.create(
+            mascota=self.mascota, motivo_consulta="Control", diagnostico="Sano", tratamiento="Ninguno",
+        )
+        self.vacuna = RegistroVacuna.objects.create(
+            mascota=self.mascota, nombre_vacuna="Antirrábica", fecha_aplicacion=timezone.now().date(),
+        )
+        self.desparasitacion = RegistroDesparasitacion.objects.create(
+            mascota=self.mascota, producto="Simparica", fecha_aplicacion=timezone.now().date(),
+        )
+
+        self.client.force_login(self.recepcion)
+
+    def test_no_puede_registrar_una_consulta(self):
+        response = self.client.post(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]), {
+            'motivo_consulta': 'Chequeo', 'diagnostico': 'Sano', 'tratamiento': 'Ninguno',
+        })
+
+        self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
+        self.assertEqual(self.mascota.consultas.count(), 1)  # solo la creada en setUp
+
+    def test_no_puede_editar_ni_eliminar_una_consulta(self):
+        response_editar = self.client.get(reverse('clientes:editar_consulta', args=[self.consulta.id]))
+        response_eliminar = self.client.post(reverse('clientes:eliminar_consulta', args=[self.consulta.id]))
+
+        self.assertRedirects(response_editar, reverse('dashboard:index'))
+        self.assertRedirects(response_eliminar, reverse('dashboard:index'))
+        self.assertTrue(ConsultaMedica.objects.filter(pk=self.consulta.id).exists())
+
+    def test_no_puede_agregar_ni_eliminar_una_vacuna(self):
+        self.client.post(reverse('clientes:agregar_vacuna', args=[self.mascota.id]), {
+            'nombre_vacuna': 'Rabia', 'fecha_aplicacion': '2026-01-01',
+        })
+        self.assertEqual(self.mascota.vacunas.count(), 1)  # no se agregó la nueva
+
+        response_eliminar = self.client.post(reverse('clientes:eliminar_vacuna', args=[self.vacuna.id]))
+        self.assertRedirects(response_eliminar, reverse('dashboard:index'))
+        self.assertTrue(RegistroVacuna.objects.filter(pk=self.vacuna.id).exists())
+
+    def test_no_puede_agregar_ni_eliminar_una_desparasitacion(self):
+        self.client.post(reverse('clientes:agregar_desparasitacion', args=[self.mascota.id]), {
+            'producto': 'Bravecto', 'fecha_aplicacion': '2026-01-01',
+        })
+        self.assertEqual(self.mascota.desparasitaciones.count(), 1)  # no se agregó la nueva
+
+        response_eliminar = self.client.post(reverse('clientes:eliminar_desparasitacion', args=[self.desparasitacion.id]))
+        self.assertRedirects(response_eliminar, reverse('dashboard:index'))
+        self.assertTrue(RegistroDesparasitacion.objects.filter(pk=self.desparasitacion.id).exists())
+
+    def test_si_puede_ver_la_historia_clinica(self):
+        """La restricción es solo de escritura: recepción sigue pudiendo consultar."""
+        response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
+        self.assertEqual(response.status_code, 200)

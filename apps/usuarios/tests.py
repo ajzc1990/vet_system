@@ -515,3 +515,43 @@ class CambiarContrasenaTests(TestCase):
         response = self.client.get(reverse('dashboard:index'))
 
         self.assertContains(response, reverse('password_change'))
+
+
+class SoloAdminGestionaClinicaYSuscripcionTests(TestCase):
+    """'Configurar Clínica' y 'Mi Suscripción' son gestión del negocio: antes solo
+    estaban ocultas del menú para VET/RECEPCION, pero cualquiera de los dos podía
+    entrar directo a la URL. Ahora el servidor también las bloquea."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Permisos Admin")
+        self.admin = User.objects.create_user(username="admin_permisos", password="testpass123")
+        PerfilUsuario.objects.create(user=self.admin, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        self.veterinario_user = User.objects.create_user(username="vet_permisos", password="testpass123")
+        PerfilUsuario.objects.create(user=self.veterinario_user, veterinaria=self.vet, rol="VET", is_approved=True)
+        self.recepcion = User.objects.create_user(username="recepcion_permisos_admin", password="testpass123")
+        PerfilUsuario.objects.create(user=self.recepcion, veterinaria=self.vet, rol="RECEPCION", is_approved=True)
+
+    def test_admin_puede_configurar_la_clinica(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('usuarios:configurar_veterinaria'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_vet_no_puede_configurar_la_clinica(self):
+        self.client.force_login(self.veterinario_user)
+        response = self.client.get(reverse('usuarios:configurar_veterinaria'))
+        self.assertRedirects(response, reverse('dashboard:index'))
+
+    def test_recepcion_no_puede_configurar_la_clinica(self):
+        self.client.force_login(self.recepcion)
+        response = self.client.get(reverse('usuarios:configurar_veterinaria'))
+        self.assertRedirects(response, reverse('dashboard:index'))
+
+    def test_vet_no_puede_ver_mi_suscripcion(self):
+        self.client.force_login(self.veterinario_user)
+        response = self.client.get(reverse('usuarios:mi_suscripcion'))
+        self.assertRedirects(response, reverse('dashboard:index'))
+
+    def test_vet_no_puede_iniciar_un_pago_de_suscripcion(self):
+        self.client.force_login(self.veterinario_user)
+        response = self.client.get(reverse('usuarios:iniciar_pago_suscripcion'))
+        self.assertRedirects(response, reverse('dashboard:index'))

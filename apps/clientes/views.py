@@ -8,6 +8,7 @@ from django.core.mail import send_mail
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
+from apps.usuarios.decorators import requerir_rol_veterinario, es_veterinario_o_admin
 from django.utils.crypto import get_random_string
 
 # Importaciones locales de Clientes
@@ -225,6 +226,10 @@ def detalle_historia_clinica(request, mascota_id):
     internaciones = Internacion.objects.filter(mascota=mascota).select_related('veterinario_responsable')
     internacion_activa = internaciones.filter(estado='INTERNADO').first()
 
+    if request.method == 'POST' and not es_veterinario_o_admin(request.user):
+        messages.error(request, "Acceso denegado: Esta función requiere permisos de Médico Veterinario.")
+        return redirect('clientes:detalle_historia_clinica', mascota_id=mascota.id)
+
     if request.method == 'POST':
         form = ConsultaMedicaForm(request.POST, request.FILES, veterinaria=vet)
 
@@ -284,6 +289,7 @@ def detalle_historia_clinica(request, mascota_id):
 
 
 @login_required
+@requerir_rol_veterinario
 def editar_consulta(request, consulta_id):
     vet = get_veterinaria_activa(request)
     ConsultaMedica, _, _, _, ConsultaMedicaForm, _ = get_historia_components()
@@ -320,6 +326,7 @@ def editar_consulta(request, consulta_id):
 
 
 @login_required
+@requerir_rol_veterinario
 def eliminar_consulta(request, consulta_id):
     vet = get_veterinaria_activa(request)
     ConsultaMedica, _, _, _, _, _ = get_historia_components()
@@ -352,6 +359,7 @@ def eliminar_consulta(request, consulta_id):
 # ==============================================================================
 
 @login_required
+@requerir_rol_veterinario
 def agregar_vacuna(request, mascota_id):
     if request.method == 'POST':
         vet = get_veterinaria_activa(request)
@@ -390,6 +398,7 @@ def agregar_vacuna(request, mascota_id):
 
 
 @login_required
+@requerir_rol_veterinario
 def eliminar_vacuna(request, vacuna_id):
     vet = get_veterinaria_activa(request)
     _, RegistroVacuna, _, _, _, _ = get_historia_components()
@@ -412,6 +421,7 @@ def eliminar_vacuna(request, vacuna_id):
 
 
 @login_required
+@requerir_rol_veterinario
 def agregar_desparasitacion(request, mascota_id):
     if request.method == 'POST':
         vet = get_veterinaria_activa(request)
@@ -517,6 +527,7 @@ def otorgar_acceso_portal(request, cliente_id):
 
 
 @login_required
+@requerir_rol_veterinario
 def eliminar_desparasitacion(request, desparasitacion_id):
     vet = get_veterinaria_activa(request)
     _, _, RegistroDesparasitacion, _, _, _ = get_historia_components()

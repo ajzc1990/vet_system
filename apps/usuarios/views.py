@@ -17,6 +17,7 @@ from .models import PerfilUsuario, Veterinaria, MensajeContacto, RegistroAuditor
 from .forms import RegistroForm, ConfigVeterinariaForm
 from .utils import get_veterinaria_activa
 from .audit import registrar_auditoria
+from .decorators import requerir_rol_admin
 from .pagos import mp_configurado, crear_preferencia_pago, obtener_pago
 
 
@@ -211,6 +212,7 @@ def dashboard(request):
 # ==============================================================================
 
 @login_required
+@requerir_rol_admin
 def configurar_veterinaria(request):
     """Permite configurar y actualizar el perfil, logo y datos de contacto de la clínica."""
     vet = get_veterinaria_activa(request)
@@ -238,6 +240,7 @@ def configurar_veterinaria(request):
 # ==============================================================================
 
 @login_required
+@requerir_rol_admin
 def mi_suscripcion(request):
     """Muestra a la veterinaria activa el estado de su propia suscripción/plan contratado."""
     vet = get_veterinaria_activa(request)
@@ -256,6 +259,7 @@ def mi_suscripcion(request):
 
 
 @login_required
+@requerir_rol_admin
 def iniciar_pago_suscripcion(request):
     """Redirige al Checkout Pro de Mercado Pago para pagar el plan contratado, en el
     ciclo elegido (?ciclo=MENSUAL o ANUAL; por defecto el ciclo actual de la suscripción)."""

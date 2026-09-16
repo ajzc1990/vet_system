@@ -40,8 +40,40 @@ def requerir_rol_veterinario(view_func):
             return view_func(request, *args, **kwargs)
 
         messages.error(
-            request, 
+            request,
             "Acceso denegado: Esta función requiere permisos de Médico Veterinario."
+        )
+        return redirect('dashboard:index')
+
+    return _wrapped_view
+
+
+def es_admin_de_veterinaria(user):
+    """Auxiliar que determina si el usuario administra la veterinaria (superusuario o
+    rol ADMIN). A diferencia de es_veterinario_o_admin, deja afuera al rol VET: hay
+    acciones (configurar la clínica, gestionar la suscripción) que son de gestión del
+    negocio, no de atención médica."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return hasattr(user, 'perfil') and getattr(user.perfil, 'rol', None) == 'ADMIN'
+
+
+def requerir_rol_admin(view_func):
+    """Decorador para proteger vistas de gestión del negocio (Configurar Clínica, Mi
+    Suscripción). Si un VET o RECEPCION intenta acceder, es reorientado con un aviso."""
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+
+        if es_admin_de_veterinaria(request.user):
+            return view_func(request, *args, **kwargs)
+
+        messages.error(
+            request,
+            "Acceso denegado: Esta función requiere permisos de Administrador de la Veterinaria."
         )
         return redirect('dashboard:index')
 
