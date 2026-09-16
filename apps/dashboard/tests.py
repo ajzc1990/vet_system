@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.clientes.models import Cliente, Mascota
-from apps.usuarios.models import PerfilUsuario, Veterinaria
+from apps.usuarios.models import MensajeContacto, PerfilUsuario, Veterinaria
 from apps.historia_clinica.models import RegistroVacuna
 
 
@@ -46,6 +46,57 @@ class DashboardPrincipalTenantIsolationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['cant_pacientes'], 1)
+
+
+class MensajesDeContactoSoloSuperusuarioTests(TestCase):
+    """Los mensajes del formulario de contacto de la landing son consultas de
+    prospectos de todo el SaaS, no de una veterinaria en particular: ningún staff de
+    ninguna clínica debería poder verlos, solo el superusuario."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica A")
+        self.admin = User.objects.create_user(username="admin_clinica", password="testpass123")
+        PerfilUsuario.objects.create(user=self.admin, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        self.superuser = User.objects.create_superuser(username="super", password="testpass123", email="s@s.com")
+
+        MensajeContacto.objects.create(
+            nombre="Prospecto", email="prospecto@example.com", mensaje="Quiero info", leido=False,
+        )
+
+    def test_staff_de_una_veterinaria_no_ve_los_mensajes_de_contacto(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['mensajes_contacto']), [])
+        self.assertEqual(response.context['mensajes_no_leidos_count'], 0)
+        self.assertNotContains(response, "prospecto@example.com")
+
+    def test_superusuario_si_ve_los_mensajes_de_contacto(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['mensajes_no_leidos_count'], 1)
+        self.assertContains(response, "prospecto@example.com")
+
+    def test_staff_de_una_veterinaria_no_puede_entrar_al_admin_de_mensajes(self):
+        self.client.force_login(self.admin)
+        self.admin.is_staff = True
+        self.admin.save()
+
+        response = self.client.get('/admin/usuarios/mensajecontacto/')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_superusuario_puede_entrar_al_admin_de_mensajes(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.get('/admin/usuarios/mensajecontacto/')
+
+        self.assertEqual(response.status_code, 200)
 
 
 class CentroRecordatoriosTests(TestCase):

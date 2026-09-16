@@ -56,9 +56,15 @@ def dashboard_principal(request):
     # Próximos turnos del día para la tabla resumida
     proximos_turnos = turnos_hoy.filter(estado__in=['PENDIENTE', 'CONFIRMADO', 'EN_ESPERA', 'ATENDIENDO'])[:5]
 
-    # 3. Mensajes de Contacto recibidos desde la Landing Page
-    mensajes_contacto = MensajeContacto.objects.all().order_by('-fecha_envio')[:10]
-    mensajes_no_leidos_count = MensajeContacto.objects.filter(leido=False).count()
+    # 3. Mensajes de Contacto recibidos desde la Landing Page: son consultas de
+    # prospectos de TODO el SaaS (no pertenecen a ninguna veterinaria), así que sólo
+    # el superusuario los ve. Ni se consultan para el resto del staff.
+    if request.user.is_superuser:
+        mensajes_contacto = MensajeContacto.objects.all().order_by('-fecha_envio')[:10]
+        mensajes_no_leidos_count = MensajeContacto.objects.filter(leido=False).count()
+    else:
+        mensajes_contacto = MensajeContacto.objects.none()
+        mensajes_no_leidos_count = 0
 
     return render(request, 'dashboard/dashboard.html', {
         'cant_turnos_hoy': cant_turnos_hoy,

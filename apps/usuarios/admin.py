@@ -59,12 +59,31 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
 
 @admin.register(MensajeContacto)
 class MensajeContactoAdmin(admin.ModelAdmin):
+    """Los mensajes del formulario de contacto público (landing page) pueden traer datos
+    personales de gente ajena al sistema (ni clientes ni staff de ninguna veterinaria), así
+    que se restringen al superusuario aunque otro usuario llegara a tener is_staff=True por
+    algún motivo (p. ej. para administrar otra cosa desde el Django Admin)."""
     list_display = ('nombre', 'email', 'telefono', 'asunto', 'fecha_envio', 'leido')
     list_filter = ('leido', 'fecha_envio')
     search_fields = ('nombre', 'email', 'asunto', 'mensaje')
     readonly_fields = ('fecha_envio',)
     list_editable = ('leido',)
     ordering = ('-fecha_envio',)
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
 
 @admin.register(RegistroAuditoria)
