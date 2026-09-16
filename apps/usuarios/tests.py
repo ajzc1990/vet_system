@@ -454,3 +454,64 @@ class LandingLlamadoAContactoTests(TestCase):
         # 5 = el link "Contacto" del nav + los 4 botones de llamado a la acción
         # (Quiero Sumarme, Probar Gratis, y los dos "Empezar Ahora" de precios).
         self.assertContains(response, 'href="#contacto"', count=5)
+
+
+class CambiarContrasenaTests(TestCase):
+    """Cualquier usuario logueado (staff o cliente del Portal) puede cambiar su propia
+    contraseña sin depender de un superusuario ni del flujo de 'olvidé mi contraseña'."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Password")
+        self.staff = User.objects.create_user(username="staff_pw", password="ViejaClave123")
+        PerfilUsuario.objects.create(user=self.staff, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+
+    def test_usuario_logueado_puede_cambiar_su_contrasena(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('password_change'), {
+            'old_password': 'ViejaClave123',
+            'new_password1': 'NuevaClaveSegura456',
+            'new_password2': 'NuevaClaveSegura456',
+        })
+
+        self.assertRedirects(response, reverse('password_change_done'))
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.check_password('NuevaClaveSegura456'))
+
+    def test_no_cambia_si_la_contrasena_actual_es_incorrecta(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.post(reverse('password_change'), {
+            'old_password': 'ClaveIncorrecta',
+            'new_password1': 'NuevaClaveSegura456',
+            'new_password2': 'NuevaClaveSegura456',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.check_password('ViejaClave123'))
+
+    def test_sigue_logueado_despues_de_cambiar_la_contrasena(self):
+        """Regresión típica de Django: si no se actualiza el session auth hash, cambiar
+        la contraseña invalida la sesión actual y el usuario queda deslogueado."""
+        self.client.force_login(self.staff)
+        self.client.post(reverse('password_change'), {
+            'old_password': 'ViejaClave123',
+            'new_password1': 'NuevaClaveSegura456',
+            'new_password2': 'NuevaClaveSegura456',
+        })
+
+        response = self.client.get(reverse('dashboard:index'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_usuario_anonimo_es_redirigido_a_login(self):
+        response = self.client.get(reverse('password_change'))
+
+        self.assertRedirects(response, f"{reverse('login')}?next={reverse('password_change')}")
+
+    def test_link_para_cambiar_contrasena_aparece_en_el_menu(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertContains(response, reverse('password_change'))

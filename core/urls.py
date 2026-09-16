@@ -42,6 +42,14 @@ urlpatterns = [
         template_name='usuarios/password_reset_complete.html',
     ), name='password_reset_complete'),
 
+    # Cambio de contraseña estando logueado (staff y clientes del Portal por igual)
+    path('password-change/', auth_views.PasswordChangeView.as_view(
+        template_name='usuarios/password_change_form.html',
+    ), name='password_change'),
+    path('password-change/hecho/', auth_views.PasswordChangeDoneView.as_view(
+        template_name='usuarios/password_change_done.html',
+    ), name='password_change_done'),
+
     # Apps del sistema con sus namespaces explícitos
     path('usuarios/', include(('apps.usuarios.urls', 'usuarios'), namespace='usuarios')),
     path('turnos/', include(('apps.turnos.urls', 'turnos'), namespace='turnos')),
