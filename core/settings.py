@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'apps.turnos',
     'apps.historia_clinica',
     'apps.inventario',
+    'apps.compras',
     'apps.usuarios',
     'apps.ventas',
     'apps.dashboard',

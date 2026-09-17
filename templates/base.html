@@ -193,6 +193,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'compras' %}active{% endif %}" href="{% url 'compras:lista_compras' %}">
+                            <i class="bi bi-truck"></i> Compras
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link-custom {% if request.resolver_match.app_name == 'ventas' %}active{% endif %}" href="{% url 'ventas:lista_ventas' %}">
                             <i class="bi bi-cart-check"></i> Ventas
                         </a>

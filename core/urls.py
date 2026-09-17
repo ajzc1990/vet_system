@@ -56,6 +56,7 @@ urlpatterns = [
     path('clientes/', include(('apps.clientes.urls', 'clientes'), namespace='clientes')),
     path('historia-clinica/', include(('apps.historia_clinica.urls', 'historia_clinica'), namespace='historia_clinica')),
     path('inventario/', include(('apps.inventario.urls', 'inventario'), namespace='inventario')),
+    path('compras/', include(('apps.compras.urls', 'compras'), namespace='compras')),
     path('ventas/', include(('apps.ventas.urls', 'ventas'), namespace='ventas')),
     path('portal/', include(('apps.portal.urls', 'portal'), namespace='portal')),
 

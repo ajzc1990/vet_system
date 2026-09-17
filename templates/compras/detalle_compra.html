@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Compra #{{ compra.id }} - VeterSystem{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <a href="{% url 'compras:lista_compras' %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Compras
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h3 class="card-title h5 mb-0 fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-receipt fs-4"></i> Compra #{{ compra.id }}
+                    </h3>
+                    <span class="badge bg-white text-primary fw-bold px-3 py-1.5 rounded-pill shadow-sm">
+                        {{ compra.fecha_hora|date:"d/m/Y H:i" }} hs
+                    </span>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="small text-muted fw-bold text-uppercase mb-1">Proveedor</div>
+                            <div class="fw-bold text-dark d-flex align-items-center gap-1">
+                                <i class="bi bi-truck text-primary"></i> {{ compra.proveedor.nombre }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small text-muted fw-bold text-uppercase mb-1">Nº Factura / Remito</div>
+                            <div class="fw-semibold text-dark">{{ compra.numero_factura|default:"-" }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small text-muted fw-bold text-uppercase mb-1">Registrada por</div>
+                            <div class="fw-semibold text-dark">{% if compra.usuario %}{{ compra.usuario.get_full_name|default:compra.usuario.username }}{% else %}-{% endif %}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small text-muted fw-bold text-uppercase mb-1">Total</div>
+                            <div class="fs-5 fw-extrabold text-danger">${{ compra.total|floatformat:2 }}</div>
+                        </div>
+                        {% if compra.observaciones %}
+                        <div class="col-12">
+                            <div class="small text-muted fw-bold text-uppercase mb-1">Observaciones</div>
+                            <div class="text-secondary">{{ compra.observaciones }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-box-seam-fill text-primary"></i> Productos
+                    </h6>
+
+                    <!-- Tarjetas (celular) -->
+                    <div class="d-md-none d-flex flex-column gap-2">
+                        {% for d in detalles %}
+                        <div class="border rounded-3 p-3">
+                            <div class="fw-bold text-dark mb-1">{{ d.producto.nombre }}</div>
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span>{{ d.cantidad }} unid. x ${{ d.precio_unitario|floatformat:2 }}</span>
+                                <span class="fw-bold text-dark">${{ d.subtotal|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Tabla (escritorio / tablet) -->
+                    <div class="table-responsive d-none d-md-block">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light border-bottom">
+                                <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem; letter-spacing: 0.5px;">
+                                    <th class="py-3">Producto</th>
+                                    <th class="py-3">Cantidad</th>
+                                    <th class="py-3">Costo Unitario</th>
+                                    <th class="text-end py-3">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in detalles %}
+                                <tr>
+                                    <td class="py-3 fw-semibold text-dark">{{ d.producto.nombre }}</td>
+                                    <td class="py-3">{{ d.cantidad }}</td>
+                                    <td class="py-3">${{ d.precio_unitario|floatformat:2 }}</td>
+                                    <td class="text-end py-3 fw-bold">${{ d.subtotal|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
