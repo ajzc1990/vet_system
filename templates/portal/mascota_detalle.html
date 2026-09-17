@@ -52,7 +52,19 @@
     </div>
 
     <div class="tab-pane fade" id="pVacunas" role="tabpanel">
-        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        {% if not vacunas %}
+        <div class="card border-0 shadow-sm rounded-4"><div class="text-center py-5 text-muted">Sin vacunas registradas.</div></div>
+        {% else %}
+        <div class="d-md-none d-flex flex-column gap-2">
+            {% for v in vacunas %}
+            <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-3">
+                <strong class="text-dark d-block"><i class="bi bi-syringe-fill text-warning me-1"></i>{{ v.nombre_vacuna }}</strong>
+                <div class="small text-secondary mb-1">Aplicada: {{ v.fecha_aplicacion|date:"d/m/Y" }}</div>
+                {% if v.fecha_proxima_dosis %}<span class="badge {% if v.proxima_dosis_vencida %}bg-danger-subtle{% else %}bg-warning-subtle text-dark{% endif %} border px-2 py-1 rounded-pill fw-bold extra-small">Próxima: {{ v.fecha_proxima_dosis|date:"d/m/Y" }}</span>{% endif %}
+            </div></div>
+            {% endfor %}
+        </div>
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light border-bottom"><tr class="text-uppercase text-secondary extra-small fw-extrabold"><th class="ps-4 py-3">Vacuna</th><th class="py-3">Fecha</th><th class="py-3">Próxima Dosis</th></tr></thead>
@@ -67,15 +79,28 @@
                                 {% else %}-{% endif %}
                             </td>
                         </tr>
-                        {% empty %}<tr><td colspan="3" class="text-center py-5 text-muted">Sin vacunas registradas.</td></tr>{% endfor %}
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <div class="tab-pane fade" id="pDespara" role="tabpanel">
-        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        {% if not desparasitaciones %}
+        <div class="card border-0 shadow-sm rounded-4"><div class="text-center py-5 text-muted">Sin desparasitaciones registradas.</div></div>
+        {% else %}
+        <div class="d-md-none d-flex flex-column gap-2">
+            {% for d in desparasitaciones %}
+            <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-3">
+                <strong class="text-dark d-block">{{ d.producto }}</strong>
+                <div class="small text-secondary mb-1">Aplicada: {{ d.fecha_aplicacion|date:"d/m/Y" }}</div>
+                {% if d.fecha_proxima_dosis %}<span class="badge {% if d.proxima_dosis_vencida %}bg-danger-subtle{% else %}bg-primary-subtle{% endif %} border px-2 py-1 rounded-pill fw-bold extra-small">Próxima: {{ d.fecha_proxima_dosis|date:"d/m/Y" }}</span>{% endif %}
+            </div></div>
+            {% endfor %}
+        </div>
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light border-bottom"><tr class="text-uppercase text-secondary extra-small fw-extrabold"><th class="ps-4 py-3">Producto</th><th class="py-3">Fecha</th><th class="py-3">Próxima Dosis</th></tr></thead>
@@ -90,11 +115,12 @@
                                 {% else %}-{% endif %}
                             </td>
                         </tr>
-                        {% empty %}<tr><td colspan="3" class="text-center py-5 text-muted">Sin desparasitaciones registradas.</td></tr>{% endfor %}
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <div class="tab-pane fade" id="pEstudios" role="tabpanel">
@@ -117,7 +143,22 @@
     </div>
 
     <div class="tab-pane fade" id="pInternaciones" role="tabpanel">
-        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        {% if not internaciones %}
+        <div class="card border-0 shadow-sm rounded-4"><div class="text-center py-5 text-muted">Sin internaciones registradas.</div></div>
+        {% else %}
+        <div class="d-md-none d-flex flex-column gap-2">
+            {% for i in internaciones %}
+            <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <span class="small text-secondary">Ingreso: {{ i.fecha_ingreso|date:"d/m/Y H:i" }}</span>
+                    <span class="badge {% if i.estado == 'INTERNADO' %}bg-danger-subtle{% elif i.estado == 'ALTA' %}bg-success-subtle{% else %}bg-secondary-subtle{% endif %} border px-2 py-1 rounded-pill fw-bold extra-small flex-shrink-0 ms-2">{{ i.get_estado_display }}</span>
+                </div>
+                <div class="small text-dark mb-1">{{ i.motivo_ingreso|truncatewords:12 }}</div>
+                <div class="small text-secondary">Alta: {{ i.fecha_alta_real|date:"d/m/Y H:i"|default:"-" }}</div>
+            </div></div>
+            {% endfor %}
+        </div>
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light border-bottom"><tr class="text-uppercase text-secondary extra-small fw-extrabold"><th class="ps-4 py-3">Ingreso</th><th class="py-3">Motivo</th><th class="py-3">Alta</th><th class="py-3">Estado</th></tr></thead>
@@ -129,11 +170,12 @@
                             <td class="py-3 text-secondary small">{{ i.fecha_alta_real|date:"d/m/Y H:i"|default:"-" }}</td>
                             <td class="py-3"><span class="badge {% if i.estado == 'INTERNADO' %}bg-danger-subtle{% elif i.estado == 'ALTA' %}bg-success-subtle{% else %}bg-secondary-subtle{% endif %} border px-3 py-1.5 rounded-pill fw-bold">{{ i.get_estado_display }}</span></td>
                         </tr>
-                        {% empty %}<tr><td colspan="4" class="text-center py-5 text-muted">Sin internaciones registradas.</td></tr>{% endfor %}
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

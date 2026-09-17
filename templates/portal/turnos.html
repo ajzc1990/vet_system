@@ -20,7 +20,33 @@
     {% endif %}
 </div>
 
-<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+{% if not turnos %}
+<div class="card border-0 shadow-lg rounded-4">
+    <div class="card-body text-center py-5 text-muted">No tenés turnos registrados.</div>
+</div>
+{% else %}
+
+<!-- Tarjetas (celular) -->
+<div class="d-md-none d-flex flex-column gap-2">
+    {% for t in turnos %}
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <span class="fw-bold text-primary small">{{ t.fecha_hora|date:"d/m/Y H:i" }} hs</span>
+                <span class="badge {% if t.estado == 'CANCELADO' %}bg-secondary-subtle{% elif t.estado == 'COMPLETADO' %}bg-success-subtle{% else %}bg-primary-subtle{% endif %} border px-2 py-1 rounded-pill fw-bold extra-small flex-shrink-0 ms-2">
+                    {{ t.get_estado_display }}
+                </span>
+            </div>
+            <div class="small text-dark fw-semibold">{{ t.mascota.nombre }}</div>
+            <div class="small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}Sin veterinario asignado{% endif %}</div>
+            <div class="small text-secondary">{{ t.motivo|default:"-"|truncatewords:10 }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Tabla (escritorio / tablet) -->
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -46,12 +72,11 @@
                             </span>
                         </td>
                     </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center py-5 text-muted">No tenés turnos registrados.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

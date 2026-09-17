@@ -24,30 +24,44 @@
         <a href="{% url 'portal:turnos' %}" class="btn btn-sm btn-outline-primary fw-semibold">Ver Todos</a>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-3">Fecha / Hora</th>
-                        <th>Mascota</th>
-                        <th>Veterinario</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in proximos_turnos %}
-                    <tr>
-                        <td class="ps-3 fw-bold text-primary">{{ t.fecha_hora|date:"d/m/Y H:i" }} hs</td>
-                        <td class="fw-semibold text-dark">{{ t.mascota.nombre }}</td>
-                        <td class="small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}-{% endif %}</td>
-                        <td><span class="badge bg-primary-subtle text-primary-emphasis border px-3 py-1.5 rounded-pill fw-bold">{{ t.get_estado_display }}</span></td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="4" class="text-center py-4 text-muted">No tenés turnos programados.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        {% if not proximos_turnos %}
+            <div class="text-center py-4 text-muted">No tenés turnos programados.</div>
+        {% else %}
+            <div class="d-md-none d-flex flex-column gap-2 p-3">
+                {% for t in proximos_turnos %}
+                <div class="border rounded-3 p-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-primary small">{{ t.fecha_hora|date:"d/m/Y H:i" }} hs</span>
+                        <span class="badge bg-primary-subtle text-primary-emphasis border px-2 py-1 rounded-pill fw-bold extra-small">{{ t.get_estado_display }}</span>
+                    </div>
+                    <div class="small text-dark fw-semibold">{{ t.mascota.nombre }}</div>
+                    <div class="small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}Sin veterinario asignado{% endif %}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="table-responsive d-none d-md-block">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Fecha / Hora</th>
+                            <th>Mascota</th>
+                            <th>Veterinario</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in proximos_turnos %}
+                        <tr>
+                            <td class="ps-3 fw-bold text-primary">{{ t.fecha_hora|date:"d/m/Y H:i" }} hs</td>
+                            <td class="fw-semibold text-dark">{{ t.mascota.nombre }}</td>
+                            <td class="small text-secondary">{% if t.veterinario %}Dr(a). {{ t.veterinario.apellido }}{% else %}-{% endif %}</td>
+                            <td><span class="badge bg-primary-subtle text-primary-emphasis border px-3 py-1.5 rounded-pill fw-bold">{{ t.get_estado_display }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
     </div>
 </div>
 
