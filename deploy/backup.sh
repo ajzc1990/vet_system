@@ -16,6 +16,10 @@
 #   docker run --rm -v vet_system_media_volume:/media_dst \
 #     -v /root/backups/vetersystem:/backup_src \
 #     alpine sh -c "cd /media_dst && tar -xzf /backup_src/media_AAAAMMDD_HHMMSS.tar.gz"
+#
+# Copia fuera del VPS (Google Drive): requiere tener un remoto "gdrive"
+# configurado con `rclone config` (ver https://rclone.org/drive/). Si el
+# remoto no existe todavía, este paso se salta solo sin romper el backup local.
 
 set -euo pipefail
 
@@ -38,7 +42,12 @@ docker run --rm \
   -v "$DESTINO":/backup_dst \
   alpine tar -czf "/backup_dst/media_${FECHA}.tar.gz" -C /media_src .
 
-# 3. Limpieza: borra backups más viejos que RETENCION_DIAS
+# 3. Copia fuera del VPS a Google Drive (si el remoto "gdrive" está configurado)
+if command -v rclone >/dev/null && rclone listremotes | grep -q '^gdrive:'; then
+  rclone copy "$DESTINO" gdrive:VeterSystemBackups
+fi
+
+# 4. Limpieza: borra backups locales más viejos que RETENCION_DIAS
 find "$DESTINO" -name "db_*.sql.gz" -mtime +"$RETENCION_DIAS" -delete
 find "$DESTINO" -name "media_*.tar.gz" -mtime +"$RETENCION_DIAS" -delete
 
