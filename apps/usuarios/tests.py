@@ -555,3 +555,63 @@ class SoloAdminGestionaClinicaYSuscripcionTests(TestCase):
         self.client.force_login(self.veterinario_user)
         response = self.client.get(reverse('usuarios:iniciar_pago_suscripcion'))
         self.assertRedirects(response, reverse('dashboard:index'))
+
+
+class RecordatoriosPendientesBadgeTests(TestCase):
+    """El Centro de Recordatorios ya existía en el código pero no estaba enlazado
+    desde ningún lado (por eso costaba encontrarlo). Ahora hay una campanita con
+    contador en el nav, visible en cualquier pantalla del staff."""
+
+    def setUp(self):
+        from apps.clientes.models import Cliente, Mascota
+        from apps.historia_clinica.models import RegistroVacuna
+        from apps.turnos.models import Turno
+
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.staff_a = User.objects.create_user(username="staff_a_reco", password="testpass123")
+        PerfilUsuario.objects.create(user=self.staff_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        cliente_a = Cliente.objects.create(veterinaria=self.vet_a, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        mascota_a = Mascota.objects.create(cliente=cliente_a, nombre="Firulais", especie="CANINO")
+        cliente_b = Cliente.objects.create(veterinaria=self.vet_b, nombre="Ana", apellido="Gomez", dni="222", telefono="2")
+        mascota_b = Mascota.objects.create(cliente=cliente_b, nombre="Michi", especie="FELINO")
+
+        manana = timezone.now() + timedelta(days=1)
+        Turno.objects.create(veterinaria=self.vet_a, mascota=mascota_a, fecha_hora=manana, estado='CONFIRMADO')
+        Turno.objects.create(veterinaria=self.vet_b, mascota=mascota_b, fecha_hora=manana, estado='CONFIRMADO')
+
+        RegistroVacuna.objects.create(
+            veterinaria=self.vet_b, mascota=mascota_b, nombre_vacuna="Rabia",
+            fecha_aplicacion=timezone.now().date(), fecha_proxima_dosis=timezone.now().date(),
+        )
+
+    def test_solo_cuenta_lo_de_su_propia_veterinaria(self):
+        self.client.force_login(self.staff_a)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertEqual(response.context['recordatorios_pendientes_count'], 1)
+
+    def test_el_cliente_del_portal_no_ve_la_campanita(self):
+        from apps.clientes.models import Cliente
+
+        cliente = Cliente.objects.create(veterinaria=self.vet_a, nombre="Rosa", apellido="Diaz", dni="999", telefono="9")
+        user_portal = User.objects.create_user(username="tutor_reco", password="testpass123")
+        cliente.usuario = user_portal
+        cliente.save()
+
+        self.client.force_login(user_portal)
+        response = self.client.get(reverse('portal:home'))
+
+        self.assertEqual(response.context['recordatorios_pendientes_count'], 0)
+        self.assertNotContains(response, reverse('dashboard:centro_recordatorios'))
+
+    def test_la_campanita_aparece_en_el_nav_con_el_contador(self):
+        self.client.force_login(self.staff_a)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertContains(response, reverse('dashboard:centro_recordatorios'))
+        self.assertContains(response, 'bi-bell-fill')

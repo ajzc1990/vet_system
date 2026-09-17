@@ -202,6 +202,14 @@
                 <!-- Acceso Rápido y Perfil/Tenant -->
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     {% if not user.cliente_portal %}
+                    <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border position-relative d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Centro de Recordatorios">
+                        <i class="bi bi-bell-fill text-warning"></i>
+                        {% if recordatorios_pendientes_count > 0 %}
+                            <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.65rem;">
+                                {{ recordatorios_pendientes_count }}
+                            </span>
+                        {% endif %}
+                    </a>
                     <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
                     </a>
