@@ -110,8 +110,70 @@
 </div>
 {% endif %}
 
-<!-- Tabla Principal de Productos -->
-<div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+{% if not productos %}
+<div class="card border-0 shadow-lg rounded-4">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-box-seam display-4 d-block mb-3 text-secondary opacity-50"></i>
+        <h5 class="fw-bold text-dark">No hay productos registrados</h5>
+        <p class="small text-muted mb-3">No se encontraron ítems en el catálogo para el filtro seleccionado.</p>
+        <a href="{% url 'inventario:nuevo_producto' %}" class="btn btn-primary btn-sm fw-bold px-4 py-2 rounded-3">
+            <i class="bi bi-plus-lg me-1"></i> Cargar Primer Producto
+        </a>
+    </div>
+</div>
+{% else %}
+
+<!-- Tarjetas (celular / pantallas angostas) -->
+<div class="d-md-none d-flex flex-column gap-3">
+    {% for p in productos %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <strong class="text-dark">{{ p.nombre }}</strong>
+                {% if p.bajo_stock %}
+                    <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 rounded-pill fw-bold extra-small flex-shrink-0 ms-2">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ p.stock_actual }}
+                    </span>
+                {% else %}
+                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-1 rounded-pill fw-bold extra-small flex-shrink-0 ms-2">
+                        <i class="bi bi-check-circle-fill me-1"></i>{{ p.stock_actual }}
+                    </span>
+                {% endif %}
+            </div>
+            <div class="small text-secondary mb-2">
+                {{ p.categoria.nombre|default:"Sin Categoría" }} &bull; {{ p.get_tipo_display }}
+                {% if p.codigo_barras %} &bull; <code class="small">{{ p.codigo_barras }}</code>{% endif %}
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-dark">${{ p.precio_venta|floatformat:2 }}</span>
+                {% if p.fecha_vencimiento %}
+                    {% if p.esta_vencido %}
+                        <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2 py-1 rounded-pill fw-bold extra-small"><i class="bi bi-calendar-x-fill me-1"></i>{{ p.fecha_vencimiento|date:"d/m/Y" }}</span>
+                    {% elif p.proximo_a_vencer %}
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill fw-bold extra-small"><i class="bi bi-hourglass-split me-1"></i>{{ p.fecha_vencimiento|date:"d/m/Y" }}</span>
+                    {% else %}
+                        <span class="small text-muted"><i class="bi bi-calendar3 me-1"></i>{{ p.fecha_vencimiento|date:"d/m/Y" }}</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2 pt-2 border-top">
+                <a href="{% url 'inventario:registrar_movimiento' p.id %}" class="btn btn-light btn-sm border text-secondary rounded-2 flex-fill" title="Movimiento de Stock">
+                    <i class="bi bi-box-arrow-in-down-right"></i>
+                </a>
+                <a href="{% url 'inventario:editar_producto' p.id %}" class="btn btn-light btn-sm border text-primary rounded-2 flex-fill" title="Editar Producto">
+                    <i class="bi bi-pencil-fill"></i>
+                </a>
+                <a href="{% url 'inventario:eliminar_producto' p.id %}" class="btn btn-light btn-sm border text-danger rounded-2 flex-fill" title="Eliminar Producto">
+                    <i class="bi bi-trash-fill"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Tabla (escritorio / tablet) -->
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -207,23 +269,11 @@
                             </div>
                         </td>
                     </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center py-5 text-muted">
-                            <div class="py-4">
-                                <i class="bi bi-box-seam display-4 d-block mb-3 text-secondary opacity-50"></i>
-                                <h5 class="fw-bold text-dark">No hay productos registrados</h5>
-                                <p class="small text-muted mb-3">No se encontraron ítems en el catálogo para el filtro seleccionado.</p>
-                                <a href="{% url 'inventario:nuevo_producto' %}" class="btn btn-primary btn-sm fw-bold px-4 py-2 rounded-3">
-                                    <i class="bi bi-plus-lg me-1"></i> Cargar Primer Producto
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

@@ -22,39 +22,60 @@
         <span class="badge bg-white bg-opacity-25 px-3 py-1 rounded-pill fw-bold">{{ turnos_data|length }}</span>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light border-bottom">
-                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
-                        <th class="ps-4 py-3">Hora</th>
-                        <th class="py-3">Paciente / Tutor</th>
-                        <th class="text-end pe-4 py-3">Contacto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in turnos_data %}
-                    <tr>
-                        <td class="ps-4 py-3 fw-bold text-primary">{{ row.item.fecha_hora|date:"H:i" }} hs</td>
-                        <td class="py-3">
-                            <strong class="text-dark">{{ row.item.mascota.nombre }}</strong>
-                            <div class="small text-muted">{{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }}</div>
-                        </td>
-                        <td class="text-end pe-4 py-3">
-                            {% if row.whatsapp.telefono %}
-                            <a href="https://wa.me/{{ row.whatsapp.telefono }}?text={{ row.whatsapp.texto|urlencode }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 px-3">
-                                <i class="bi bi-whatsapp me-1"></i> Recordar
-                            </a>
-                            {% else %}
-                            <span class="text-muted small">Sin teléfono</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="3" class="text-center py-5 text-muted">No hay turnos agendados para mañana.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        {% if not turnos_data %}
+            <div class="text-center py-5 text-muted">No hay turnos agendados para mañana.</div>
+        {% else %}
+            <!-- Tarjetas (celular) -->
+            <div class="d-md-none d-flex flex-column gap-2 p-3">
+                {% for row in turnos_data %}
+                <div class="border rounded-3 p-2 d-flex justify-content-between align-items-center gap-2">
+                    <div class="flex-grow-1 min-w-0">
+                        <span class="fw-bold text-primary small">{{ row.item.fecha_hora|date:"H:i" }} hs</span> &bull;
+                        <strong class="small">{{ row.item.mascota.nombre }}</strong>
+                        <div class="small text-muted">{{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }}</div>
+                    </div>
+                    {% if row.whatsapp.telefono %}
+                    <a href="https://wa.me/{{ row.whatsapp.telefono }}?text={{ row.whatsapp.texto|urlencode }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 flex-shrink-0">
+                        <i class="bi bi-whatsapp"></i>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Tabla (escritorio / tablet) -->
+            <div class="table-responsive d-none d-md-block">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light border-bottom">
+                        <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                            <th class="ps-4 py-3">Hora</th>
+                            <th class="py-3">Paciente / Tutor</th>
+                            <th class="text-end pe-4 py-3">Contacto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in turnos_data %}
+                        <tr>
+                            <td class="ps-4 py-3 fw-bold text-primary">{{ row.item.fecha_hora|date:"H:i" }} hs</td>
+                            <td class="py-3">
+                                <strong class="text-dark">{{ row.item.mascota.nombre }}</strong>
+                                <div class="small text-muted">{{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }}</div>
+                            </td>
+                            <td class="text-end pe-4 py-3">
+                                {% if row.whatsapp.telefono %}
+                                <a href="https://wa.me/{{ row.whatsapp.telefono }}?text={{ row.whatsapp.texto|urlencode }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 px-3">
+                                    <i class="bi bi-whatsapp me-1"></i> Recordar
+                                </a>
+                                {% else %}
+                                <span class="text-muted small">Sin teléfono</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
     </div>
 </div>
 
@@ -68,7 +89,7 @@
             </div>
             <div class="list-group list-group-flush">
                 {% for row in vacunas_vencidas_data %}
-                <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4">
                     <div>
                         <strong class="text-dark">{{ row.item.mascota.nombre }}</strong> <span class="text-muted small">({{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }})</span>
                         <div class="small text-danger fw-semibold">{{ row.item.nombre_vacuna }} &bull; venció {{ row.item.fecha_proxima_dosis|date:"d/m/Y" }}</div>
@@ -90,7 +111,7 @@
             </div>
             <div class="list-group list-group-flush">
                 {% for row in vacunas_proximas_data %}
-                <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4">
                     <div>
                         <strong class="text-dark">{{ row.item.mascota.nombre }}</strong> <span class="text-muted small">({{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }})</span>
                         <div class="small text-warning-emphasis fw-semibold">{{ row.item.nombre_vacuna }} &bull; vence {{ row.item.fecha_proxima_dosis|date:"d/m/Y" }}</div>
@@ -115,7 +136,7 @@
             </div>
             <div class="list-group list-group-flush">
                 {% for row in despara_vencidas_data %}
-                <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4">
                     <div>
                         <strong class="text-dark">{{ row.item.mascota.nombre }}</strong> <span class="text-muted small">({{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }})</span>
                         <div class="small text-danger fw-semibold">{{ row.item.producto }} &bull; venció {{ row.item.fecha_proxima_dosis|date:"d/m/Y" }}</div>
@@ -137,7 +158,7 @@
             </div>
             <div class="list-group list-group-flush">
                 {% for row in despara_proximas_data %}
-                <div class="list-group-item d-flex justify-content-between align-items-center py-3 px-4">
+                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4">
                     <div>
                         <strong class="text-dark">{{ row.item.mascota.nombre }}</strong> <span class="text-muted small">({{ row.item.mascota.cliente.nombre }} {{ row.item.mascota.cliente.apellido }})</span>
                         <div class="small text-warning-emphasis fw-semibold">{{ row.item.producto }} &bull; vence {{ row.item.fecha_proxima_dosis|date:"d/m/Y" }}</div>
