@@ -113,7 +113,7 @@
 
 <!-- Próximos Turnos del Día -->
 <div class="card border-0 shadow-sm rounded-3 mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Próxima Sala de Espera / Turnos</h5>
         <a href="{% url 'turnos:lista_turnos' %}" class="btn btn-sm btn-outline-primary fw-semibold">Ver Agenda Completa</a>
     </div>
@@ -195,7 +195,7 @@
      consultas de prospectos de todo el SaaS, no pertenecen a ninguna veterinaria) -->
 {% if user.is_superuser %}
 <div class="card border-0 shadow-sm rounded-3">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h5 class="card-title fw-bold text-dark mb-0">
             <i class="bi bi-envelope-paper me-2 text-primary"></i>Consultas Recibidas desde la Landing Page
         </h5>

@@ -18,7 +18,7 @@
 
     {% if suscripcion %}
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden mb-4">
-        <div class="card-header py-3 px-4 {% if suscripcion.esta_vencida %}bg-danger{% elif suscripcion.estado == 'PRUEBA' %}bg-info{% else %}bg-success{% endif %} text-white d-flex justify-content-between align-items-center">
+        <div class="card-header py-3 px-4 {% if suscripcion.esta_vencida %}bg-danger{% elif suscripcion.estado == 'PRUEBA' %}bg-info{% else %}bg-success{% endif %} text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="fw-bold mb-0 fs-6">Plan {{ suscripcion.plan.nombre }}</h5>
             <span class="badge bg-white bg-opacity-25 px-3 py-1 rounded-pill fw-bold">{{ suscripcion.get_estado_display }}</span>
         </div>
