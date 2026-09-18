@@ -87,6 +87,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'apps.usuarios.context_processors.suscripcion_activa',
                 'apps.usuarios.context_processors.recordatorios_pendientes',
+                'apps.usuarios.context_processors.alertas_stock',
             ],
         },
     },

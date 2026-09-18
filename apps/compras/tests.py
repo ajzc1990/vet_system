@@ -158,3 +158,59 @@ class RegistrarCompraViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Compra.objects.count(), 0)
+
+    def test_precarga_proveedor_y_producto_desde_query_params(self):
+        url = (
+            reverse('compras:registrar_compra')
+            + f'?proveedor={self.proveedor.id}&producto={self.producto_a.id}&cantidad=15&precio=80.00'
+        )
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['form'].initial.get('proveedor'), str(self.proveedor.id))
+        primera_fila = response.context['formset'][0]
+        self.assertEqual(primera_fila.initial.get('producto'), str(self.producto_a.id))
+        self.assertEqual(primera_fila.initial.get('cantidad'), '15')
+
+
+class SugerenciasCompraTests(TestCase):
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.user_a = User.objects.create_user(username="user_a_sug", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        self.proveedor = Proveedor.objects.create(veterinaria=self.vet_a, nombre="Distribuidora")
+
+        self.bajo_stock = Producto.objects.create(
+            veterinaria=self.vet_a, nombre="Amoxicilina", stock_actual=1, stock_minimo=5, precio_costo=100
+        )
+        Producto.objects.create(veterinaria=self.vet_a, nombre="Vacuna Quintuple", stock_actual=20, stock_minimo=5)
+        Producto.objects.create(veterinaria=self.vet_b, nombre="Alimento", stock_actual=0, stock_minimo=10)
+
+        self.client.force_login(self.user_a)
+
+    def test_solo_lista_productos_con_stock_bajo_de_su_veterinaria(self):
+        response = self.client.get(reverse('compras:sugerencias'))
+
+        productos_sugeridos = [s['producto'] for s in response.context['sugerencias']]
+        self.assertIn(self.bajo_stock, productos_sugeridos)
+        self.assertEqual(len(productos_sugeridos), 1)
+
+    def test_sugiere_el_ultimo_proveedor_usado_para_ese_producto(self):
+        # Cantidad chica para que, aun después de sumar stock, el producto siga
+        # por debajo de su mínimo y no desaparezca de las sugerencias.
+        compra = Compra.objects.create(veterinaria=self.vet_a, proveedor=self.proveedor, total=0)
+        DetalleCompra.objects.create(compra=compra, producto=self.bajo_stock, cantidad=1, precio_unitario=100)
+
+        response = self.client.get(reverse('compras:sugerencias'))
+
+        sugerencia = response.context['sugerencias'][0]
+        self.assertEqual(sugerencia['proveedor'], self.proveedor)
+
+    def test_sin_historial_de_compra_no_sugiere_proveedor(self):
+        response = self.client.get(reverse('compras:sugerencias'))
+
+        sugerencia = response.context['sugerencias'][0]
+        self.assertIsNone(sugerencia['proveedor'])

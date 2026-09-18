@@ -8,6 +8,7 @@ urlpatterns = [
     # Compras
     path('', views.lista_compras, name='lista_compras'),
     path('exportar-csv/', views.exportar_compras_csv, name='exportar_compras_csv'),
+    path('sugerencias/', views.sugerencias_compra, name='sugerencias'),
     path('nueva/', views.registrar_compra, name='registrar_compra'),
     path('<int:compra_id>/', views.detalle_compra, name='detalle_compra'),
 

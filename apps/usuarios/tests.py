@@ -615,3 +615,41 @@ class RecordatoriosPendientesBadgeTests(TestCase):
 
         self.assertContains(response, reverse('dashboard:centro_recordatorios'))
         self.assertContains(response, 'bi-bell-fill')
+
+
+class AlertasStockBadgeTests(TestCase):
+    """El badge de stock bajo en el link de Compras del nav debe contar solo los
+    productos de la propia veterinaria, e ignorarse para clientes del Portal."""
+
+    def setUp(self):
+        from apps.inventario.models import Producto
+
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.staff_a = User.objects.create_user(username="staff_a_stock", password="testpass123")
+        PerfilUsuario.objects.create(user=self.staff_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        Producto.objects.create(veterinaria=self.vet_a, nombre="Amoxicilina", stock_actual=1, stock_minimo=5)
+        Producto.objects.create(veterinaria=self.vet_a, nombre="Vacuna Quintuple", stock_actual=20, stock_minimo=5)
+        Producto.objects.create(veterinaria=self.vet_b, nombre="Alimento", stock_actual=0, stock_minimo=10)
+
+    def test_solo_cuenta_el_stock_bajo_de_su_propia_veterinaria(self):
+        self.client.force_login(self.staff_a)
+
+        response = self.client.get(reverse('dashboard:index'))
+
+        self.assertEqual(response.context['productos_bajo_stock_count'], 1)
+
+    def test_el_cliente_del_portal_no_ve_el_badge(self):
+        from apps.clientes.models import Cliente
+
+        cliente = Cliente.objects.create(veterinaria=self.vet_a, nombre="Rosa", apellido="Diaz", dni="999", telefono="9")
+        user_portal = User.objects.create_user(username="tutor_stock", password="testpass123")
+        cliente.usuario = user_portal
+        cliente.save()
+
+        self.client.force_login(user_portal)
+        response = self.client.get(reverse('portal:home'))
+
+        self.assertEqual(response.context['productos_bajo_stock_count'], 0)

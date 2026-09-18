@@ -1,5 +1,6 @@
 # apps/compras/views.py
 import csv
+from django.db.models import F
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -8,6 +9,7 @@ from django.http import HttpResponse
 
 from .models import Proveedor, Compra, DetalleCompra
 from .forms import ProveedorForm, CompraForm, DetalleCompraFormSet
+from apps.inventario.models import Producto
 from apps.usuarios.utils import get_veterinaria_activa
 from apps.usuarios.audit import registrar_auditoria
 
@@ -121,6 +123,42 @@ def exportar_compras_csv(request):
 
 
 @login_required
+def sugerencias_compra(request):
+    """Cruza los productos con stock bajo con el último proveedor al que se le compró
+    cada uno (según el historial de compras), para sugerir qué reponer y a quién
+    comprarle, con un acceso directo a una compra precargada."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        productos = Producto.objects.filter(stock_actual__lte=F('stock_minimo'))
+    else:
+        productos = (
+            Producto.objects.filter(veterinaria=vet, stock_actual__lte=F('stock_minimo'))
+            if vet else Producto.objects.none()
+        )
+    productos = productos.select_related('categoria').order_by('stock_actual')
+
+    sugerencias = []
+    for producto in productos:
+        ultimo_detalle = (
+            DetalleCompra.objects.filter(producto=producto)
+            .select_related('compra__proveedor')
+            .order_by('-compra__fecha_hora')
+            .first()
+        )
+        proveedor = ultimo_detalle.compra.proveedor if ultimo_detalle else None
+        cantidad_sugerida = max(producto.stock_minimo * 2 - producto.stock_actual, producto.stock_minimo)
+
+        sugerencias.append({
+            'producto': producto,
+            'proveedor': proveedor,
+            'cantidad_sugerida': cantidad_sugerida,
+        })
+
+    return render(request, 'compras/sugerencias.html', {'sugerencias': sugerencias})
+
+
+@login_required
 @transaction.atomic
 def registrar_compra(request):
     """Registra una compra a proveedor con varias líneas de productos, sumando stock."""
@@ -171,8 +209,23 @@ def registrar_compra(request):
         else:
             messages.error(request, "Por favor revisa los datos ingresados en el formulario.")
     else:
-        form = CompraForm(veterinaria=vet)
-        formset = DetalleCompraFormSet(form_kwargs={'veterinaria': vet})
+        # Precarga opcional desde "Sugerencias de Compra" (?proveedor=&producto=&cantidad=)
+        proveedor_id = request.GET.get('proveedor')
+        producto_id = request.GET.get('producto')
+        cantidad_sugerida = request.GET.get('cantidad')
+        precio_sugerido = request.GET.get('precio')
+
+        form_initial = {'proveedor': proveedor_id} if proveedor_id else None
+        formset_initial = None
+        if producto_id:
+            formset_initial = [{
+                'producto': producto_id,
+                'cantidad': cantidad_sugerida,
+                'precio_unitario': precio_sugerido,
+            }]
+
+        form = CompraForm(veterinaria=vet, initial=form_initial)
+        formset = DetalleCompraFormSet(form_kwargs={'veterinaria': vet}, initial=formset_initial)
 
     return render(request, 'compras/form_compra.html', {'form': form, 'formset': formset})
 

@@ -193,8 +193,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'compras' %}active{% endif %}" href="{% url 'compras:lista_compras' %}">
+                        <a class="nav-link-custom position-relative {% if request.resolver_match.app_name == 'compras' %}active{% endif %}" href="{% if productos_bajo_stock_count > 0 %}{% url 'compras:sugerencias' %}{% else %}{% url 'compras:lista_compras' %}{% endif %}">
                             <i class="bi bi-truck"></i> Compras
+                            {% if productos_bajo_stock_count > 0 %}
+                                <span class="badge bg-danger rounded-pill" style="font-size: 0.6rem; vertical-align: top;">{{ productos_bajo_stock_count }}</span>
+                            {% endif %}
                         </a>
                     </li>
                     <li class="nav-item">

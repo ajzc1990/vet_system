@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Sugerencias de Compra - VeterSystem{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i> Sugerencias de Compra
+        </h2>
+        <p class="text-muted small mb-0">Productos en o por debajo del stock mínimo, con el último proveedor conocido</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="{% url 'inventario:lista_productos' %}?filtro=bajo_stock" class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-box-seam"></i> Ver en Inventario
+        </a>
+        <a href="{% url 'compras:lista_compras' %}" class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
+            <i class="bi bi-receipt"></i> Ver Compras
+        </a>
+    </div>
+</div>
+
+{% if not sugerencias %}
+<div class="card border-0 shadow-lg rounded-4">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-check-circle display-4 d-block mb-3 text-success opacity-75"></i>
+        <h5 class="fw-bold text-dark">Todo el stock está en orden</h5>
+        <p class="small text-muted mb-0">No hay productos por debajo de su stock mínimo por ahora.</p>
+    </div>
+</div>
+{% else %}
+
+<!-- Tarjetas (celular / pantallas angostas) -->
+<div class="d-md-none d-flex flex-column gap-3">
+    {% for s in sugerencias %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-3">
+            <div class="fw-bold text-dark d-flex align-items-center gap-1 mb-1">
+                <i class="bi bi-box-seam-fill text-primary"></i> {{ s.producto.nombre }}
+            </div>
+            <div class="small text-danger fw-semibold mb-2">
+                <i class="bi bi-exclamation-circle-fill"></i> Stock: {{ s.producto.stock_actual }} / mínimo {{ s.producto.stock_minimo }}
+            </div>
+            {% if s.proveedor %}
+                <div class="small text-secondary d-flex align-items-center gap-1 mb-2">
+                    <i class="bi bi-truck"></i> Último proveedor: <strong>{{ s.proveedor.nombre }}</strong>
+                </div>
+            {% else %}
+                <div class="small text-secondary d-flex align-items-center gap-1 mb-2">
+                    <i class="bi bi-question-circle"></i> Sin historial de compras para este producto
+                </div>
+            {% endif %}
+            <a href="{% url 'compras:registrar_compra' %}?{% if s.proveedor %}proveedor={{ s.proveedor.id }}&{% endif %}producto={{ s.producto.id }}&cantidad={{ s.cantidad_sugerida }}&precio={{ s.producto.precio_costo }}"
+               class="btn btn-primary btn-sm fw-bold rounded-2 w-100 d-flex align-items-center justify-content-center gap-1">
+                <i class="bi bi-cart-plus-fill"></i> Registrar Compra ({{ s.cantidad_sugerida }} unid.)
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Tabla (escritorio / tablet) -->
+<div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light border-bottom">
+                    <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem; letter-spacing: 0.5px;">
+                        <th class="ps-4 py-3">Producto</th>
+                        <th class="py-3">Stock Actual / Mínimo</th>
+                        <th class="py-3">Último Proveedor</th>
+                        <th class="py-3">Sugerencia</th>
+                        <th class="text-end pe-4 py-3">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sugerencias %}
+                    <tr>
+                        <td class="ps-4 py-3 fw-semibold text-dark">{{ s.producto.nombre }}</td>
+                        <td class="py-3">
+                            <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle px-2.5 py-1 rounded-pill fw-bold">
+                                {{ s.producto.stock_actual }} / {{ s.producto.stock_minimo }}
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            {% if s.proveedor %}
+                                <span class="small text-secondary d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-truck text-primary"></i> {{ s.proveedor.nombre }}
+                                </span>
+                            {% else %}
+                                <span class="small text-muted fst-italic">Sin historial</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 small text-secondary">{{ s.cantidad_sugerida }} unidades</td>
+                        <td class="text-end pe-4 py-3">
+                            <a href="{% url 'compras:registrar_compra' %}?{% if s.proveedor %}proveedor={{ s.proveedor.id }}&{% endif %}producto={{ s.producto.id }}&cantidad={{ s.cantidad_sugerida }}&precio={{ s.producto.precio_costo }}"
+                               class="btn btn-primary btn-sm fw-bold rounded-2 px-3 shadow-sm d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-cart-plus-fill"></i> Registrar Compra
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

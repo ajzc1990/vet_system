@@ -51,3 +51,24 @@ def recordatorios_pendientes(request):
     ).count()
 
     return {'recordatorios_pendientes_count': turnos_manana + vacunas + despara}
+
+
+def alertas_stock(request):
+    """Cantidad de productos en o por debajo del stock mínimo, para el badge del link
+    de Compras en el nav. No aplica a clientes del Portal."""
+    if not request.user.is_authenticated or hasattr(request.user, 'cliente_portal'):
+        return {'productos_bajo_stock_count': 0}
+
+    from django.db.models import F
+    from apps.inventario.models import Producto
+
+    veterinaria = getattr(request, 'veterinaria', None)
+    es_superuser_global = request.user.is_superuser and not veterinaria
+
+    if not es_superuser_global and not veterinaria:
+        return {'productos_bajo_stock_count': 0}
+
+    filtro_tenant = {} if es_superuser_global else {'veterinaria': veterinaria}
+    count = Producto.objects.filter(stock_actual__lte=F('stock_minimo'), **filtro_tenant).count()
+
+    return {'productos_bajo_stock_count': count}

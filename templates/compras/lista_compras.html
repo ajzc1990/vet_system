@@ -12,6 +12,12 @@
     </div>
 
     <div class="d-flex align-items-center gap-2 flex-wrap">
+        <a href="{% url 'compras:sugerencias' %}" class="btn btn-outline-warning fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm position-relative">
+            <i class="bi bi-exclamation-triangle-fill"></i> Sugerencias
+            {% if productos_bajo_stock_count > 0 %}
+                <span class="badge bg-danger rounded-pill">{{ productos_bajo_stock_count }}</span>
+            {% endif %}
+        </a>
         <a href="{% url 'compras:lista_proveedores' %}" class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
             <i class="bi bi-truck"></i> Proveedores
         </a>
