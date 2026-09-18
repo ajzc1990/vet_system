@@ -135,7 +135,7 @@ class RegistroVacuna(models.Model):
     @property
     def proxima_dosis_vencida(self):
         if self.fecha_proxima_dosis:
-            return self.fecha_proxima_dosis < timezone.now().date()
+            return self.fecha_proxima_dosis < timezone.localdate()
         return False
 
 
@@ -191,7 +191,7 @@ class RegistroDesparasitacion(models.Model):
     @property
     def proxima_dosis_vencida(self):
         if self.fecha_proxima_dosis:
-            return self.fecha_proxima_dosis < timezone.now().date()
+            return self.fecha_proxima_dosis < timezone.localdate()
         return False
 
 

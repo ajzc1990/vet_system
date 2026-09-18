@@ -273,7 +273,7 @@ class PagoSuscripcionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         suscripcion.refresh_from_db()
         self.assertEqual(suscripcion.estado, 'ACTIVA')
-        self.assertEqual(suscripcion.ultimo_pago_registrado, timezone.now().date())
+        self.assertEqual(suscripcion.ultimo_pago_registrado, timezone.localdate())
         self.assertGreater(suscripcion.fecha_vencimiento, vencimiento_original)
 
     def test_webhook_de_pago_anual_extiende_365_dias_y_guarda_el_ciclo(self):

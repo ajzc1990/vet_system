@@ -83,10 +83,11 @@ def crear_suscripcion_de_prueba(sender, instance, created, **kwargs):
     if not plan_entrada:
         return
 
+    hoy = timezone.localdate()
     Suscripcion.objects.create(
         veterinaria=instance,
         plan=plan_entrada,
         estado='PRUEBA',
-        fecha_inicio=timezone.now().date(),
-        fecha_vencimiento=timezone.now().date() + timedelta(days=14),
+        fecha_inicio=hoy,
+        fecha_vencimiento=hoy + timedelta(days=14),
     )

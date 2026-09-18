@@ -31,7 +31,7 @@ def lista_turnos(request):
     # 2. Filtro por Fecha / "Ver todos"
     fecha_filter = request.GET.get('fecha')
     ver_todos = request.GET.get('todos') == '1'
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
 
     if fecha_filter:
         turnos = turnos.filter(fecha_hora__date=fecha_filter)

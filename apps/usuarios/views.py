@@ -323,7 +323,7 @@ def webhook_mercadopago(request):
             ciclo = str((pago.get('metadata') or {}).get('ciclo', 'MENSUAL')).upper()
             dias = 365 if ciclo == 'ANUAL' else 30
 
-            hoy = timezone.now().date()
+            hoy = timezone.localdate()
             base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy else hoy
             suscripcion.fecha_vencimiento = base + timedelta(days=dias)
             suscripcion.ciclo_facturacion = ciclo if ciclo in ('MENSUAL', 'ANUAL') else 'MENSUAL'
@@ -374,11 +374,12 @@ def extender_suscripcion(request, suscripcion_id):
         ciclo = ciclo if ciclo in ('MENSUAL', 'ANUAL') else 'MENSUAL'
         dias = 365 if ciclo == 'ANUAL' else 30
 
-        base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= timezone.now().date() else timezone.now().date()
+        hoy = timezone.localdate()
+        base = suscripcion.fecha_vencimiento if suscripcion.fecha_vencimiento >= hoy else hoy
         suscripcion.fecha_vencimiento = base + timedelta(days=dias)
         suscripcion.ciclo_facturacion = ciclo
         suscripcion.estado = 'ACTIVA'
-        suscripcion.ultimo_pago_registrado = timezone.now().date()
+        suscripcion.ultimo_pago_registrado = hoy
         suscripcion.save()
 
         messages.success(request, f"Suscripción de {suscripcion.veterinaria.nombre} extendida hasta el {suscripcion.fecha_vencimiento.strftime('%d/%m/%Y')}.")

@@ -73,7 +73,7 @@ class AgendaFiltroPorDefectoTests(TestCase):
         self.assertIn(self.turno_pasado, turnos_listados)
 
     def test_filtrar_por_una_fecha_especifica_funciona(self):
-        fecha = self.turno_pasado.fecha_hora.date().isoformat()
+        fecha = timezone.localtime(self.turno_pasado.fecha_hora).date().isoformat()
         response = self.client.get(reverse('turnos:lista_turnos'), {'fecha': fecha})
         turnos_listados = list(response.context['turnos'])
         self.assertIn(self.turno_pasado, turnos_listados)

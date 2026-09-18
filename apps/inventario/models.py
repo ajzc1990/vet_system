@@ -83,14 +83,14 @@ class Producto(models.Model):
     def esta_vencido(self):
         """Retorna True si la fecha de vencimiento transcurrió."""
         if self.fecha_vencimiento:
-            return self.fecha_vencimiento < timezone.now().date()
+            return self.fecha_vencimiento < timezone.localdate()
         return False
 
     @property
     def proximo_a_vencer(self):
         """Retorna True si el producto vence dentro de los próximos 30 días y aún no expiró."""
         if self.fecha_vencimiento:
-            hoy = timezone.now().date()
+            hoy = timezone.localdate()
             limite = hoy + timedelta(days=30)
             return hoy <= self.fecha_vencimiento <= limite
         return False
@@ -99,7 +99,7 @@ class Producto(models.Model):
     def dias_para_vencer(self):
         """Devuelve el número de días restantes para vencer (negativo si ya venció)."""
         if self.fecha_vencimiento:
-            return (self.fecha_vencimiento - timezone.now().date()).days
+            return (self.fecha_vencimiento - timezone.localdate()).days
         return None
 
 

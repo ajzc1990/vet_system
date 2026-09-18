@@ -187,11 +187,11 @@ class Suscripcion(models.Model):
 
     @property
     def dias_para_vencer(self):
-        return (self.fecha_vencimiento - timezone.now().date()).days
+        return (self.fecha_vencimiento - timezone.localdate()).days
 
     @property
     def esta_vencida(self):
-        return self.estado != 'CANCELADA' and self.fecha_vencimiento < timezone.now().date()
+        return self.estado != 'CANCELADA' and self.fecha_vencimiento < timezone.localdate()
 
     @property
     def proxima_a_vencer(self):

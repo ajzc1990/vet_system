@@ -32,7 +32,7 @@ def recordatorios_pendientes(request):
     veterinaria = getattr(request, 'veterinaria', None)
     es_superuser_global = request.user.is_superuser and not veterinaria
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     manana = hoy + timedelta(days=1)
     limite = hoy + timedelta(days=7)
 

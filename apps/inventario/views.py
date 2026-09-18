@@ -26,7 +26,7 @@ def lista_productos(request):
     else:
         qs_base = Producto.objects.filter(veterinaria=vet).select_related('categoria') if vet else Producto.objects.none()
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     limite_vencimiento = hoy + timedelta(days=30)
 
     # Contadores para las tarjetas/KPIs de la cabecera
@@ -72,7 +72,7 @@ def exportar_productos_csv(request):
     else:
         productos = Producto.objects.filter(veterinaria=vet).select_related('categoria') if vet else Producto.objects.none()
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     limite_vencimiento = hoy + timedelta(days=30)
     filtro = request.GET.get('filtro')
     if filtro == 'bajo_stock':

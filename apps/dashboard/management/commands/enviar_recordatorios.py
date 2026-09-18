@@ -18,7 +18,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        hoy = timezone.now().date()
+        hoy = timezone.localdate()
         manana = hoy + timedelta(days=1)
         limite_proximos = hoy + timedelta(days=7)
 

@@ -19,7 +19,7 @@ def dashboard_principal(request):
         return redirect('portal:home')
 
     vet = get_veterinaria_activa(request)
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     limite_vencimiento = hoy + timedelta(days=30)
 
     # 1. Filtros base según Tenant
@@ -92,7 +92,7 @@ def centro_recordatorios(request):
     """Centro de Recordatorios: agrupa turnos de mañana y refuerzos de vacunas/desparasitaciones
     próximos o vencidos, con un enlace directo de WhatsApp ya redactado para contactar al tutor."""
     vet = get_veterinaria_activa(request)
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     manana = hoy + timedelta(days=1)
     limite_proximos = hoy + timedelta(days=7)
 
