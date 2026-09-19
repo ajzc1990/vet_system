@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}VeterSystem - Sistema de Gestión Veterinaria{% endblock %}</title>
-    
+
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -17,212 +17,455 @@
 
     <style>
         :root {
-            --vs-primary: #0d6efd;
-            --vs-primary-dark: #0a58ca;
+            /* Acento en degradé violeta→azul, sidebar oscuro, fondo frío — inspirado en
+               portafolioagustinzelaya.com, adaptado a una app de uso diario en clínica. */
+            --vs-primary: #6366f1;
+            --vs-primary-dark: #4f46e5;
+            --vs-primary-light: #eef2ff;
+            --vs-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+            --vs-sidebar-bg: #0f1420;
+            --vs-sidebar-bg-soft: #161d2e;
+            --vs-sidebar-hover: #1c2537;
+            --vs-sidebar-text: #94a3b8;
+            --vs-sidebar-text-active: #ffffff;
+            --vs-sidebar-border: #232c40;
             --vs-dark: #0f172a;
-            --vs-light-bg: #f8fafc;
-            --vs-border: #e2e8f0;
+            --vs-light-bg: #f5f7fb;
+            --vs-border: #e5e9f2;
+            --vs-ink-soft: #64748b;
+            --vs-mint: #10b981;
+            --vs-mint-bg: #d1fae5;
+            --sidebar-width: 264px;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--vs-light-bg);
             color: #334155;
+        }
+
+        h1, h2, h3, h4, h5, h6 { letter-spacing: -0.01em; }
+
+        /* "fw-extrabold" se usa en ~40 plantillas para títulos de página, pero nunca
+           tuvo una regla que lo respalde (Bootstrap no la trae de fábrica) — quedaba
+           en fw-bold normal sin que se notara. La definimos acá: un solo cambio hace
+           que todos los títulos del sistema se vean con el peso que ya se pedía. */
+        .fw-extrabold { font-weight: 800 !important; }
+
+        /* ============ App Shell ============ */
+        .app-shell {
             display: flex;
-            flex-direction: column;
             min-height: 100vh;
         }
 
-        /* Navbar Principal */
-        .navbar-main {
-            background-color: #ffffff;
-            border-bottom: 1px solid var(--vs-border);
-            padding: 0.75rem 1rem;
+        /* ============ Sidebar (offcanvas responsive: drawer < lg, fijo >= lg) ============ */
+        .app-sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--vs-sidebar-bg);
+            border-right: 1px solid var(--vs-sidebar-border);
+            display: flex;
+            flex-direction: column;
         }
 
-        .navbar-brand-logo {
-            background-color: var(--vs-primary);
+        @media (min-width: 992px) {
+            .app-sidebar {
+                position: fixed;
+                top: 0; left: 0; bottom: 0;
+            }
+            .app-main { margin-left: var(--sidebar-width); }
+        }
+
+        .offcanvas.app-sidebar { --bs-offcanvas-width: var(--sidebar-width); }
+
+        .sidebar-brand {
+            padding: 1.35rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            border-bottom: 1px solid var(--vs-sidebar-border);
+        }
+
+        .sidebar-brand-logo {
+            background: var(--vs-gradient);
             color: #ffffff;
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-size: 1.2rem;
+            flex-shrink: 0;
         }
 
-        .nav-link-custom {
-            color: #64748b;
-            font-weight: 600;
-            font-size: 0.92rem;
-            padding: 0.5rem 0.7rem !important;
-            border-radius: 8px;
-            transition: all 0.2s ease;
+        .sidebar-brand-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #ffffff;
+            white-space: nowrap;
+        }
+        .sidebar-brand-text span { color: #818cf8; }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .sidebar-section-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #4b5875;
+            padding: 0.6rem 0.6rem 0.4rem;
+        }
+
+        .sidebar-link {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
-            white-space: nowrap;
+            gap: 0.75rem;
+            padding: 0.62rem 0.75rem;
+            border-radius: 10px;
+            color: var(--vs-sidebar-text);
+            font-weight: 600;
+            font-size: 0.92rem;
             text-decoration: none;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            position: relative;
         }
 
-        .nav-link-custom:hover {
-            color: var(--vs-primary);
-            background-color: #f1f5f9;
+        .sidebar-link i.bi { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+
+        .sidebar-link:hover {
+            background-color: var(--vs-sidebar-hover);
+            color: #ffffff;
         }
 
-        .nav-link-custom.active {
-            color: var(--vs-primary) !important;
-            background-color: #e0e7ff;
+        .sidebar-link.active {
+            background: var(--vs-gradient);
+            color: #ffffff;
+            box-shadow: 0 4px 14px -4px rgba(99, 102, 241, 0.55);
+        }
+
+        .sidebar-link .badge-count {
+            margin-left: auto;
+            font-size: 0.68rem;
             font-weight: 700;
+            background-color: #ef4444;
+            color: #fff;
+            border-radius: 50px;
+            padding: 0.15rem 0.45rem;
         }
 
-        .main-container {
-            flex: 1;
-            padding-top: 1.5rem;
-            padding-bottom: 2.5rem;
+        .sidebar-footer {
+            border-top: 1px solid var(--vs-sidebar-border);
+            padding: 0.85rem;
         }
 
-        /* Acciones rápidas del navbar (campanita, Nuevo Turno, usuario): misma altura
-           y misma forma para que lean como un solo grupo, no como piezas sueltas. */
-        .navbar-action-btn {
+        .sidebar-user-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.5rem 0.6rem;
+            border-radius: 10px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--vs-sidebar-text-active);
+            transition: background-color 0.15s ease;
+        }
+        .sidebar-user-btn:hover { background-color: var(--vs-sidebar-hover); }
+
+        .avatar-circle {
+            width: 34px;
+            height: 34px;
+            background: var(--vs-gradient);
+            color: #ffffff;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* ============ Topbar ============ */
+        .app-topbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--vs-border);
+            padding: 0.65rem 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+
+        .sidebar-toggle-btn {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--vs-border);
+            background-color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--vs-dark);
+            font-size: 1.1rem;
+        }
+
+        .topbar-action-btn {
             height: 40px;
             border-radius: 10px !important;
             display: inline-flex;
             align-items: center;
         }
 
-        /* User Profile Dropdown Card */
-        .user-dropdown-btn {
-            background-color: #f1f5f9;
-            border: 1px solid var(--vs-border);
-            padding: 0.35rem 0.75rem;
-            border-radius: 10px;
-            transition: all 0.2s ease;
+        .btn-gradient {
+            background: var(--vs-gradient);
+            color: #fff;
+            border: none;
+        }
+        .btn-gradient:hover { color: #fff; filter: brightness(1.06); }
+
+        .app-content {
+            flex: 1;
+            padding: 1.5rem 1rem 2.5rem;
+        }
+        @media (min-width: 992px) { .app-content { padding: 1.75rem 2rem 2.75rem; } }
+
+        .app-main {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
-        .user-dropdown-btn:hover {
-            background-color: #e2e8f0;
+        /* ============ Componentes compartidos ============ */
+        .card {
+            border-radius: 16px;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+        a .card:hover, .card.card-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.18) !important;
         }
 
-        .avatar-circle {
-            width: 28px;
-            height: 28px;
-            background-color: var(--vs-primary);
-            color: #ffffff;
-            border-radius: 50%;
+        /* Badges de estado: píldora suave en vez del cuadrado plano de Bootstrap,
+           para que "Pendiente / Confirmado / Nuevo" etc. acompañen la paleta nueva. */
+        .badge {
+            border-radius: 50px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            padding: 0.42em 0.85em;
+        }
+
+        /* Encabezados de tabla con un tinte frío en vez del gris plano de Bootstrap. */
+        .table > thead:not([class]) th,
+        .table-light,
+        .table > :not(caption) > * > .table-light {
+            --bs-table-bg: #f3f4fb;
+            --bs-table-color: #4b5875;
+            font-size: 0.78rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .table-hover > tbody > tr:hover > * {
+            --bs-table-accent-bg: var(--vs-primary-light);
+        }
+
+        /* Tarjetas de estadística (KPI): número grande + chip de ícono, sin franja de
+           color al costado (evita el look "plantilla genérica"). */
+        .stat-tile {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 1.25rem;
+            height: 100%;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 10px -3px rgba(15, 23, 42, 0.08);
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+        .stat-tile:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 28px -14px rgba(15, 23, 42, 0.22);
+        }
+        .stat-tile-icon {
+            width: 42px; height: 42px;
+            border-radius: 12px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
-            font-weight: 700;
+            font-size: 1.15rem;
+            margin-bottom: 0.85rem;
         }
+        .stat-tile-value { font-size: 1.85rem; font-weight: 800; color: var(--vs-dark); line-height: 1; }
+        .stat-tile-label { font-size: 0.82rem; color: var(--vs-ink-soft); font-weight: 600; margin-top: 0.35rem; }
+        .stat-tile-meta { font-size: 0.78rem; font-weight: 700; margin-top: 0.4rem; }
 
-        /* Cards & UI elements */
-        .card {
-            border-radius: 16px;
+        .badge-pill-soft {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background-color: var(--vs-mint-bg);
+            color: #047857;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 0.3rem 0.7rem;
+            border-radius: 50px;
+        }
+        .badge-pill-soft::before {
+            content: "";
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background-color: var(--vs-mint);
         }
 
         /* Encabezados de tabla: nunca partir el texto en varias líneas. Si la tabla no
            entra en pantallas angostas, que aparezca el scroll horizontal de
            .table-responsive en vez de comprimir/quebrar las columnas. */
-        .table-responsive thead th {
-            white-space: nowrap;
-        }
+        .table-responsive thead th { white-space: nowrap; }
 
         .footer {
             background-color: #ffffff;
             border-top: 1px solid var(--vs-border);
         }
+
+        /* Botones y enlaces primarios de todo el sistema heredan el degradé. */
+        .btn-primary {
+            background: var(--vs-gradient);
+            border-color: transparent;
+        }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background: var(--vs-primary-dark) !important;
+            border-color: transparent !important;
+        }
+        .btn-outline-primary { color: var(--vs-primary); border-color: var(--vs-primary); }
+        .btn-outline-primary:hover { background: var(--vs-gradient); border-color: transparent; }
+        .text-primary { color: var(--vs-primary) !important; }
+        .bg-primary { background: var(--vs-gradient) !important; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
-    <!-- Navbar Superior -->
-    <nav class="navbar navbar-expand-xl navbar-main sticky-top shadow-sm">
-        <div class="container-fluid px-3 px-lg-4">
-            <!-- Brand Logo -->
-            <a class="navbar-brand fw-extrabold text-dark d-flex align-items-center gap-2 me-4" href="{% url 'dashboard:index' %}">
-                <div class="navbar-brand-logo">
-                    <i class="bi bi-heart-pulse-fill"></i>
-                </div>
-                <span class="fs-4">Veter<span class="text-primary">System</span></span>
+    <div class="app-shell">
+        <!-- ============ Sidebar (drawer en mobile/tablet, fijo desde lg) ============ -->
+        <div class="offcanvas-lg offcanvas-start app-sidebar" tabindex="-1" id="appSidebar" aria-labelledby="appSidebarLabel">
+            <a class="sidebar-brand text-decoration-none" href="{% url 'dashboard:index' %}" id="appSidebarLabel">
+                <div class="sidebar-brand-logo"><i class="bi bi-heart-pulse-fill"></i></div>
+                <span class="sidebar-brand-text">Veter<span>System</span></span>
+                <button type="button" class="btn-close btn-close-white ms-auto d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Cerrar"></button>
             </a>
-            
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse flex-wrap row-gap-2" id="navbarNav">
-                <!-- Navegación Principal con detección de app activa -->
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
-                    {% if user.cliente_portal %}
-                        <li class="nav-item">
-                            <a class="nav-link-custom {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'portal:home' %}">
-                                <i class="bi bi-house-heart"></i> Mis Mascotas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link-custom {% if request.resolver_match.url_name == 'turnos' %}active{% endif %}" href="{% url 'portal:turnos' %}">
-                                <i class="bi bi-calendar-event"></i> Mis Turnos
-                            </a>
-                        </li>
-                        {% if user.cliente_portal.veterinaria_id %}
-                        <li class="nav-item">
-                            <a class="nav-link-custom {% if request.resolver_match.url_name == 'solicitar_turno_publico' %}active{% endif %}" href="{% url 'turnos:solicitar_turno_publico' user.cliente_portal.veterinaria_id %}">
-                                <i class="bi bi-calendar-plus"></i> Solicitar Turno
-                            </a>
-                        </li>
-                        {% endif %}
-                    {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
-                            <i class="bi bi-speedometer2"></i> Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'turnos' %}active{% endif %}" href="{% url 'turnos:agenda_diaria' %}">
-                            <i class="bi bi-calendar-event"></i> Agenda Turnos
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'clientes' or request.resolver_match.app_name == 'historia_clinica' and request.resolver_match.url_name != 'lista_internaciones' and request.resolver_match.url_name != 'detalle_internacion' %}active{% endif %}" href="{% url 'clientes:lista_clientes' %}">
-                            <i class="bi bi-people"></i> Pacientes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.url_name == 'lista_internaciones' or request.resolver_match.url_name == 'detalle_internacion' %}active{% endif %}" href="{% url 'historia_clinica:lista_internaciones' %}">
-                            <i class="bi bi-hospital"></i> Internación
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'inventario' %}active{% endif %}" href="{% url 'inventario:lista_productos' %}">
-                            <i class="bi bi-box-seam"></i> Inventario
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link-custom position-relative {% if request.resolver_match.app_name == 'compras' %}active{% endif %}" href="{% if productos_bajo_stock_count > 0 %}{% url 'compras:sugerencias' %}{% else %}{% url 'compras:lista_compras' %}{% endif %}">
-                            <i class="bi bi-truck"></i> Compras
-                            {% if productos_bajo_stock_count > 0 %}
-                                <span class="badge bg-danger rounded-pill" style="font-size: 0.6rem; vertical-align: top;">{{ productos_bajo_stock_count }}</span>
-                            {% endif %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link-custom {% if request.resolver_match.app_name == 'ventas' %}active{% endif %}" href="{% url 'ventas:lista_ventas' %}">
-                            <i class="bi bi-cart-check"></i> Ventas
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
 
-                <!-- Acceso Rápido y Perfil/Tenant: flex-shrink-0 + sin flex-wrap propio para que
-                     el grupo entero (campanita + Nuevo Turno + usuario) se mueva como una sola
-                     unidad en vez de partirse a la mitad en anchos intermedios. -->
-                <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto ms-xl-0">
-                    {% if not user.cliente_portal %}
-                    <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border navbar-action-btn position-relative justify-content-center" style="width: 40px;" title="Centro de Recordatorios">
+            <nav class="sidebar-nav">
+                {% if user.cliente_portal %}
+                    <a class="sidebar-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'portal:home' %}">
+                        <i class="bi bi-house-heart"></i> Mis Mascotas
+                    </a>
+                    <a class="sidebar-link {% if request.resolver_match.url_name == 'turnos' %}active{% endif %}" href="{% url 'portal:turnos' %}">
+                        <i class="bi bi-calendar-event"></i> Mis Turnos
+                    </a>
+                    {% if user.cliente_portal.veterinaria_id %}
+                        <a class="sidebar-link {% if request.resolver_match.url_name == 'solicitar_turno_publico' %}active{% endif %}" href="{% url 'turnos:solicitar_turno_publico' user.cliente_portal.veterinaria_id %}">
+                            <i class="bi bi-calendar-plus"></i> Solicitar Turno
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <span class="sidebar-section-label">Clínica</span>
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'turnos' %}active{% endif %}" href="{% url 'turnos:agenda_diaria' %}">
+                        <i class="bi bi-calendar-event"></i> Agenda Turnos
+                    </a>
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'clientes' or request.resolver_match.app_name == 'historia_clinica' and request.resolver_match.url_name != 'lista_internaciones' and request.resolver_match.url_name != 'detalle_internacion' %}active{% endif %}" href="{% url 'clientes:lista_clientes' %}">
+                        <i class="bi bi-people"></i> Pacientes
+                    </a>
+                    <a class="sidebar-link {% if request.resolver_match.url_name == 'lista_internaciones' or request.resolver_match.url_name == 'detalle_internacion' %}active{% endif %}" href="{% url 'historia_clinica:lista_internaciones' %}">
+                        <i class="bi bi-hospital"></i> Internación
+                    </a>
+
+                    <span class="sidebar-section-label">Negocio</span>
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'inventario' %}active{% endif %}" href="{% url 'inventario:lista_productos' %}">
+                        <i class="bi bi-box-seam"></i> Inventario
+                    </a>
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'compras' %}active{% endif %}" href="{% if productos_bajo_stock_count > 0 %}{% url 'compras:sugerencias' %}{% else %}{% url 'compras:lista_compras' %}{% endif %}">
+                        <i class="bi bi-truck"></i> Compras
+                        {% if productos_bajo_stock_count > 0 %}<span class="badge-count">{{ productos_bajo_stock_count }}</span>{% endif %}
+                    </a>
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'ventas' %}active{% endif %}" href="{% url 'ventas:lista_ventas' %}">
+                        <i class="bi bi-cart-check"></i> Ventas
+                    </a>
+                {% endif %}
+            </nav>
+
+            {% if user.is_authenticated %}
+            <div class="sidebar-footer">
+                <div class="dropup">
+                    <button class="sidebar-user-btn" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="avatar-circle">{{ user.username|slice:":1"|upper }}</div>
+                        <div class="d-flex flex-column align-items-start lh-sm text-start overflow-hidden">
+                            <span class="fw-bold small text-truncate w-100">{{ user.username }}</span>
+                            {% if not user.cliente_portal %}
+                                <span class="text-truncate w-100" style="font-size: 0.7rem; color: var(--vs-sidebar-text);">
+                                    <i class="bi bi-building"></i>
+                                    {% if request.veterinaria %}{{ request.veterinaria.nombre }}
+                                    {% elif user.perfil and user.perfil.veterinaria %}{{ user.perfil.veterinaria.nombre }}
+                                    {% else %}Súper Admin{% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <i class="bi bi-chevron-expand small ms-auto" style="color: var(--vs-sidebar-text);"></i>
+                    </button>
+                    <ul class="dropdown-menu shadow-lg border-0 rounded-3 p-2" aria-labelledby="userMenu" style="min-width: 230px;">
+                        <li class="px-3 py-2 border-bottom mb-1">
+                            <div class="fw-bold text-dark small">{{ user.get_full_name|default:user.username }}</div>
+                            <div class="text-muted extra-small" style="font-size: 0.75rem;">
+                                {% if user.is_superuser %}Súper Administrador{% elif user.perfil %}{{ user.perfil.get_rol_display }}{% elif user.cliente_portal %}Cliente / Tutor{% else %}Usuario{% endif %}
+                            </div>
+                        </li>
+                        {% if user.perfil and user.perfil.veterinaria %}
+                            <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:configurar_veterinaria' %}"><i class="bi bi-gear me-2"></i> Configurar Clínica</a></li>
+                        {% endif %}
+                        {% if user.is_superuser or user.perfil.rol == 'ADMIN' %}
+                            <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:mi_suscripcion' %}"><i class="bi bi-credit-card-2-front me-2"></i> Mi Suscripción</a></li>
+                            <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:auditoria' %}"><i class="bi bi-shield-lock me-2"></i> Auditoría</a></li>
+                        {% endif %}
+                        {% if user.is_superuser %}
+                            <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:panel_suscripciones' %}"><i class="bi bi-building-gear me-2"></i> Panel de Suscripciones</a></li>
+                        {% endif %}
+                        <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'password_change' %}"><i class="bi bi-key me-2"></i> Cambiar Contraseña</a></li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <form method="post" action="{% url 'logout' %}" class="d-block m-0">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'landing' %}">
+                                <button type="submit" class="dropdown-item rounded-2 small text-danger py-2 fw-semibold w-100 text-start border-0 bg-transparent">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ============ Área principal ============ -->
+        <div class="app-main">
+            <header class="app-topbar d-flex align-items-center justify-content-between gap-2">
+                <button class="sidebar-toggle-btn d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Abrir menú">
+                    <i class="bi bi-list"></i>
+                </button>
+                <a class="d-lg-none d-flex align-items-center gap-2 text-decoration-none" href="{% url 'dashboard:index' %}">
+                    <div class="sidebar-brand-logo" style="width:32px;height:32px;font-size:1rem;"><i class="bi bi-heart-pulse-fill"></i></div>
+                    <span class="fw-extrabold text-dark">Veter<span class="text-primary">System</span></span>
+                </a>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                    {% if not user.cliente_portal and user.is_authenticated %}
+                    <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border topbar-action-btn position-relative justify-content-center" style="width: 40px;" title="Centro de Recordatorios">
                         <i class="bi bi-bell-fill text-warning"></i>
                         {% if recordatorios_pendientes_count > 0 %}
                             <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.65rem;">
@@ -230,145 +473,65 @@
                             </span>
                         {% endif %}
                     </a>
-                    <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary btn-sm fw-bold px-3 navbar-action-btn shadow-sm gap-1">
+                    <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-gradient btn-sm fw-bold px-3 topbar-action-btn shadow-sm gap-1">
                         <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
                     </a>
                     {% endif %}
+                </div>
+            </header>
 
-                    {% if user.is_authenticated %}
-                        <!-- User Profile Dropdown (incluye la veterinaria activa como subtítulo) -->
-                        <div class="dropdown">
-                            <button class="btn user-dropdown-btn navbar-action-btn gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                                <div class="avatar-circle">
-                                    {{ user.username|slice:":1"|upper }}
-                                </div>
-                                <div class="d-none d-md-flex flex-column align-items-start lh-sm">
-                                    <span class="fw-bold small text-dark">{{ user.username }}</span>
-                                    {% if not user.cliente_portal %}
-                                        <span class="text-muted d-inline-flex align-items-center gap-1" style="font-size: 0.7rem;">
-                                            <i class="bi bi-building"></i>
-                                            {% if request.veterinaria %}
-                                                {{ request.veterinaria.nombre }}
-                                            {% elif user.perfil and user.perfil.veterinaria %}
-                                                {{ user.perfil.veterinaria.nombre }}
-                                            {% else %}
-                                                Súper Admin
-                                            {% endif %}
-                                        </span>
-                                    {% endif %}
-                                </div>
-                                <i class="bi bi-chevron-down small text-muted"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2 mt-2" aria-labelledby="userMenu" style="min-width: 200px;">
-                                <li class="px-3 py-2 border-bottom mb-1">
-                                    <div class="fw-bold text-dark small">{{ user.get_full_name|default:user.username }}</div>
-                                    <div class="text-muted extra-small" style="font-size: 0.75rem;">
-                                        {% if user.is_superuser %}Súper Administrador{% elif user.perfil %}{{ user.perfil.get_rol_display }}{% elif user.cliente_portal %}Cliente / Tutor{% else %}Usuario{% endif %}
-                                    </div>
-                                </li>
-                                {% if user.perfil and user.perfil.veterinaria %}
-                                    <li>
-                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:configurar_veterinaria' %}">
-                                            <i class="bi bi-gear me-2"></i> Configurar Clínica
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                {% if user.is_superuser or user.perfil.rol == 'ADMIN' %}
-                                    <li>
-                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:mi_suscripcion' %}">
-                                            <i class="bi bi-credit-card-2-front me-2"></i> Mi Suscripción
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:auditoria' %}">
-                                            <i class="bi bi-shield-lock me-2"></i> Auditoría
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                {% if user.is_superuser %}
-                                    <li>
-                                        <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:panel_suscripciones' %}">
-                                            <i class="bi bi-building-gear me-2"></i> Panel de Suscripciones
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                <li>
-                                    <a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'password_change' %}">
-                                        <i class="bi bi-key me-2"></i> Cambiar Contraseña
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider my-1"></li>
-                                <li>
-                                    <!-- Formulario de Logout Forzado a Landing Page -->
-                                    <form method="post" action="{% url 'logout' %}" class="d-block m-0">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next" value="{% url 'landing' %}">
-                                        <button type="submit" class="dropdown-item rounded-2 small text-danger py-2 fw-semibold w-100 text-start border-0 bg-transparent">
-                                            <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
+            <div class="app-content">
+                {% if es_demo_publica %}
+                <div class="alert alert-info border-0 rounded-3 shadow-sm mb-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle-fill fs-5"></i>
+                    <span class="fw-medium">Estás en el entorno de <strong>demo pública</strong>, compartido con otros visitantes: los datos se reinician periódicamente. No cargues información real acá.</span>
+                </div>
+                {% endif %}
+
+                {% if suscripcion and suscripcion.esta_vencida %}
+                <div class="alert alert-danger border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} venció el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}. Regularizá el pago para evitar interrupciones del servicio.</span>
+                    {% if user.perfil.rol == 'ADMIN' or user.is_superuser %}
+                    <a href="{% url 'usuarios:mi_suscripcion' %}" class="btn btn-sm btn-danger fw-bold rounded-pill px-3">Ver Detalle</a>
+                    {% endif %}
+                </div>
+                {% elif suscripcion and suscripcion.proxima_a_vencer %}
+                <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span class="fw-bold"><i class="bi bi-clock-history me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} vence el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }} ({{ suscripcion.dias_para_vencer }} día{{ suscripcion.dias_para_vencer|pluralize }}).</span>
+                    {% if user.perfil.rol == 'ADMIN' or user.is_superuser %}
+                    <a href="{% url 'usuarios:mi_suscripcion' %}" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3">Ver Detalle</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show shadow-sm border-0 rounded-3 mb-4" role="alert">
+                            {% if message.tags == 'error' %}
+                                <i class="bi bi-x-circle-fill me-2 fs-5"></i>
+                            {% elif message.tags == 'warning' %}
+                                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                            {% elif message.tags == 'success' %}
+                                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                            {% endif %}
+                            <span class="align-middle fw-medium">{{ message }}</span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                    {% endif %}
-                </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
             </div>
-        </div>
-    </nav>
 
-    <!-- Contenedor Principal y Alertas Flash -->
-    <div class="container main-container">
-        {% if es_demo_publica %}
-        <div class="alert alert-info border-0 rounded-3 shadow-sm mb-4 d-flex align-items-center gap-2">
-            <i class="bi bi-info-circle-fill fs-5"></i>
-            <span class="fw-medium">Estás en el entorno de <strong>demo pública</strong>, compartido con otros visitantes: los datos se reinician periódicamente. No cargues información real acá.</span>
+            <!-- Footer -->
+            <footer class="footer mt-auto py-3 text-center text-muted small">
+                <span>&copy; {% now "Y" %} <strong>VeterSystem</strong> &bull; Sistema de Gestión Clínica Veterinaria Multi-Tenant.</span>
+            </footer>
         </div>
-        {% endif %}
-
-        {% if suscripcion and suscripcion.esta_vencida %}
-        <div class="alert alert-danger border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span class="fw-bold"><i class="bi bi-exclamation-octagon-fill me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} venció el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }}. Regularizá el pago para evitar interrupciones del servicio.</span>
-            {% if user.perfil.rol == 'ADMIN' or user.is_superuser %}
-            <a href="{% url 'usuarios:mi_suscripcion' %}" class="btn btn-sm btn-danger fw-bold rounded-pill px-3">Ver Detalle</a>
-            {% endif %}
-        </div>
-        {% elif suscripcion and suscripcion.proxima_a_vencer %}
-        <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <span class="fw-bold"><i class="bi bi-clock-history me-2"></i>Tu suscripción al plan {{ suscripcion.plan.nombre }} vence el {{ suscripcion.fecha_vencimiento|date:"d/m/Y" }} ({{ suscripcion.dias_para_vencer }} día{{ suscripcion.dias_para_vencer|pluralize }}).</span>
-            {% if user.perfil.rol == 'ADMIN' or user.is_superuser %}
-            <a href="{% url 'usuarios:mi_suscripcion' %}" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3">Ver Detalle</a>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show shadow-sm border-0 rounded-3 mb-4" role="alert">
-                    {% if message.tags == 'error' %}
-                        <i class="bi bi-x-circle-fill me-2 fs-5"></i>
-                    {% elif message.tags == 'warning' %}
-                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
-                    {% elif message.tags == 'success' %}
-                        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                    {% else %}
-                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
-                    {% endif %}
-                    <span class="align-middle fw-medium">{{ message }}</span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        {% block content %}
-        {% endblock %}
     </div>
-
-    <!-- Footer -->
-    <footer class="footer mt-auto py-3 text-center text-muted small">
-        <div class="container">
-            <span>&copy; {% now "Y" %} <strong>VeterSystem</strong> &bull; Sistema de Gestión Clínica Veterinaria Multi-Tenant.</span>
-        </div>
-    </footer>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
