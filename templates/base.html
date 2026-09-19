@@ -83,12 +83,21 @@
             padding-bottom: 2.5rem;
         }
 
+        /* Acciones rápidas del navbar (campanita, Nuevo Turno, usuario): misma altura
+           y misma forma para que lean como un solo grupo, no como piezas sueltas. */
+        .navbar-action-btn {
+            height: 40px;
+            border-radius: 10px !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
         /* User Profile Dropdown Card */
         .user-dropdown-btn {
             background-color: #f1f5f9;
             border: 1px solid var(--vs-border);
             padding: 0.35rem 0.75rem;
-            border-radius: 50px;
+            border-radius: 10px;
             transition: all 0.2s ease;
         }
 
@@ -145,7 +154,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             
-            <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="collapse navbar-collapse flex-wrap row-gap-2" id="navbarNav">
                 <!-- Navegación Principal con detección de app activa -->
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
                     {% if user.cliente_portal %}
@@ -208,10 +217,12 @@
                     {% endif %}
                 </ul>
 
-                <!-- Acceso Rápido y Perfil/Tenant -->
-                <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Acceso Rápido y Perfil/Tenant: flex-shrink-0 + sin flex-wrap propio para que
+                     el grupo entero (campanita + Nuevo Turno + usuario) se mueva como una sola
+                     unidad en vez de partirse a la mitad en anchos intermedios. -->
+                <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto ms-xl-0">
                     {% if not user.cliente_portal %}
-                    <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border position-relative d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Centro de Recordatorios">
+                    <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border navbar-action-btn position-relative justify-content-center" style="width: 40px;" title="Centro de Recordatorios">
                         <i class="bi bi-bell-fill text-warning"></i>
                         {% if recordatorios_pendientes_count > 0 %}
                             <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle" style="font-size: 0.65rem;">
@@ -219,7 +230,7 @@
                             </span>
                         {% endif %}
                     </a>
-                    <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
+                    <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary btn-sm fw-bold px-3 navbar-action-btn shadow-sm gap-1">
                         <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
                     </a>
                     {% endif %}
@@ -227,7 +238,7 @@
                     {% if user.is_authenticated %}
                         <!-- User Profile Dropdown (incluye la veterinaria activa como subtítulo) -->
                         <div class="dropdown">
-                            <button class="btn user-dropdown-btn d-flex align-items-center gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button class="btn user-dropdown-btn navbar-action-btn gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="avatar-circle">
                                     {{ user.username|slice:":1"|upper }}
                                 </div>
