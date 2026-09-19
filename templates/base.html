@@ -59,9 +59,14 @@
         }
 
         /* ============ Sidebar (offcanvas responsive: drawer < lg, fijo >= lg) ============ */
+        /* Bootstrap fuerza background-color:transparent!important y width:400px en
+           .offcanvas-lg (por diseño, para que la variante "siempre visible" no tape
+           el contenido de al lado) — hay que pisarlo con la misma prioridad, si no el
+           sidebar queda transparente en pantallas grandes y el texto blanco casi no
+           se lee sobre el fondo claro de atrás. */
         .app-sidebar {
             width: var(--sidebar-width);
-            background-color: var(--vs-sidebar-bg);
+            background-color: var(--vs-sidebar-bg) !important;
             border-right: 1px solid var(--vs-sidebar-border);
             display: flex;
             flex-direction: column;
@@ -75,7 +80,7 @@
             .app-main { margin-left: var(--sidebar-width); }
         }
 
-        .offcanvas.app-sidebar { --bs-offcanvas-width: var(--sidebar-width); }
+        .offcanvas-lg.app-sidebar { --bs-offcanvas-width: var(--sidebar-width); }
 
         .sidebar-brand {
             padding: 1.35rem 1.25rem;
