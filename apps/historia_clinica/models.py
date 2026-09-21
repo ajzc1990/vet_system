@@ -351,6 +351,78 @@ class Internacion(models.Model):
         return self.dias_internado * self.costo_dia_estadia
 
 
+class Receta(models.Model):
+    veterinaria = models.ForeignKey(
+        Veterinaria,
+        on_delete=models.CASCADE,
+        related_name='recetas',
+        null=True,
+        blank=True,
+        verbose_name="Veterinaria"
+    )
+    mascota = models.ForeignKey(
+        Mascota,
+        on_delete=models.CASCADE,
+        related_name='recetas',
+        verbose_name="Mascota"
+    )
+    veterinario = models.ForeignKey(
+        Veterinario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recetas',
+        verbose_name="Veterinario"
+    )
+    consulta = models.ForeignKey(
+        ConsultaMedica,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='recetas',
+        verbose_name="Consulta Asociada"
+    )
+
+    fecha_emision = models.DateTimeField(default=timezone.now, verbose_name="Fecha de Emisión")
+    diagnostico = models.CharField(max_length=255, blank=True, verbose_name="Diagnóstico")
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
+
+    creado_el = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Receta"
+        verbose_name_plural = "Recetas"
+        ordering = ['-fecha_emision']
+
+    def __str__(self):
+        return f"Receta {self.fecha_emision.strftime('%d/%m/%Y')} - {self.mascota.nombre}"
+
+    def save(self, *args, **kwargs):
+        if not self.veterinaria_id and self.mascota and hasattr(self.mascota, 'cliente') and self.mascota.cliente:
+            self.veterinaria = self.mascota.cliente.veterinaria
+        super().save(*args, **kwargs)
+
+
+class ItemReceta(models.Model):
+    receta = models.ForeignKey(
+        Receta,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name="Receta"
+    )
+    medicamento = models.CharField(max_length=200, verbose_name="Medicamento")
+    dosis = models.CharField(max_length=150, blank=True, verbose_name="Dosis")
+    duracion = models.CharField(max_length=150, blank=True, verbose_name="Duración")
+    indicaciones = models.CharField(max_length=255, blank=True, verbose_name="Indicaciones")
+
+    class Meta:
+        verbose_name = "Ítem de Receta"
+        verbose_name_plural = "Ítems de Receta"
+
+    def __str__(self):
+        return self.medicamento
+
+
 class EvolucionInternacion(models.Model):
     ESTADO_GENERAL = [
         ('ESTABLE', 'Estable'),

@@ -20,6 +20,11 @@ urlpatterns = [
     path('mascota/<int:mascota_id>/subir-estudio/', views.subir_estudio, name='subir_estudio'),
     path('estudio/<int:estudio_id>/eliminar/', views.eliminar_estudio, name='eliminar_estudio'),
 
+    # Recetas Digitales
+    path('mascota/<int:mascota_id>/nueva-receta/', views.nueva_receta, name='nueva_receta'),
+    path('receta/<int:receta_id>/eliminar/', views.eliminar_receta, name='eliminar_receta'),
+    path('receta/<int:receta_id>/pdf/', views.descargar_receta_digital_pdf, name='descargar_receta_digital_pdf'),
+
     # Internación / Hospitalización
     path('internaciones/', views.lista_internaciones, name='lista_internaciones'),
     path('mascota/<int:mascota_id>/internar/', views.internar_mascota, name='internar_mascota'),

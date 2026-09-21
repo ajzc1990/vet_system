@@ -1,9 +1,10 @@
 from django import forms
+from django.forms import formset_factory
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from .models import (
     ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico,
-    Internacion, EvolucionInternacion,
+    Internacion, EvolucionInternacion, Receta,
 )
 from apps.inventario.models import Producto
 from apps.turnos.models import Veterinario, Turno
@@ -325,6 +326,61 @@ class EvolucionInternacionForm(forms.ModelForm):
 
         self.fields['notas'].label = "Evolución Clínica / Novedades *"
         self.fields['veterinario'].required = False
+
+
+class RecetaForm(forms.ModelForm):
+    class Meta:
+        model = Receta
+        fields = ['veterinario', 'consulta', 'diagnostico', 'observaciones']
+        widgets = {
+            'veterinario': forms.Select(attrs={'class': 'form-select'}),
+            'consulta': forms.Select(attrs={'class': 'form-select'}),
+            'diagnostico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Otitis externa bacteriana'}),
+            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Indicaciones generales, recomendaciones para el tutor...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        veterinaria = kwargs.pop('veterinaria', None)
+        mascota = kwargs.pop('mascota', None)
+        super().__init__(*args, **kwargs)
+
+        if veterinaria:
+            self.fields['veterinario'].queryset = Veterinario.objects.filter(veterinaria=veterinaria, activo=True)
+        if mascota:
+            self.fields['consulta'].queryset = ConsultaMedica.objects.filter(mascota=mascota)
+            self.fields['consulta'].empty_label = "-- Vincular a consulta (opcional) --"
+
+        self.fields['veterinario'].required = False
+        self.fields['consulta'].required = False
+
+
+class ItemRecetaForm(forms.Form):
+    medicamento = forms.CharField(
+        max_length=200, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Amoxicilina 500mg'}),
+        label="Medicamento"
+    )
+    dosis = forms.CharField(
+        max_length=150, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 1 comp. cada 12hs'}),
+        label="Dosis"
+    )
+    duracion = forms.CharField(
+        max_length=150, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Durante 7 días'}),
+        label="Duración"
+    )
+    indicaciones = forms.CharField(
+        max_length=255, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Administrar con alimento'}),
+        label="Indicaciones"
+    )
+
+    def esta_completo(self):
+        return bool(self.cleaned_data.get('medicamento'))
+
+
+ItemRecetaFormSet = formset_factory(ItemRecetaForm, extra=4)
 
 
 class AltaInternacionForm(forms.ModelForm):

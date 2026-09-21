@@ -23,14 +23,14 @@ def get_historia_components():
     Importa de forma lazy los modelos reales de la app historia_clinica y su formulario
     para evitar importaciones circulares en el arranque del servidor.
     """
-    from apps.historia_clinica.models import ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico
+    from apps.historia_clinica.models import ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico, Receta
     try:
         from apps.historia_clinica.forms import ConsultaMedicaForm, EstudioMedicoForm
     except ImportError:
         from .forms import ConsultaMedicaForm
         EstudioMedicoForm = None
 
-    return ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico, ConsultaMedicaForm, EstudioMedicoForm
+    return ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico, ConsultaMedicaForm, EstudioMedicoForm, Receta
 
 
 # ==============================================================================
@@ -212,7 +212,7 @@ def detalle_historia_clinica(request, mascota_id):
     else:
         mascota = get_object_or_404(Mascota, pk=mascota_id, cliente__veterinaria=vet)
 
-    ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico, ConsultaMedicaForm, _ = get_historia_components()
+    ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico, ConsultaMedicaForm, _, Receta = get_historia_components()
     
     consultas = getattr(mascota, 'consultas', ConsultaMedica.objects.filter(mascota=mascota)).all().order_by('-fecha_hora').prefetch_related('estudios')
     vacunas = getattr(mascota, 'vacunas', RegistroVacuna.objects.filter(mascota=mascota)).all().order_by('-fecha_aplicacion')
@@ -225,6 +225,9 @@ def detalle_historia_clinica(request, mascota_id):
     from apps.historia_clinica.models import Internacion
     internaciones = Internacion.objects.filter(mascota=mascota).select_related('veterinario_responsable')
     internacion_activa = internaciones.filter(estado='INTERNADO').first()
+
+    # Recetas digitales emitidas al paciente
+    recetas = Receta.objects.filter(mascota=mascota).select_related('veterinario').prefetch_related('items')
 
     if request.method == 'POST' and not es_veterinario_o_admin(request.user):
         messages.error(request, "Acceso denegado: Esta función requiere permisos de Médico Veterinario.")
@@ -283,6 +286,7 @@ def detalle_historia_clinica(request, mascota_id):
         'estudios': estudios,  # <--- VARIABLE CLAVE ENVIADA A LA PLANTILLA
         'internaciones': internaciones,
         'internacion_activa': internacion_activa,
+        'recetas': recetas,
         'form': form,
     }
     return render(request, 'clientes/historia_clinica.html', context)
@@ -292,7 +296,7 @@ def detalle_historia_clinica(request, mascota_id):
 @requerir_rol_veterinario
 def editar_consulta(request, consulta_id):
     vet = get_veterinaria_activa(request)
-    ConsultaMedica, _, _, _, ConsultaMedicaForm, _ = get_historia_components()
+    ConsultaMedica, _, _, _, ConsultaMedicaForm, _, _ = get_historia_components()
     
     if request.user.is_superuser:
         consulta = get_object_or_404(ConsultaMedica, pk=consulta_id)
@@ -329,7 +333,7 @@ def editar_consulta(request, consulta_id):
 @requerir_rol_veterinario
 def eliminar_consulta(request, consulta_id):
     vet = get_veterinaria_activa(request)
-    ConsultaMedica, _, _, _, _, _ = get_historia_components()
+    ConsultaMedica, _, _, _, _, _, _ = get_historia_components()
     
     if request.user.is_superuser:
         consulta = get_object_or_404(ConsultaMedica, pk=consulta_id)
@@ -369,7 +373,7 @@ def agregar_vacuna(request, mascota_id):
         else:
             mascota = get_object_or_404(Mascota, pk=mascota_id, cliente__veterinaria=vet)
 
-        _, RegistroVacuna, _, _, _, _ = get_historia_components()
+        _, RegistroVacuna, _, _, _, _, _ = get_historia_components()
 
         nombre_vacuna = request.POST.get('nombre_vacuna')
         fecha_aplicacion = request.POST.get('fecha_aplicacion')
@@ -401,7 +405,7 @@ def agregar_vacuna(request, mascota_id):
 @requerir_rol_veterinario
 def eliminar_vacuna(request, vacuna_id):
     vet = get_veterinaria_activa(request)
-    _, RegistroVacuna, _, _, _, _ = get_historia_components()
+    _, RegistroVacuna, _, _, _, _, _ = get_historia_components()
     
     if request.user.is_superuser:
         vacuna = get_object_or_404(RegistroVacuna, pk=vacuna_id)
@@ -431,7 +435,7 @@ def agregar_desparasitacion(request, mascota_id):
         else:
             mascota = get_object_or_404(Mascota, pk=mascota_id, cliente__veterinaria=vet)
 
-        _, _, RegistroDesparasitacion, _, _, _ = get_historia_components()
+        _, _, RegistroDesparasitacion, _, _, _, _ = get_historia_components()
 
         producto = request.POST.get('producto')
         fecha_aplicacion = request.POST.get('fecha_aplicacion')
@@ -530,7 +534,7 @@ def otorgar_acceso_portal(request, cliente_id):
 @requerir_rol_veterinario
 def eliminar_desparasitacion(request, desparasitacion_id):
     vet = get_veterinaria_activa(request)
-    _, _, RegistroDesparasitacion, _, _, _ = get_historia_components()
+    _, _, RegistroDesparasitacion, _, _, _, _ = get_historia_components()
     
     if request.user.is_superuser:
         registro = get_object_or_404(RegistroDesparasitacion, pk=desparasitacion_id)

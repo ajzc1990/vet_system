@@ -15,10 +15,11 @@ from reportlab.lib import colors
 from .forms import (
     ConsultaMedicaForm, RegistroVacunaForm, RegistroDesparasitacionForm, EstudioMedicoForm,
     InternacionForm, EvolucionInternacionForm, AltaInternacionForm,
+    RecetaForm, ItemRecetaFormSet,
 )
 from .models import (
     Mascota, ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico,
-    Internacion, EvolucionInternacion,
+    Internacion, EvolucionInternacion, Receta, ItemReceta,
 )
 from apps.inventario.models import MovimientoStock, Producto
 from apps.usuarios.decorators import requerir_rol_veterinario
@@ -438,6 +439,212 @@ def descargar_receta_pdf(request, consulta_id):
     vet_nombre = "Médico Veterinario"
     if consulta.veterinario:
         vet_nombre = f"Dr(a). {consulta.veterinario.nombre} {consulta.veterinario.apellido}"
+
+    datos_firma = [
+        ["_______________________________________"],
+        [f"<b>{vet_nombre}</b>"],
+        ["Firma y Sello Profesional"]
+    ]
+    t_firma = Table(datos_firma, colWidths=[250], hAlign='RIGHT')
+    t_firma.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(t_firma)
+
+    doc.build(story)
+    return response
+
+
+@login_required
+@requerir_rol_veterinario
+@transaction.atomic
+def nueva_receta(request, mascota_id):
+    """Emite una receta digital estructurada (medicamento, dosis, duración, indicaciones) para el paciente."""
+    vet = get_veterinaria_activa(request)
+    mascota = _get_mascota_tenant(request, mascota_id, vet)
+
+    if request.method == 'POST':
+        form = RecetaForm(request.POST, veterinaria=vet, mascota=mascota)
+        formset = ItemRecetaFormSet(request.POST)
+
+        if form.is_valid() and formset.is_valid():
+            filas_completas = [f for f in formset if f.cleaned_data and f.esta_completo()]
+
+            if not filas_completas:
+                messages.error(request, "Agregá al menos un medicamento antes de guardar la receta.")
+            else:
+                receta = form.save(commit=False)
+                receta.mascota = mascota
+                if vet:
+                    receta.veterinaria = vet
+                if not receta.veterinario_id and hasattr(request.user, 'veterinario'):
+                    receta.veterinario = request.user.veterinario
+                receta.save()
+
+                for f in filas_completas:
+                    ItemReceta.objects.create(
+                        receta=receta,
+                        medicamento=f.cleaned_data['medicamento'],
+                        dosis=f.cleaned_data.get('dosis', ''),
+                        duracion=f.cleaned_data.get('duracion', ''),
+                        indicaciones=f.cleaned_data.get('indicaciones', ''),
+                    )
+
+                registrar_auditoria(
+                    request, 'CREAR', modelo='Receta', objeto_id=receta.id,
+                    descripcion=f"Emisión de receta digital para {mascota.nombre}"
+                )
+
+                messages.success(request, f"Receta emitida correctamente para {mascota.nombre}.")
+                return redirect('clientes:detalle_historia_clinica', mascota_id=mascota.id)
+        else:
+            messages.error(request, "No se pudo emitir la receta. Revisa los datos ingresados.")
+    else:
+        form = RecetaForm(veterinaria=vet, mascota=mascota)
+        formset = ItemRecetaFormSet()
+
+    return render(request, 'historia_clinica/form_receta.html', {
+        'form': form,
+        'formset': formset,
+        'mascota': mascota,
+        'titulo': f'Nueva Receta: {mascota.nombre}'
+    })
+
+
+@login_required
+@requerir_rol_veterinario
+def eliminar_receta(request, receta_id):
+    """Elimina una receta digital emitida (uso administrativo, ej. carga erronea)."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        receta = get_object_or_404(Receta, pk=receta_id)
+    else:
+        receta = get_object_or_404(Receta, pk=receta_id, veterinaria=vet)
+
+    mascota_id = receta.mascota.id
+
+    if request.method == 'POST':
+        mascota_nombre = receta.mascota.nombre
+        receta.delete()
+        registrar_auditoria(
+            request, 'ELIMINAR', modelo='Receta', objeto_id=receta_id,
+            descripcion=f"Eliminación de receta digital de {mascota_nombre}"
+        )
+        messages.success(request, "La receta fue eliminada correctamente.")
+        return redirect('clientes:detalle_historia_clinica', mascota_id=mascota_id)
+
+    return render(request, 'historia_clinica/confirmar_eliminar_receta.html', {
+        'receta': receta
+    })
+
+
+@login_required
+def descargar_receta_digital_pdf(request, receta_id):
+    """Genera el PDF de una receta digital estructurada (medicamentos, dosis, duración e indicaciones)."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        receta = get_object_or_404(Receta, pk=receta_id)
+    else:
+        receta = get_object_or_404(Receta, pk=receta_id, veterinaria=vet)
+
+    mascota = receta.mascota
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Receta_{mascota.nombre}_{receta.fecha_emision.strftime("%Y%m%d")}.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    story = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#0d6efd'), spaceAfter=2)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#6c757d'), spaceAfter=3)
+
+    vet_obj = receta.veterinaria or vet
+    nombre_vet = vet_obj.nombre if vet_obj else "Clínica Veterinaria VeterSystem"
+    cuit_vet = f"CUIT/RIF: {vet_obj.cuit_rif}" if vet_obj and vet_obj.cuit_rif else ""
+    tel_vet = f"Tel: {vet_obj.telefono}" if vet_obj and vet_obj.telefono else ""
+    dir_vet = vet_obj.direccion if vet_obj and vet_obj.direccion else ""
+
+    header_text = [
+        Paragraph(f"<b>{nombre_vet}</b>", title_style),
+        Paragraph(f"{cuit_vet} {('| ' + tel_vet) if tel_vet else ''}".strip(), subtitle_style),
+        Paragraph(f"{dir_vet}", subtitle_style),
+        Paragraph(f"<b>Receta Digital</b> | Fecha: {receta.fecha_emision.strftime('%d/%m/%Y %H:%M')}", subtitle_style),
+    ]
+
+    logo_img = None
+    if vet_obj and vet_obj.logo and os.path.exists(vet_obj.logo.path):
+        try:
+            logo_img = Image(vet_obj.logo.path, width=75, height=75)
+            logo_img.hAlign = 'RIGHT'
+        except Exception:
+            logo_img = None
+
+    if logo_img:
+        header_table = Table([[header_text, logo_img]], colWidths=[430, 90])
+        header_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('ALIGN', (1, 0), (1, 0), 'RIGHT')]))
+        story.append(header_table)
+    else:
+        for p in header_text:
+            story.append(p)
+
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0d6efd'), spaceBefore=8, spaceAfter=15))
+
+    datos_paciente = [
+        [
+            Paragraph(f"<b>Paciente:</b> {mascota.nombre}", styles['Normal']),
+            Paragraph(f"<b>Especie/Raza:</b> {mascota.get_especie_display()} / {mascota.raza or 'Mestizo'}", styles['Normal'])
+        ],
+        [
+            Paragraph(f"<b>Tutor/a:</b> {mascota.cliente.nombre} {mascota.cliente.apellido}", styles['Normal']),
+            Paragraph(f"<b>Peso:</b> {mascota.peso_kg or '-'} kg", styles['Normal'])
+        ]
+    ]
+    t_paciente = Table(datos_paciente, colWidths=[260, 260])
+    t_paciente.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('PADDING', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+    ]))
+    story.append(t_paciente)
+    story.append(Spacer(1, 15))
+
+    if receta.diagnostico:
+        story.append(Paragraph(f"<b>Diagnóstico:</b> {receta.diagnostico}", styles['Normal']))
+        story.append(Spacer(1, 10))
+
+    story.append(Paragraph("<b>RP / Medicamentos:</b>", ParagraphStyle('H2', parent=styles['Heading2'], fontSize=12, textColor=colors.HexColor('#198754'))))
+    story.append(Spacer(1, 6))
+
+    tabla_data = [["Medicamento", "Dosis", "Duración", "Indicaciones"]]
+    for item in receta.items.all():
+        tabla_data.append([item.medicamento, item.dosis or '-', item.duracion or '-', item.indicaciones or '-'])
+
+    t_items = Table(tabla_data, colWidths=[140, 110, 110, 160])
+    t_items.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#198754')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('PADDING', (0, 0), (-1, -1), 6),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dee2e6')),
+    ]))
+    story.append(t_items)
+    story.append(Spacer(1, 15))
+
+    if receta.observaciones:
+        story.append(Paragraph(f"<b>Observaciones:</b> {receta.observaciones}", styles['Normal']))
+        story.append(Spacer(1, 30))
+    else:
+        story.append(Spacer(1, 30))
+
+    vet_nombre = "Médico Veterinario"
+    if receta.veterinario:
+        vet_nombre = f"Dr(a). {receta.veterinario.nombre} {receta.veterinario.apellido}"
 
     datos_firma = [
         ["_______________________________________"],

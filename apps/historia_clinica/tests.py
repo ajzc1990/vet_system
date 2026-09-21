@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from apps.clientes.models import Cliente, Mascota
 from apps.usuarios.models import PerfilUsuario, Veterinaria
-from apps.historia_clinica.models import Internacion, ConsultaMedica
+from apps.historia_clinica.models import Internacion, ConsultaMedica, Receta, ItemReceta
 from apps.inventario.models import Producto
 
 
@@ -176,3 +176,99 @@ class ConsultaMedicaActualizaPesoTests(TestCase):
 
         mascota.refresh_from_db()
         self.assertEqual(mascota.peso_kg, 12.5)
+
+
+def _formset_data(items, prefix='form'):
+    data = {
+        f'{prefix}-TOTAL_FORMS': str(len(items)),
+        f'{prefix}-INITIAL_FORMS': '0',
+        f'{prefix}-MIN_NUM_FORMS': '0',
+        f'{prefix}-MAX_NUM_FORMS': '1000',
+    }
+    for i, item in enumerate(items):
+        for key, value in item.items():
+            data[f'{prefix}-{i}-{key}'] = value
+    return data
+
+
+class RecetaDigitalTests(TestCase):
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.user_a = User.objects.create_user(username="user_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        cliente_a = Cliente.objects.create(
+            veterinaria=self.vet_a, nombre="Carlos", apellido="Diaz", dni="111", telefono="1",
+        )
+        self.mascota_a = Mascota.objects.create(cliente=cliente_a, nombre="Rocky", especie="CANINO")
+
+        cliente_b = Cliente.objects.create(
+            veterinaria=self.vet_b, nombre="Ana", apellido="Gomez", dni="222", telefono="2",
+        )
+        self.mascota_b = Mascota.objects.create(cliente=cliente_b, nombre="Michi", especie="FELINO")
+        self.receta_b = Receta.objects.create(veterinaria=self.vet_b, mascota=self.mascota_b, diagnostico="Otitis")
+        ItemReceta.objects.create(receta=self.receta_b, medicamento="Otomax", dosis="2 gotas")
+
+        self.client.force_login(self.user_a)
+
+    def test_puede_emitir_una_receta_con_medicamentos(self):
+        data = {
+            'diagnostico': 'Gastroenteritis',
+            'observaciones': 'Control en 7 días',
+        }
+        data.update(_formset_data([
+            {'medicamento': 'Amoxicilina 500mg', 'dosis': '1 comp cada 12hs', 'duracion': '7 días', 'indicaciones': 'Con alimento'},
+            {'medicamento': '', 'dosis': '', 'duracion': '', 'indicaciones': ''},
+        ]))
+
+        response = self.client.post(reverse('historia_clinica:nueva_receta', args=[self.mascota_a.id]), data)
+
+        self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
+        receta = Receta.objects.get(mascota=self.mascota_a)
+        self.assertEqual(receta.veterinaria, self.vet_a)
+        self.assertEqual(receta.items.count(), 1)
+        self.assertEqual(receta.items.first().medicamento, 'Amoxicilina 500mg')
+
+    def test_no_puede_emitir_receta_sin_ningun_medicamento(self):
+        data = {'diagnostico': 'Sin medicacion'}
+        data.update(_formset_data([{'medicamento': '', 'dosis': '', 'duracion': '', 'indicaciones': ''}]))
+
+        response = self.client.post(reverse('historia_clinica:nueva_receta', args=[self.mascota_a.id]), data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Receta.objects.filter(mascota=self.mascota_a).exists())
+
+    def test_no_puede_emitir_receta_para_mascota_de_otra_veterinaria(self):
+        data = {'diagnostico': 'Intento de acceso indebido'}
+        data.update(_formset_data([{'medicamento': 'Intruso', 'dosis': '', 'duracion': '', 'indicaciones': ''}]))
+
+        response = self.client.post(reverse('historia_clinica:nueva_receta', args=[self.mascota_b.id]), data)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_no_puede_ver_ni_eliminar_receta_de_otra_veterinaria(self):
+        pdf_response = self.client.get(reverse('historia_clinica:descargar_receta_digital_pdf', args=[self.receta_b.id]))
+        self.assertEqual(pdf_response.status_code, 404)
+
+        delete_response = self.client.post(reverse('historia_clinica:eliminar_receta', args=[self.receta_b.id]))
+        self.assertEqual(delete_response.status_code, 404)
+        self.assertTrue(Receta.objects.filter(pk=self.receta_b.id).exists())
+
+    def test_puede_descargar_el_pdf_de_su_propia_receta(self):
+        receta_a = Receta.objects.create(veterinaria=self.vet_a, mascota=self.mascota_a, diagnostico="Control")
+        ItemReceta.objects.create(receta=receta_a, medicamento="Meloxicam")
+
+        response = self.client.get(reverse('historia_clinica:descargar_receta_digital_pdf', args=[receta_a.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    def test_puede_eliminar_su_propia_receta(self):
+        receta_a = Receta.objects.create(veterinaria=self.vet_a, mascota=self.mascota_a, diagnostico="A eliminar")
+
+        response = self.client.post(reverse('historia_clinica:eliminar_receta', args=[receta_a.id]))
+
+        self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
+        self.assertFalse(Receta.objects.filter(pk=receta_a.id).exists())
