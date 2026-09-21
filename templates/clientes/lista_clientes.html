@@ -61,14 +61,14 @@
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="card-body p-3">
             <div class="d-flex align-items-center gap-2 mb-2">
-                <div class="avatar-circle-sm bg-primary-subtle text-primary-emphasis fw-bold rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 0.9rem;">
+                <div class="bg-primary-subtle text-primary-emphasis fw-bold rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 0.9rem;">
                     {{ cliente.apellido|slice:":1"|upper }}{{ cliente.nombre|slice:":1"|upper }}
                 </div>
                 <div class="flex-grow-1 min-w-0">
                     <a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="fw-bold text-dark text-decoration-none d-block">
                         {{ cliente.apellido }}, {{ cliente.nombre }}
                     </a>
-                    <code class="bg-light text-secondary border px-2 py-0.5 rounded extra-small fw-mono">{{ cliente.dni|default:"--" }}</code>
+                    <code class="bg-light text-secondary border px-2 py-0.5 rounded extra-small font-monospace">{{ cliente.dni|default:"--" }}</code>
                 </div>
             </div>
 
@@ -124,7 +124,7 @@
                             <!-- Nombre del Cliente -->
                             <td class="ps-4 py-3">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar-circle-sm bg-primary-subtle text-primary-emphasis fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 0.85rem;">
+                                    <div class="bg-primary-subtle text-primary-emphasis fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; font-size: 0.85rem;">
                                         {{ cliente.apellido|slice:":1"|upper }}{{ cliente.nombre|slice:":1"|upper }}
                                     </div>
                                     <div>
@@ -138,7 +138,7 @@
 
                             <!-- DNI -->
                             <td class="py-3">
-                                <code class="bg-light text-secondary border px-2 py-1 rounded small fw-mono">{{ cliente.dni|default:"--" }}</code>
+                                <code class="bg-light text-secondary border px-2 py-1 rounded small font-monospace">{{ cliente.dni|default:"--" }}</code>
                             </td>
 
                             <!-- Contacto -->
@@ -148,7 +148,7 @@
                                         <i class="bi bi-whatsapp"></i> {{ cliente.telefono }}
                                     </a>
                                 {% else %}
-                                    <span class="text-muted small italic">Sin teléfono</span>
+                                    <span class="text-muted small fst-italic">Sin teléfono</span>
                                 {% endif %}
                             </td>
 

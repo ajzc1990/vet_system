@@ -200,7 +200,7 @@
                                 <span class="small fw-semibold text-dark d-block"><i class="bi bi-calendar-check text-success me-1"></i>{{ item.caja.fecha_cierre|date:"d/m/Y H:i" }} hs</span>
                                 <small class="text-muted extra-small">Por: {% if item.caja.usuario_cierre %}{{ item.caja.usuario_cierre.get_full_name|default:item.caja.usuario_cierre.username }}{% else %}-{% endif %}</small>
                             {% else %}
-                                <span class="text-muted small italic"><i class="bi bi-hourglass-split me-1"></i>En curso...</span>
+                                <span class="text-muted small fst-italic"><i class="bi bi-hourglass-split me-1"></i>En curso...</span>
                             {% endif %}
                         </td>
 

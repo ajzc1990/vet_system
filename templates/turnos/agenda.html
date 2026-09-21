@@ -121,7 +121,7 @@
             <div class="d-flex flex-wrap gap-2 pt-2 border-top">
                 {% if turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
                     <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-success btn-sm fw-bold px-3 rounded-2 d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-stethoscope"></i> Atender
+                        <i class="bi bi-clipboard2-pulse-fill"></i> Atender
                     </a>
                 {% endif %}
                 <a href="{% url 'turnos:editar_turno' turno.id %}" class="btn btn-light btn-sm border text-secondary rounded-2">
@@ -201,7 +201,7 @@
                                     <i class="bi bi-person-badge-fill text-primary"></i> Dr(a). {{ turno.veterinario.apellido }}, {{ turno.veterinario.nombre }}
                                 </span>
                             {% else %}
-                                <span class="text-muted small italic"><i class="bi bi-dash-circle me-1"></i>Sin asignar</span>
+                                <span class="text-muted small fst-italic"><i class="bi bi-dash-circle me-1"></i>Sin asignar</span>
                             {% endif %}
                         </td>
 
@@ -245,7 +245,7 @@
                                 <!-- Botón de Atención Directa -->
                                 {% if turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
                                     <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-success btn-sm fw-bold px-3 py-1.5 shadow-sm rounded-2 d-inline-flex align-items-center gap-1" title="Iniciar Consulta médica en Historia Clínica">
-                                        <i class="bi bi-stethoscope"></i> Atender
+                                        <i class="bi bi-clipboard2-pulse-fill"></i> Atender
                                     </a>
                                 {% endif %}
 

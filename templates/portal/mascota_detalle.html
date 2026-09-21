@@ -58,7 +58,7 @@
         <div class="d-md-none d-flex flex-column gap-2">
             {% for v in vacunas %}
             <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-3">
-                <strong class="text-dark d-block"><i class="bi bi-syringe-fill text-warning me-1"></i>{{ v.nombre_vacuna }}</strong>
+                <strong class="text-dark d-block"><i class="bi bi-shield-plus text-warning me-1"></i>{{ v.nombre_vacuna }}</strong>
                 <div class="small text-secondary mb-1">Aplicada: {{ v.fecha_aplicacion|date:"d/m/Y" }}</div>
                 {% if v.fecha_proxima_dosis %}<span class="badge {% if v.proxima_dosis_vencida %}bg-danger-subtle{% else %}bg-warning-subtle text-dark{% endif %} border px-2 py-1 rounded-pill fw-bold extra-small">Próxima: {{ v.fecha_proxima_dosis|date:"d/m/Y" }}</span>{% endif %}
             </div></div>
@@ -71,7 +71,7 @@
                     <tbody>
                         {% for v in vacunas %}
                         <tr>
-                            <td class="ps-4 py-3 fw-bold text-dark"><i class="bi bi-syringe-fill text-warning me-1"></i>{{ v.nombre_vacuna }}</td>
+                            <td class="ps-4 py-3 fw-bold text-dark"><i class="bi bi-shield-plus text-warning me-1"></i>{{ v.nombre_vacuna }}</td>
                             <td class="py-3">{{ v.fecha_aplicacion|date:"d/m/Y" }}</td>
                             <td class="py-3">
                                 {% if v.fecha_proxima_dosis %}

@@ -52,6 +52,16 @@
            que todos los títulos del sistema se vean con el peso que ya se pedía. */
         .fw-extrabold { font-weight: 800 !important; }
 
+        /* Utilidades chicas que se usan en decenas de plantillas pero nunca tuvieron
+           una regla real detrás (mezcla de nombres al estilo Tailwind que no existen
+           en Bootstrap 5.3). Se centralizan acá para que valgan en todo el sistema. */
+        .extra-small { font-size: 0.75rem; }
+        .tracking-wider { letter-spacing: 0.05em; }
+        .min-w-0 { min-width: 0; }
+        .shadow-md { box-shadow: 0 .5rem 1rem rgba(15, 23, 42, .15) !important; }
+        .opacity-10 { opacity: 0.1 !important; }
+        .transition-all { transition: all 0.16s ease; }
+
         /* ============ App Shell ============ */
         .app-shell {
             display: flex;
@@ -357,11 +367,13 @@
     <div class="app-shell">
         <!-- ============ Sidebar (drawer en mobile/tablet, fijo desde lg) ============ -->
         <div class="offcanvas-lg offcanvas-start app-sidebar" tabindex="-1" id="appSidebar" aria-labelledby="appSidebarLabel">
-            <a class="sidebar-brand text-decoration-none" href="{% url 'dashboard:index' %}" id="appSidebarLabel">
-                <div class="sidebar-brand-logo"><i class="bi bi-heart-pulse-fill"></i></div>
-                <span class="sidebar-brand-text">Veter<span>System</span></span>
+            <div class="sidebar-brand" id="appSidebarLabel">
+                <a class="text-decoration-none d-flex align-items-center gap-2 flex-grow-1 overflow-hidden" href="{% url 'dashboard:index' %}">
+                    <div class="sidebar-brand-logo"><i class="bi bi-heart-pulse-fill"></i></div>
+                    <span class="sidebar-brand-text">Veter<span>System</span></span>
+                </a>
                 <button type="button" class="btn-close btn-close-white ms-auto d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Cerrar"></button>
-            </a>
+            </div>
 
             <nav class="sidebar-nav">
                 {% if user.cliente_portal %}
@@ -384,12 +396,14 @@
                     <a class="sidebar-link {% if request.resolver_match.app_name == 'turnos' %}active{% endif %}" href="{% url 'turnos:agenda_diaria' %}">
                         <i class="bi bi-calendar-event"></i> Agenda Turnos
                     </a>
-                    <a class="sidebar-link {% if request.resolver_match.app_name == 'clientes' or request.resolver_match.app_name == 'historia_clinica' and request.resolver_match.url_name != 'lista_internaciones' and request.resolver_match.url_name != 'detalle_internacion' %}active{% endif %}" href="{% url 'clientes:lista_clientes' %}">
+                    {% with internacion_urls="lista_internaciones,detalle_internacion,internar_mascota,nueva_evolucion_internacion,dar_alta_internacion,eliminar_internacion,descargar_informe_internacion_pdf" %}
+                    <a class="sidebar-link {% if request.resolver_match.app_name == 'clientes' or request.resolver_match.app_name == 'historia_clinica' and request.resolver_match.url_name not in internacion_urls %}active{% endif %}" href="{% url 'clientes:lista_clientes' %}">
                         <i class="bi bi-people"></i> Pacientes
                     </a>
-                    <a class="sidebar-link {% if request.resolver_match.url_name == 'lista_internaciones' or request.resolver_match.url_name == 'detalle_internacion' %}active{% endif %}" href="{% url 'historia_clinica:lista_internaciones' %}">
+                    <a class="sidebar-link {% if request.resolver_match.url_name in internacion_urls %}active{% endif %}" href="{% url 'historia_clinica:lista_internaciones' %}">
                         <i class="bi bi-hospital"></i> Internación
                     </a>
+                    {% endwith %}
 
                     <span class="sidebar-section-label">Negocio</span>
                     <a class="sidebar-link {% if request.resolver_match.app_name == 'inventario' %}active{% endif %}" href="{% url 'inventario:lista_productos' %}">

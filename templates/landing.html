@@ -17,13 +17,34 @@
 
     <style>
         :root {
-            --vs-primary: #0d6efd;
-            --vs-primary-dark: #0a58ca;
+            /* Alineado a la paleta violeta/azul en degradé del resto de la app
+               (ver templates/base.html) — antes esta landing seguía en el celeste
+               por defecto de Bootstrap, desentonando con la app ya rediseñada. */
+            --vs-primary: #6366f1;
+            --vs-primary-dark: #4f46e5;
+            --vs-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
             --vs-secondary: #0ea5e9;
             --vs-dark: #0f172a;
             --vs-light: #f8fafc;
             --vs-accent: #f59e0b;
         }
+
+        /* Clases usadas en esta plantilla que no vienen de Bootstrap 5.3 de fábrica
+           (o que, como fw-extrabold, comparten nombre con la regla de base.html pero
+           esta página no extiende esa plantilla y necesita su propia definición). */
+        .fw-extrabold { font-weight: 800 !important; }
+        .tracking-wider { letter-spacing: 0.05em; }
+        .leading-relaxed { line-height: 1.625; }
+        .max-w-2xl { max-width: 42rem; }
+        .opacity-10 { opacity: 0.1 !important; }
+
+        .btn-primary { background: var(--vs-gradient); border-color: transparent; }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            background: var(--vs-primary-dark) !important;
+            border-color: transparent !important;
+        }
+        .text-primary { color: var(--vs-primary) !important; }
+        .bg-primary { background: var(--vs-gradient) !important; }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
@@ -34,14 +55,14 @@
 
         /* Navbar Custom */
         .navbar-custom {
-            background-color: rgba(13, 110, 253, 0.95);
+            background-color: rgba(99, 102, 241, 0.95);
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
         }
 
         /* Hero Section Gradient & Pattern */
         .hero-section {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d6efd 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #6366f1 100%);
             color: white;
             padding: 120px 0 100px 0;
             position: relative;
@@ -89,8 +110,8 @@
 
         .hover-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 20px 30px -10px rgba(13, 110, 253, 0.15) !important;
-            border-color: rgba(13, 110, 253, 0.3);
+            box-shadow: 0 20px 30px -10px rgba(99, 102, 241, 0.15) !important;
+            border-color: rgba(99, 102, 241, 0.3);
         }
 
         .hover-card:hover .feature-icon-wrapper {
@@ -104,7 +125,7 @@
         /* Custom Form Controls */
         .form-control:focus, .form-select:focus {
             border-color: var(--vs-primary);
-            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
         }
     </style>
 </head>
@@ -426,7 +447,7 @@
                 </div>
 
                 <div class="col-md-5 col-lg-4">
-                    <div class="card h-100 border-0 shadow-lg rounded-4 p-4 bg-white position-relative" style="border-top: 4px solid #0d6efd !important;">
+                    <div class="card h-100 border-0 shadow-lg rounded-4 p-4 bg-white position-relative" style="border-top: 4px solid #6366f1 !important;">
                         {% if ahorro_anual > 0 %}
                         <span class="badge bg-warning text-dark fw-bold px-3 py-2 rounded-pill position-absolute top-0 start-50 translate-middle shadow-sm">
                             Ahorrás ${{ ahorro_anual|floatformat:0 }} al año
