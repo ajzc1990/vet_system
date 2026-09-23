@@ -1,10 +1,12 @@
+from unittest.mock import patch, MagicMock
+
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.clientes.models import Cliente, Mascota
 from apps.usuarios.models import PerfilUsuario, Veterinaria
-from apps.historia_clinica.models import Internacion, ConsultaMedica, Receta, ItemReceta
+from apps.historia_clinica.models import Internacion, ConsultaMedica, Receta, ItemReceta, ResumenClinicoIA
 from apps.inventario.models import Producto
 
 
@@ -272,3 +274,101 @@ class RecetaDigitalTests(TestCase):
 
         self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
         self.assertFalse(Receta.objects.filter(pk=receta_a.id).exists())
+
+
+def _mock_respuesta_anthropic(texto):
+    bloque = MagicMock()
+    bloque.type = 'text'
+    bloque.text = texto
+    respuesta = MagicMock()
+    respuesta.content = [bloque]
+    return respuesta
+
+
+class ResumenClinicoIATests(TestCase):
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.user_a = User.objects.create_user(username="user_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        self.recepcion_a = User.objects.create_user(username="recepcion_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.recepcion_a, veterinaria=self.vet_a, rol="RECEPCION", is_approved=True)
+
+        cliente_a = Cliente.objects.create(
+            veterinaria=self.vet_a, nombre="Carlos", apellido="Diaz", dni="111", telefono="1",
+        )
+        self.mascota_a = Mascota.objects.create(cliente=cliente_a, nombre="Rocky", especie="CANINO")
+
+        cliente_b = Cliente.objects.create(
+            veterinaria=self.vet_b, nombre="Ana", apellido="Gomez", dni="222", telefono="2",
+        )
+        self.mascota_b = Mascota.objects.create(cliente=cliente_b, nombre="Michi", especie="FELINO")
+
+        self.client.force_login(self.user_a)
+
+    def test_boton_no_aparece_ni_genera_si_la_funcion_esta_deshabilitada(self):
+        # IA_RESUMENES_ENABLED es False por defecto en settings de test.
+        response = self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
+
+        self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
+        self.assertFalse(ResumenClinicoIA.objects.filter(mascota=self.mascota_a).exists())
+
+    @override_settings(IA_RESUMENES_ENABLED=True, ANTHROPIC_API_KEY='fake-key')
+    @patch('apps.historia_clinica.ia.anthropic.Anthropic')
+    def test_genera_y_guarda_el_resumen_con_la_funcion_habilitada(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_client.messages.create.return_value = _mock_respuesta_anthropic("Paciente sano, sin antecedentes relevantes.")
+        mock_anthropic_cls.return_value = mock_client
+
+        response = self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
+
+        self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
+        resumen = ResumenClinicoIA.objects.get(mascota=self.mascota_a)
+        self.assertEqual(resumen.texto, "Paciente sano, sin antecedentes relevantes.")
+        self.assertEqual(resumen.generado_por, self.user_a)
+
+    @override_settings(IA_RESUMENES_ENABLED=True, ANTHROPIC_API_KEY='fake-key')
+    @patch('apps.historia_clinica.ia.anthropic.Anthropic')
+    def test_regenerar_actualiza_el_resumen_existente_en_vez_de_duplicarlo(self, mock_anthropic_cls):
+        mock_client = MagicMock()
+        mock_anthropic_cls.return_value = mock_client
+
+        mock_client.messages.create.return_value = _mock_respuesta_anthropic("Primer resumen.")
+        self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
+
+        mock_client.messages.create.return_value = _mock_respuesta_anthropic("Resumen actualizado.")
+        self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
+
+        self.assertEqual(ResumenClinicoIA.objects.filter(mascota=self.mascota_a).count(), 1)
+        self.assertEqual(ResumenClinicoIA.objects.get(mascota=self.mascota_a).texto, "Resumen actualizado.")
+
+    @override_settings(IA_RESUMENES_ENABLED=True, ANTHROPIC_API_KEY='fake-key')
+    @patch('apps.historia_clinica.ia.anthropic.Anthropic')
+    def test_error_de_la_api_no_rompe_la_vista_ni_guarda_nada(self, mock_anthropic_cls):
+        import anthropic as anthropic_module
+
+        mock_client = MagicMock()
+        mock_client.messages.create.side_effect = anthropic_module.APIConnectionError(request=MagicMock())
+        mock_anthropic_cls.return_value = mock_client
+
+        response = self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
+
+        self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
+        self.assertFalse(ResumenClinicoIA.objects.filter(mascota=self.mascota_a).exists())
+
+    @override_settings(IA_RESUMENES_ENABLED=True, ANTHROPIC_API_KEY='fake-key')
+    def test_no_puede_generar_resumen_para_mascota_de_otra_veterinaria(self):
+        response = self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_b.id]))
+
+        self.assertEqual(response.status_code, 404)
+
+    @override_settings(IA_RESUMENES_ENABLED=True, ANTHROPIC_API_KEY='fake-key')
+    def test_recepcion_no_puede_generar_resumen(self):
+        self.client.force_login(self.recepcion_a)
+
+        response = self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
+
+        self.assertRedirects(response, reverse('dashboard:index'))
+        self.assertFalse(ResumenClinicoIA.objects.filter(mascota=self.mascota_a).exists())

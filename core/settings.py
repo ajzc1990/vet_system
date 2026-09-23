@@ -153,6 +153,11 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@vetersystem.local
 MP_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
 MP_PUBLIC_KEY = os.getenv('MP_PUBLIC_KEY')
 
+# Resúmenes clínicos con IA (Anthropic). Deshabilitado por defecto: sin API key
+# cargada o con el flag en False, el botón de generar resumen no aparece.
+IA_RESUMENES_ENABLED = os.getenv('IA_RESUMENES_ENABLED', 'False').lower() in ('true', '1', 't')
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+
 # Rutas de Autenticación
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/dashboard/'  # O la vista principal que prefieras

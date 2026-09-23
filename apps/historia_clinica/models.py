@@ -423,6 +423,31 @@ class ItemReceta(models.Model):
         return self.medicamento
 
 
+class ResumenClinicoIA(models.Model):
+    mascota = models.OneToOneField(
+        Mascota,
+        on_delete=models.CASCADE,
+        related_name='resumen_ia',
+        verbose_name="Mascota"
+    )
+    texto = models.TextField(verbose_name="Resumen")
+    generado_el = models.DateTimeField(auto_now=True, verbose_name="Generado el")
+    generado_por = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Generado por"
+    )
+
+    class Meta:
+        verbose_name = "Resumen Clínico (IA)"
+        verbose_name_plural = "Resúmenes Clínicos (IA)"
+
+    def __str__(self):
+        return f"Resumen IA - {self.mascota.nombre} ({self.generado_el.strftime('%d/%m/%Y')})"
+
+
 class EvolucionInternacion(models.Model):
     ESTADO_GENERAL = [
         ('ESTABLE', 'Estable'),

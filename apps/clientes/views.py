@@ -1,6 +1,7 @@
 import csv
 import re
 
+from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -229,6 +230,8 @@ def detalle_historia_clinica(request, mascota_id):
     # Recetas digitales emitidas al paciente
     recetas = Receta.objects.filter(mascota=mascota).select_related('veterinario').prefetch_related('items')
 
+    resumen_ia = getattr(mascota, 'resumen_ia', None)
+
     if request.method == 'POST' and not es_veterinario_o_admin(request.user):
         messages.error(request, "Acceso denegado: Esta función requiere permisos de Médico Veterinario.")
         return redirect('clientes:detalle_historia_clinica', mascota_id=mascota.id)
@@ -287,6 +290,8 @@ def detalle_historia_clinica(request, mascota_id):
         'internaciones': internaciones,
         'internacion_activa': internacion_activa,
         'recetas': recetas,
+        'resumen_ia': resumen_ia,
+        'ia_resumenes_habilitado': settings.IA_RESUMENES_ENABLED,
         'form': form,
     }
     return render(request, 'clientes/historia_clinica.html', context)

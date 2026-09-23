@@ -21,6 +21,7 @@ from .models import (
     Mascota, ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, EstudioMedico,
     Internacion, EvolucionInternacion, Receta, ItemReceta,
 )
+from .ia import generar_resumen_clinico, ResumenIADeshabilitado, ResumenIAError
 from apps.inventario.models import MovimientoStock, Producto
 from apps.usuarios.decorators import requerir_rol_veterinario
 from apps.usuarios.utils import get_veterinaria_activa
@@ -660,6 +661,25 @@ def descargar_receta_digital_pdf(request, receta_id):
 
     doc.build(story)
     return response
+
+
+@login_required
+@requerir_rol_veterinario
+def generar_resumen_ia(request, mascota_id):
+    """Genera (o regenera) el resumen clínico de la mascota con IA."""
+    vet = get_veterinaria_activa(request)
+    mascota = _get_mascota_tenant(request, mascota_id, vet)
+
+    if request.method == 'POST':
+        try:
+            generar_resumen_clinico(mascota, usuario=request.user)
+            messages.success(request, "Resumen clínico generado con IA.")
+        except ResumenIADeshabilitado:
+            messages.error(request, "La función de resúmenes con IA no está habilitada.")
+        except ResumenIAError:
+            messages.error(request, "No se pudo generar el resumen en este momento. Probá de nuevo en unos minutos.")
+
+    return redirect('clientes:detalle_historia_clinica', mascota_id=mascota.id)
 
 
 @login_required

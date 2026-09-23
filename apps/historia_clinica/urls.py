@@ -25,6 +25,9 @@ urlpatterns = [
     path('receta/<int:receta_id>/eliminar/', views.eliminar_receta, name='eliminar_receta'),
     path('receta/<int:receta_id>/pdf/', views.descargar_receta_digital_pdf, name='descargar_receta_digital_pdf'),
 
+    # Resumen Clínico con IA
+    path('mascota/<int:mascota_id>/resumen-ia/', views.generar_resumen_ia, name='generar_resumen_ia'),
+
     # Internación / Hospitalización
     path('internaciones/', views.lista_internaciones, name='lista_internaciones'),
     path('mascota/<int:mascota_id>/internar/', views.internar_mascota, name='internar_mascota'),
