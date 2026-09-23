@@ -16,16 +16,30 @@ export function useEnvio(ruta: string) {
   const [enviando, setEnviando] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
 
-  async function enviar(body: unknown, mensajeExito: string) {
+  /**
+   * Por defecto hace POST, vuelve a la pantalla anterior y avisa con `mensajeExito`.
+   * `onExito` reemplaza la navegación (p. ej. ir a la mascota recién creada).
+   */
+  async function enviar<T = unknown>(
+    body: unknown,
+    mensajeExito: string,
+    opciones: { method?: 'POST' | 'PATCH'; onExito?: (respuesta: T) => void } = {},
+  ) {
     setEnviando(true);
     setErrores({});
     try {
-      await api(ruta, { method: 'POST', body });
-      router.back();
-      Alert.alert(mensajeExito);
+      const respuesta = await api<T>(ruta, { method: opciones.method ?? 'POST', body });
+      if (opciones.onExito) opciones.onExito(respuesta);
+      else router.back();
+      if (mensajeExito) Alert.alert(mensajeExito);
     } catch (e) {
       if (e instanceof ApiError && Object.keys(e.campos).length > 0) {
-        setErrores(Object.fromEntries(Object.entries(e.campos).map(([k, v]) => [k, v[0]])));
+        const porCampo = Object.fromEntries(Object.entries(e.campos).map(([k, v]) => [k, v[0]]));
+        setErrores(porCampo);
+        // Un error de un campo que el formulario no muestra (o 'detail') igual tiene que verse.
+        if (porCampo.detail || porCampo.non_field_errors) {
+          Alert.alert('No se pudo guardar', porCampo.detail ?? porCampo.non_field_errors);
+        }
       } else {
         Alert.alert('No se pudo guardar', e instanceof Error ? e.message : undefined);
       }

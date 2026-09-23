@@ -23,6 +23,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="internados"
+        options={{
+          title: 'Internados',
+          tabBarIcon: ({ color, size }) => <Ionicons name="bed" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           title: 'Mi cuenta',

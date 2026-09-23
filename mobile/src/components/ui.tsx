@@ -277,4 +277,67 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   fila: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  chip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.lg },
+  fab: {
+    position: 'absolute',
+    right: Spacing.lg,
+    bottom: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderRadius: 999,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
 });
+
+/** Opciones tocables (especie, sexo, estado...). Con `valor === null` ninguna queda marcada. */
+export function Chips<T extends string | number>({
+  opciones,
+  valor,
+  onCambiar,
+}: {
+  opciones: { valor: T; etiqueta: string }[];
+  valor: T | null;
+  onCambiar: (valor: T) => void;
+}) {
+  const t = useTheme();
+  return (
+    <View style={styles.chips}>
+      {opciones.map((o) => {
+        const activo = o.valor === valor;
+        return (
+          <Pressable
+            key={String(o.valor)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: activo }}
+            onPress={() => onCambiar(o.valor)}
+            style={[styles.chip, { backgroundColor: activo ? t.primary : t.primaryLight }]}>
+            <Text style={{ color: activo ? t.onPrimary : t.primaryDark, fontWeight: '600' }}>{o.etiqueta}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+export function BotonFlotante({ icono, etiqueta, onPress }: { icono: IconName; etiqueta: string; onPress: () => void }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={etiqueta}
+      onPress={onPress}
+      style={({ pressed }) => [styles.fab, { backgroundColor: t.primary, opacity: pressed ? 0.85 : 1 }]}>
+      <Ionicons name={icono} size={22} color={t.onPrimary} />
+      <Text style={{ color: t.onPrimary, fontWeight: '700', fontSize: 15 }}>{etiqueta}</Text>
+    </Pressable>
+  );
+}
+

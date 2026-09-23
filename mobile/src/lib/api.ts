@@ -49,17 +49,29 @@ function armarError(status: number, cuerpo: unknown): ApiError {
   return new ApiError(`Error del servidor (${status}).`, status);
 }
 
+function url(ruta: string) {
+  return `${API_URL}/api/${ruta.replace(/^\//, '')}`;
+}
+
+/** body: objeto (se manda como JSON) o FormData (multipart, para subir archivos). */
 export async function api<T>(ruta: string, opciones: { method?: string; body?: unknown } = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (token) headers.Authorization = `Token ${token}`;
-  if (opciones.body !== undefined) headers['Content-Type'] = 'application/json';
+  const esFormulario = opciones.body instanceof FormData;
+  // Con FormData el Content-Type (y su boundary) lo arma fetch solo.
+  if (opciones.body !== undefined && !esFormulario) headers['Content-Type'] = 'application/json';
 
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${API_URL}/api/${ruta.replace(/^\//, '')}`, {
+    respuesta = await fetch(url(ruta), {
       method: opciones.method ?? 'GET',
       headers,
-      body: opciones.body !== undefined ? JSON.stringify(opciones.body) : undefined,
+      body:
+        opciones.body === undefined
+          ? undefined
+          : esFormulario
+            ? (opciones.body as FormData)
+            : JSON.stringify(opciones.body),
     });
   } catch {
     throw new ApiError(`No se pudo conectar con el servidor (${API_URL}).`, 0);
@@ -78,4 +90,25 @@ export async function api<T>(ruta: string, opciones: { method?: string; body?: u
     throw armarError(respuesta.status, cuerpo);
   }
   return cuerpo as T;
+}
+
+/** Descarga un PDF de la API al caché del celular y abre el menú de compartir (WhatsApp, mail...). */
+export async function compartirPdf(ruta: string, nombreArchivo: string) {
+  const { File, Paths } = await import('expo-file-system');
+  const Sharing = await import('expo-sharing');
+
+  const destino = new File(Paths.cache, nombreArchivo.replace(/[^\w.-]+/g, '_'));
+  let archivo: InstanceType<typeof File>;
+  try {
+    archivo = await File.downloadFileAsync(url(ruta), destino, {
+      headers: token ? { Authorization: `Token ${token}` } : {},
+      idempotent: true,
+    });
+  } catch {
+    throw new ApiError('No se pudo descargar el PDF.', 0);
+  }
+  if (!(await Sharing.isAvailableAsync())) {
+    throw new ApiError('Este dispositivo no permite compartir archivos.', 0);
+  }
+  await Sharing.shareAsync(archivo.uri, { mimeType: 'application/pdf', dialogTitle: nombreArchivo });
 }

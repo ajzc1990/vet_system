@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Boton, EstadoCarga, Fila, Insignia, Tarjeta, Texto } from '@/components/ui';
+import { Boton, BotonFlotante, EstadoCarga, Fila, Insignia, Tarjeta, Texto } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { aISO, esHoy, hora, sumarDias, tituloDia } from '@/lib/fechas';
@@ -86,7 +86,15 @@ export default function Agenda() {
               style={item.estado === 'CANCELADO' && { opacity: 0.55 }}>
               <View style={styles.cabecera}>
                 <Texto variante="subtitulo">{hora(item.fecha_hora)}</Texto>
-                <Insignia texto={item.estado_display} estado={item.estado} />
+                <View style={styles.cabeceraDerecha}>
+                  <Insignia texto={item.estado_display} estado={item.estado} />
+                  <Pressable
+                    hitSlop={10}
+                    accessibilityLabel="Editar turno"
+                    onPress={() => router.push({ pathname: '/turno/[id]', params: { id: item.id } })}>
+                    <Ionicons name="create-outline" size={22} color={t.primary} />
+                  </Pressable>
+                </View>
               </View>
               <Texto style={{ fontWeight: '600' }}>{item.mascota_nombre}</Texto>
               <Fila icono="person-outline">{item.cliente_nombre}</Fila>
@@ -130,6 +138,11 @@ export default function Agenda() {
           );
         }}
       />
+      <BotonFlotante
+        icono="add"
+        etiqueta="Turno"
+        onPress={() => router.push({ pathname: '/turno/[id]', params: { id: 'nuevo', fecha: aISO(dia) } })}
+      />
     </View>
   );
 }
@@ -143,8 +156,9 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  lista: { padding: Spacing.lg, gap: Spacing.md, flexGrow: 1 },
+  lista: { padding: Spacing.lg, paddingBottom: 96, gap: Spacing.md, flexGrow: 1 },
   cabecera: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cabeceraDerecha: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   acciones: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs, alignItems: 'center' },
   accion: { flex: 1, minHeight: 40 },
   cancelar: { paddingHorizontal: Spacing.xs },

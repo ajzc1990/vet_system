@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 
-import { EstadoCarga, Tarjeta, Texto } from '@/components/ui';
+import { BotonFlotante, EstadoCarga, Tarjeta, Texto } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { edad } from '@/lib/fechas';
 import type { Mascota, Paginado } from '@/lib/types';
@@ -90,6 +90,7 @@ export default function Pacientes() {
           );
         }}
       />
+      <BotonFlotante icono="person-add" etiqueta="Cliente" onPress={() => router.push('/cliente/nuevo')} />
     </View>
   );
 }
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   input: { flex: 1, fontSize: 16, paddingVertical: Spacing.md },
-  lista: { padding: Spacing.lg, gap: Spacing.md, flexGrow: 1 },
+  lista: { padding: Spacing.lg, paddingBottom: 96, gap: Spacing.md, flexGrow: 1 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

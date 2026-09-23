@@ -1,12 +1,25 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.clientes.models import Cliente, Mascota
 from apps.inventario.models import Producto
-from apps.turnos.models import Turno
+from apps.turnos.models import Turno, Veterinario
 from apps.ventas.models import Venta, DetalleVenta
 
 
-class MascotaSerializer(serializers.ModelSerializer):
+class TenantSerializerMixin:
+    """Valida que las FKs que manda la app (mascota, cliente, veterinario...) sean de la
+    veterinaria del usuario. La vista pasa la veterinaria en el context; para el superusuario
+    viene None y no se restringe, igual que en el resto del sistema."""
+
+    def _del_tenant(self, obj, veterinaria_de_obj, mensaje):
+        vet = self.context.get('veterinaria')
+        if obj is not None and vet is not None and veterinaria_de_obj != vet.id:
+            raise serializers.ValidationError(mensaje)
+        return obj
+
+
+class MascotaSerializer(TenantSerializerMixin, serializers.ModelSerializer):
     especie_display = serializers.CharField(source='get_especie_display', read_only=True)
     sexo_display = serializers.CharField(source='get_sexo_display', read_only=True)
 
@@ -17,6 +30,9 @@ class MascotaSerializer(serializers.ModelSerializer):
             'fecha_nacimiento', 'sexo', 'sexo_display', 'peso_kg', 'castrado',
             'observaciones', 'creado_en',
         ]
+
+    def validate_cliente(self, cliente):
+        return self._del_tenant(cliente, cliente.veterinaria_id, "El cliente no pertenece a tu veterinaria.")
 
 
 class ClienteSerializer(serializers.ModelSerializer):
@@ -43,7 +59,13 @@ class ProductoSerializer(serializers.ModelSerializer):
         ]
 
 
-class TurnoSerializer(serializers.ModelSerializer):
+class VeterinarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Veterinario
+        fields = ['id', 'nombre', 'apellido', 'matricula']
+
+
+class TurnoSerializer(TenantSerializerMixin, serializers.ModelSerializer):
     mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
     cliente_nombre = serializers.SerializerMethodField()
     veterinario_nombre = serializers.SerializerMethodField()
@@ -65,6 +87,15 @@ class TurnoSerializer(serializers.ModelSerializer):
         if not obj.veterinario:
             return None
         return f"{obj.veterinario.nombre} {obj.veterinario.apellido}"
+
+    def validate_mascota(self, mascota):
+        return self._del_tenant(mascota, mascota.cliente.veterinaria_id, "La mascota no pertenece a tu veterinaria.")
+
+    def validate_veterinario(self, veterinario):
+        if veterinario is not None and not veterinario.activo:
+            raise serializers.ValidationError("El veterinario no está activo.")
+        return self._del_tenant(
+            veterinario, getattr(veterinario, 'veterinaria_id', None), "El veterinario no pertenece a tu veterinaria.")
 
 
 class DetalleVentaSerializer(serializers.ModelSerializer):
@@ -138,8 +169,14 @@ class ConsultaMedicaSerializer(serializers.ModelSerializer):
         return _nombre_veterinario(obj.veterinario)
 
 
+# Los modelos usan default=timezone.now en DateFields: si la app omite la fecha, el objeto
+# queda con un datetime y DRF no lo puede serializar como fecha. Se usa la fecha local.
+FECHA_DE_HOY = {'default': timezone.localdate}
+
+
 class RegistroVacunaSerializer(serializers.ModelSerializer):
     veterinario_nombre = serializers.SerializerMethodField()
+    fecha_aplicacion = serializers.DateField(**FECHA_DE_HOY)
     proxima_dosis_vencida = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -156,6 +193,7 @@ class RegistroVacunaSerializer(serializers.ModelSerializer):
 
 class RegistroDesparasitacionSerializer(serializers.ModelSerializer):
     tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
+    fecha_aplicacion = serializers.DateField(**FECHA_DE_HOY)
     proxima_dosis_vencida = serializers.BooleanField(read_only=True)
 
     class Meta:
@@ -208,3 +246,83 @@ class InternacionResumenSerializer(serializers.ModelSerializer):
     class Meta:
         model = Internacion
         fields = ['id', 'box', 'motivo_ingreso', 'fecha_ingreso', 'estado', 'estado_display', 'dias_internado']
+
+
+# ==============================================================================
+# APP MÓVIL: estudios (foto/archivo) e internaciones
+# ==============================================================================
+
+from apps.historia_clinica.forms import validar_archivo_medico
+from apps.historia_clinica.models import EstudioMedico, EvolucionInternacion
+
+
+class EstudioMedicoSerializer(serializers.ModelSerializer):
+    tipo_estudio_display = serializers.CharField(source='get_tipo_estudio_display', read_only=True)
+    es_imagen = serializers.BooleanField(read_only=True)
+    fecha_estudio = serializers.DateField(**FECHA_DE_HOY)
+
+    class Meta:
+        model = EstudioMedico
+        fields = [
+            'id', 'titulo', 'tipo_estudio', 'tipo_estudio_display', 'archivo', 'es_imagen',
+            'fecha_estudio', 'observaciones',
+        ]
+
+    def validate_archivo(self, archivo):
+        # Mismas reglas que el formulario web: 10 MB, PDF/JPG/PNG.
+        return validar_archivo_medico(archivo)
+
+
+class EvolucionInternacionSerializer(serializers.ModelSerializer):
+    estado_general_display = serializers.CharField(source='get_estado_general_display', read_only=True)
+    veterinario_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = EvolucionInternacion
+        fields = [
+            'id', 'fecha_hora', 'estado_general', 'estado_general_display', 'peso_kg', 'temperatura_c',
+            'frecuencia_cardiaca', 'frecuencia_respiratoria', 'notas', 'medicacion_administrada',
+            'veterinario_nombre',
+        ]
+        read_only_fields = ['fecha_hora']
+
+    def get_veterinario_nombre(self, obj):
+        return _nombre_veterinario(obj.veterinario)
+
+
+class InternacionSerializer(TenantSerializerMixin, serializers.ModelSerializer):
+    """Ingreso a internación (POST /mascotas/{id}/internar/) y ficha de seguimiento."""
+    estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+    mascota_nombre = serializers.CharField(source='mascota.nombre', read_only=True)
+    especie_display = serializers.CharField(source='mascota.get_especie_display', read_only=True)
+    cliente_nombre = serializers.SerializerMethodField()
+    cliente_telefono = serializers.CharField(source='mascota.cliente.telefono', read_only=True)
+    veterinario_responsable_nombre = serializers.SerializerMethodField()
+    evoluciones = EvolucionInternacionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Internacion
+        fields = [
+            'id', 'mascota', 'mascota_nombre', 'especie_display', 'cliente_nombre', 'cliente_telefono',
+            'veterinario_responsable', 'veterinario_responsable_nombre', 'box', 'motivo_ingreso',
+            'diagnostico_ingreso', 'dieta_indicaciones', 'fecha_ingreso', 'fecha_alta_estimada',
+            'fecha_alta_real', 'estado', 'estado_display', 'resumen_alta', 'dias_internado',
+            'costo_dia_estadia', 'evoluciones',
+        ]
+        read_only_fields = ['mascota', 'fecha_ingreso', 'fecha_alta_real', 'estado', 'resumen_alta']
+
+    def get_cliente_nombre(self, obj):
+        return f"{obj.mascota.cliente.nombre} {obj.mascota.cliente.apellido}"
+
+    def get_veterinario_responsable_nombre(self, obj):
+        return _nombre_veterinario(obj.veterinario_responsable)
+
+    def validate_veterinario_responsable(self, veterinario):
+        return self._del_tenant(
+            veterinario, getattr(veterinario, 'veterinaria_id', None), "El veterinario no pertenece a tu veterinaria.")
+
+
+class AltaInternacionSerializer(serializers.Serializer):
+    """Mismas reglas que AltaInternacionForm: estado de cierre y epicrisis obligatoria."""
+    estado = serializers.ChoiceField(choices=[c for c in Internacion.ESTADOS if c[0] != 'INTERNADO'])
+    resumen_alta = serializers.CharField()

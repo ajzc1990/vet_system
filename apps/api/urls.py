@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 
 from .auth import obtener_token
 from .views import (
-    cerrar_sesion, yo, ClienteViewSet, MascotaViewSet, ProductoViewSet, TurnoViewSet, VentaViewSet,
+    cerrar_sesion, yo, ClienteViewSet, InternacionViewSet, MascotaViewSet, ProductoViewSet,
+    RecetaViewSet, TurnoViewSet, VentaViewSet, VeterinarioViewSet,
 )
 
 router = DefaultRouter()
@@ -12,6 +13,9 @@ router.register('mascotas', MascotaViewSet, basename='mascota')
 router.register('productos', ProductoViewSet, basename='producto')
 router.register('turnos', TurnoViewSet, basename='turno')
 router.register('ventas', VentaViewSet, basename='venta')
+router.register('veterinarios', VeterinarioViewSet, basename='veterinario')
+router.register('internaciones', InternacionViewSet, basename='internacion')
+router.register('recetas', RecetaViewSet, basename='receta')
 
 urlpatterns = [
     path('token/', obtener_token, name='obtener_token'),

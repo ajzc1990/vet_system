@@ -14,6 +14,21 @@ export type Usuario = {
   rol_display: string | null;
   veterinaria: string | null;
   puede_atender: boolean;
+  ia_habilitada: boolean;
+};
+
+export type Veterinario = { id: number; nombre: string; apellido: string; matricula: string };
+
+export type Cliente = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  telefono: string;
+  email: string | null;
+  direccion: string | null;
+  activo: boolean;
+  mascotas: Mascota[];
 };
 
 export type EstadoTurno = 'PENDIENTE' | 'CONFIRMADO' | 'COMPLETADO' | 'CANCELADO';
@@ -112,12 +127,60 @@ export type Internacion = {
   dias_internado: number;
 };
 
+export type Estudio = {
+  id: number;
+  titulo: string;
+  tipo_estudio: string;
+  tipo_estudio_display: string;
+  archivo: string;
+  es_imagen: boolean;
+  fecha_estudio: string;
+  observaciones: string | null;
+};
+
+export type Evolucion = {
+  id: number;
+  fecha_hora: string;
+  estado_general: string;
+  estado_general_display: string;
+  peso_kg: string | null;
+  temperatura_c: string | null;
+  frecuencia_cardiaca: number | null;
+  frecuencia_respiratoria: number | null;
+  notas: string;
+  medicacion_administrada: string | null;
+  veterinario_nombre: string | null;
+};
+
+export type InternacionDetalle = {
+  id: number;
+  mascota: number;
+  mascota_nombre: string;
+  especie_display: string;
+  cliente_nombre: string;
+  cliente_telefono: string;
+  veterinario_responsable_nombre: string | null;
+  box: string | null;
+  motivo_ingreso: string;
+  diagnostico_ingreso: string | null;
+  dieta_indicaciones: string | null;
+  fecha_ingreso: string;
+  fecha_alta_estimada: string | null;
+  fecha_alta_real: string | null;
+  estado: string;
+  estado_display: string;
+  resumen_alta: string | null;
+  dias_internado: number;
+  evoluciones: Evolucion[];
+};
+
 export type Historia = {
   mascota: Mascota;
   consultas: Consulta[];
   vacunas: Vacuna[];
   desparasitaciones: Desparasitacion[];
   recetas: Receta[];
+  estudios: Estudio[];
   internaciones_activas: Internacion[];
   resumen_ia: { texto: string; generado_el: string } | null;
 };

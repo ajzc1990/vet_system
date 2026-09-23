@@ -35,7 +35,16 @@
           "imageWidth": 120
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "VeterSystem usa la cámara para adjuntar fotos de estudios y lesiones a la historia clínica.",
+          "photosPermission": "VeterSystem accede a tus fotos para adjuntar estudios a la historia clínica."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

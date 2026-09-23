@@ -5,11 +5,17 @@ Usa la API REST de Django en `apps/api/` con login por token.
 
 ## Qué hace
 
-- **Agenda:** turnos del día, con navegación entre días. Desde cada turno se puede confirmar, cancelar o atender (abre la consulta ya vinculada al turno).
-- **Pacientes:** búsqueda por nombre de la mascota, tutor o DNI.
-- **Ficha del paciente:** datos, tutor (llamar o WhatsApp), internación activa, resumen con IA, vacunas (marca las vencidas), consultas, recetas y desparasitaciones.
-- **Altas:** nueva consulta con signos vitales, vacuna con atajos para la próxima dosis y receta con varios medicamentos.
+- **Agenda:** turnos del día con navegación entre días. Nuevo turno (botón flotante), editar, confirmar, cancelar
+  y "Atender", que abre la consulta vinculada al turno.
+- **Pacientes:** búsqueda por mascota, tutor o DNI, y alta de cliente con su primera mascota.
+- **Ficha del paciente:**
+  - datos del paciente y del tutor (llamar, WhatsApp, agendar turno, cargar otra mascota), con edición;
+  - internación activa y resumen con IA (se puede generar si la IA está habilitada);
+  - vacunas (el carnet en PDF se comparte), consultas, recetas (en PDF, para compartir), estudios y fotos,
+    y desparasitaciones.
+- **Acciones médicas:** consulta, vacuna, receta, estudio con la cámara, desparasitación e internación.
   Solo las ven los roles VET y ADMIN, igual que en la web.
+- **Internados:** sala de internación, controles (evoluciones con signos vitales), alta o cierre, e informe en PDF.
 
 ## Correr en desarrollo
 
