@@ -91,3 +91,120 @@ class VentaSerializer(serializers.ModelSerializer):
         if not obj.cliente:
             return None
         return f"{obj.cliente.nombre} {obj.cliente.apellido}"
+
+
+# ==============================================================================
+# APP MÓVIL (staff): historia clínica y altas desde el celular
+# ==============================================================================
+
+from apps.historia_clinica.models import (
+    ConsultaMedica, RegistroVacuna, RegistroDesparasitacion, Receta, ItemReceta,
+    Internacion,
+)
+
+
+def _nombre_veterinario(veterinario):
+    if not veterinario:
+        return None
+    return f"{veterinario.nombre} {veterinario.apellido}"
+
+
+class MascotaDetalleSerializer(MascotaSerializer):
+    """Mascota con los datos de contacto del tutor, para la ficha del paciente en la app."""
+    cliente_nombre = serializers.SerializerMethodField()
+    cliente_telefono = serializers.CharField(source='cliente.telefono', read_only=True)
+
+    class Meta(MascotaSerializer.Meta):
+        fields = MascotaSerializer.Meta.fields + ['cliente_nombre', 'cliente_telefono']
+
+    def get_cliente_nombre(self, obj):
+        return f"{obj.cliente.nombre} {obj.cliente.apellido}"
+
+
+class ConsultaMedicaSerializer(serializers.ModelSerializer):
+    veterinario_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConsultaMedica
+        fields = [
+            'id', 'mascota', 'turno', 'veterinario', 'veterinario_nombre', 'fecha_hora',
+            'peso_actual_kg', 'temperatura_c', 'frecuencia_cardiaca', 'frecuencia_respiratoria',
+            'motivo_consulta', 'anamnesis', 'examen_clinico', 'diagnostico', 'tratamiento',
+            'observaciones_privadas',
+        ]
+        read_only_fields = ['mascota', 'veterinario', 'fecha_hora']
+
+    def get_veterinario_nombre(self, obj):
+        return _nombre_veterinario(obj.veterinario)
+
+
+class RegistroVacunaSerializer(serializers.ModelSerializer):
+    veterinario_nombre = serializers.SerializerMethodField()
+    proxima_dosis_vencida = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = RegistroVacuna
+        fields = [
+            'id', 'mascota', 'veterinario', 'veterinario_nombre', 'nombre_vacuna', 'lote',
+            'fecha_aplicacion', 'fecha_proxima_dosis', 'proxima_dosis_vencida', 'observaciones',
+        ]
+        read_only_fields = ['mascota', 'veterinario']
+
+    def get_veterinario_nombre(self, obj):
+        return _nombre_veterinario(obj.veterinario)
+
+
+class RegistroDesparasitacionSerializer(serializers.ModelSerializer):
+    tipo_display = serializers.CharField(source='get_tipo_display', read_only=True)
+    proxima_dosis_vencida = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = RegistroDesparasitacion
+        fields = [
+            'id', 'tipo', 'tipo_display', 'producto', 'dosis', 'fecha_aplicacion',
+            'fecha_proxima_dosis', 'proxima_dosis_vencida',
+        ]
+
+
+class ItemRecetaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ItemReceta
+        fields = ['id', 'medicamento', 'dosis', 'duracion', 'indicaciones']
+
+
+class RecetaSerializer(serializers.ModelSerializer):
+    items = ItemRecetaSerializer(many=True)
+    veterinario_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Receta
+        fields = [
+            'id', 'mascota', 'consulta', 'veterinario', 'veterinario_nombre',
+            'fecha_emision', 'diagnostico', 'observaciones', 'items',
+        ]
+        read_only_fields = ['mascota', 'veterinario', 'fecha_emision']
+
+    def get_veterinario_nombre(self, obj):
+        return _nombre_veterinario(obj.veterinario)
+
+    def validate_items(self, items):
+        # Igual que la vista web (nueva_receta): una receta sin medicamentos no se emite.
+        items = [i for i in items if i.get('medicamento', '').strip()]
+        if not items:
+            raise serializers.ValidationError("Agregá al menos un medicamento.")
+        return items
+
+    def create(self, validated_data):
+        items = validated_data.pop('items')
+        receta = Receta.objects.create(**validated_data)
+        for item in items:
+            ItemReceta.objects.create(receta=receta, **item)
+        return receta
+
+
+class InternacionResumenSerializer(serializers.ModelSerializer):
+    estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+
+    class Meta:
+        model = Internacion
+        fields = ['id', 'box', 'motivo_ingreso', 'fecha_ingreso', 'estado', 'estado_display', 'dias_internado']

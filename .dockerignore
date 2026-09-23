@@ -7,3 +7,5 @@ db.sqlite3
 .gitignore
 .env
 media/
+# App móvil (Expo): no forma parte de la imagen de Django
+mobile/

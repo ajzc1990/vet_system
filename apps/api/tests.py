@@ -111,3 +111,106 @@ class ApiTenantIsolationTests(TestCase):
         response = client.get(reverse('api:cliente-list'))
 
         self.assertEqual(response.status_code, 403)
+
+
+class ApiAppMovilTests(TestCase):
+    """Endpoints de escritura y de ficha que usa la app móvil del staff."""
+
+    def setUp(self):
+        from apps.turnos.models import Turno, Veterinario
+        from django.utils import timezone
+
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.medico = User.objects.create_user(username="medico", password="testpass123")
+        PerfilUsuario.objects.create(user=self.medico, veterinaria=self.vet_a, rol="VET", is_approved=True)
+        self.veterinario = Veterinario.objects.create(
+            veterinaria=self.vet_a, usuario=self.medico, nombre="Laura", apellido="Diaz", matricula="M1")
+
+        self.recepcion = User.objects.create_user(username="recepcion", password="testpass123")
+        PerfilUsuario.objects.create(user=self.recepcion, veterinaria=self.vet_a, rol="RECEPCION", is_approved=True)
+
+        cliente_a = Cliente.objects.create(veterinaria=self.vet_a, nombre="Juan", apellido="Perez", dni="111", telefono="1")
+        cliente_b = Cliente.objects.create(veterinaria=self.vet_b, nombre="Ana", apellido="Gomez", dni="222", telefono="2")
+        self.mascota_a = Mascota.objects.create(cliente=cliente_a, nombre="Firulais", especie="CANINO")
+        self.mascota_b = Mascota.objects.create(cliente=cliente_b, nombre="Michi", especie="FELINO")
+
+        self.turno = Turno.objects.create(
+            veterinaria=self.vet_a, mascota=self.mascota_a, fecha_hora=timezone.now(), estado='CONFIRMADO')
+
+    def _cliente(self, user):
+        client = APIClient()
+        token = Token.objects.create(user=user)
+        client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        return client
+
+    def _consulta(self, **extra):
+        return {'motivo_consulta': 'Vómitos', 'diagnostico': 'Gastritis', 'tratamiento': 'Dieta blanda', **extra}
+
+    def test_yo_devuelve_rol_y_si_puede_atender(self):
+        response = self._cliente(self.recepcion).get(reverse('api:yo'))
+        self.assertEqual(response.data['rol'], 'RECEPCION')
+        self.assertFalse(response.data['puede_atender'])
+        self.assertEqual(response.data['veterinaria'], 'Clinica A')
+
+    def test_veterinario_registra_consulta_y_completa_el_turno(self):
+        response = self._cliente(self.medico).post(
+            reverse('api:mascota-consultas', args=[self.mascota_a.id]),
+            self._consulta(turno=self.turno.id, peso_actual_kg='12.5'), format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['veterinario'], self.veterinario.id)
+        self.turno.refresh_from_db()
+        self.assertEqual(self.turno.estado, 'COMPLETADO')
+        self.mascota_a.refresh_from_db()
+        self.assertEqual(str(self.mascota_a.peso_kg), '12.50')
+
+    def test_recepcion_no_puede_registrar_consultas(self):
+        response = self._cliente(self.recepcion).post(
+            reverse('api:mascota-consultas', args=[self.mascota_a.id]), self._consulta(), format='json')
+        self.assertEqual(response.status_code, 403)
+
+    def test_no_se_puede_registrar_consulta_en_mascota_de_otro_tenant(self):
+        response = self._cliente(self.medico).post(
+            reverse('api:mascota-consultas', args=[self.mascota_b.id]), self._consulta(), format='json')
+        self.assertEqual(response.status_code, 404)
+
+    def test_receta_sin_medicamentos_es_rechazada(self):
+        response = self._cliente(self.medico).post(
+            reverse('api:mascota-recetas', args=[self.mascota_a.id]),
+            {'diagnostico': 'Otitis', 'items': [{'medicamento': '  '}]}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_receta_con_items_aparece_en_la_historia(self):
+        client = self._cliente(self.medico)
+        response = client.post(
+            reverse('api:mascota-recetas', args=[self.mascota_a.id]),
+            {'diagnostico': 'Otitis', 'items': [{'medicamento': 'Otomax', 'dosis': '3 gotas'}]}, format='json')
+        self.assertEqual(response.status_code, 201)
+
+        historia = client.get(reverse('api:mascota-historia', args=[self.mascota_a.id]))
+        self.assertEqual(historia.data['recetas'][0]['items'][0]['medicamento'], 'Otomax')
+
+    def test_agenda_filtrada_por_fecha_y_cambio_de_estado(self):
+        client = self._cliente(self.recepcion)
+        from django.utils import timezone
+        hoy = timezone.localtime(self.turno.fecha_hora).date().isoformat()
+
+        agenda = client.get(reverse('api:turno-list'), {'fecha': hoy})
+        self.assertEqual([t['id'] for t in agenda.data['results']], [self.turno.id])
+
+        response = client.post(reverse('api:turno-estado', args=[self.turno.id]), {'estado': 'CANCELADO'})
+        self.assertEqual(response.data['estado'], 'CANCELADO')
+
+        invalido = client.post(reverse('api:turno-estado', args=[self.turno.id]), {'estado': 'VOLANDO'})
+        self.assertEqual(invalido.status_code, 400)
+
+    def test_busqueda_de_mascotas_por_apellido_del_tutor(self):
+        response = self._cliente(self.medico).get(reverse('api:mascota-list'), {'q': 'pere'})
+        self.assertEqual([m['nombre'] for m in response.data['results']], ['Firulais'])
+
+    def test_cerrar_sesion_revoca_el_token(self):
+        client = self._cliente(self.medico)
+        self.assertEqual(client.post(reverse('api:cerrar_sesion')).status_code, 204)
+        self.assertFalse(Token.objects.filter(user=self.medico).exists())
