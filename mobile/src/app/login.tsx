@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,9 +38,7 @@ export default function Login() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.contenedor} keyboardShouldPersistTaps="handled">
           <View style={styles.marca}>
-            <View style={[styles.logo, { backgroundColor: t.primary }]}>
-              <Ionicons name="paw" size={36} color={t.onPrimary} />
-            </View>
+            <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
             <Texto variante="titulo">VeterSystem</Texto>
             <Texto variante="secundario">Ingresá con tu usuario de la clínica</Texto>
           </View>
@@ -88,14 +87,7 @@ export default function Login() {
 const styles = StyleSheet.create({
   contenedor: { flexGrow: 1, justifyContent: 'center', padding: Spacing.xl, gap: Spacing.xl },
   marca: { alignItems: 'center', gap: Spacing.sm },
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.sm,
-  },
+  logo: { width: 80, height: 80, borderRadius: Radius.lg + 4, marginBottom: Spacing.sm },
   error: {
     flexDirection: 'row',
     alignItems: 'center',

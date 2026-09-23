@@ -1,10 +1,16 @@
 /**
- * Cliente HTTP de la API de VeterSystem. La URL del servidor sale de EXPO_PUBLIC_API_URL
- * (ver .env.example); en desarrollo tiene que ser la IP de la PC en la red local, porque
- * "localhost" en el celular es el propio celular.
+ * Cliente HTTP de la API de VeterSystem.
+ *
+ * Las builds instaladas (APK / tiendas) apuntan SIEMPRE a producción. EXPO_PUBLIC_API_URL
+ * (ver .env.example) sólo se usa en desarrollo con Expo Go: así un `eas update` publicado
+ * desde una PC con .env.local de pruebas no puede dejar a los clientes apuntando a una IP local.
  */
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+const PRODUCCION = 'https://vetersystem.com';
+
+export const API_URL = (
+  __DEV__ ? (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000') : PRODUCCION
+).replace(/\/$/, '');
 
 export class ApiError extends Error {
   constructor(

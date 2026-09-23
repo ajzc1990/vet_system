@@ -55,17 +55,34 @@ src/
   lib/                      cliente de API, sesión (token en SecureStore), tipos, fechas
 ```
 
-## Publicar en las tiendas
+## Generar la app instalable (EAS)
 
-La app se compila en la nube con EAS, sin Android Studio ni Mac. Los perfiles de
-[eas.json](eas.json) ya apuntan a `https://vetersystem.com`:
+Las builds instaladas apuntan siempre a `https://vetersystem.com` ([src/lib/api.ts](src/lib/api.ts)).
+`EXPO_PUBLIC_API_URL` solo se usa en desarrollo con Expo Go.
 
 ```bash
-npx eas-cli@latest login
-npx eas-cli@latest build --profile preview --platform android      # APK para instalar directo y probar
+npx eas-cli@latest build --profile preview --platform android      # APK para repartir con un link
 npx eas-cli@latest build --profile production --platform android   # .aab para Google Play
-npx eas-cli@latest submit --platform android
 ```
 
-Antes de compilar, el backend de producción tiene que tener los endpoints de `apps/api/`
-de esta versión (por ejemplo `/api/yo/`). Si no, la app no puede iniciar sesión.
+## Actualizaciones sin reinstalar (EAS Update)
+
+Los cambios que son solo de pantallas o lógica (archivos de `src/`) se publican así, y cada
+celular los descarga solo la próxima vez que abre la app:
+
+```bash
+npx eas-cli@latest update --channel preview --environment preview --message "Qué cambió"
+```
+
+- El canal `preview` llega a los APK generados con `--profile preview`, y `production` a los de Google Play.
+- Si se agrega o cambia una librería con código nativo (`npx expo install ...`), la actualización no les
+  llega a los APK viejos, porque el `runtimeVersion` usa la política `fingerprint`. En ese caso hay que
+  generar un APK nuevo.
+- Antes de publicar, probá los cambios con Expo Go.
+
+## Publicar en Google Play
+
+```bash
+npx eas-cli@latest build --profile production --platform android
+npx eas-cli@latest submit --platform android
+```
