@@ -23,6 +23,8 @@ export default function AppLayout() {
       <Stack.Screen name="internacion/[id]/index" options={{ title: 'Internación' }} />
       <Stack.Screen name="internacion/[id]/evolucion" options={modal('Nuevo control')} />
       <Stack.Screen name="internacion/[id]/alta" options={modal('Cerrar internación')} />
+
+      <Stack.Screen name="solicitudes" options={{ title: 'Solicitudes de turno web' }} />
     </Stack>
   );
 }

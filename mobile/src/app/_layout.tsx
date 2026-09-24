@@ -1,4 +1,5 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -35,6 +36,16 @@ function Navegador() {
   useEffect(() => {
     if (!cargando) SplashScreen.hide();
   }, [cargando]);
+
+  // Tocar una notificación (aun con la app cerrada) abre la pantalla que indica data.url.
+  const respuesta = Notifications.useLastNotificationResponse();
+  const logueado = !!usuario;
+  useEffect(() => {
+    if (!logueado || !respuesta) return;
+    const url = respuesta.notification.request.content.data?.url;
+    if (typeof url === 'string') router.push(url as Href);
+    Notifications.clearLastNotificationResponse();
+  }, [respuesta, logueado]);
 
   if (cargando) return null;
 

@@ -421,3 +421,139 @@ class ApiAppMovilEtapaATests(TestCase):
         with override_settings(IA_RESUMENES_ENABLED=False):
             response = self._cliente(self.medico).post(reverse('api:mascota-resumen-ia', args=[self.mascota_a.id]))
         self.assertEqual(response.status_code, 503)
+
+
+class NotificacionesPushTests(TestCase):
+    """Registro de celulares, envío por Expo (simulado) y avisos automáticos."""
+
+    TOKEN = 'ExponentPushToken[abc123]'
+
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+        self.medico = User.objects.create_user(username="medico", password="testpass123")
+        PerfilUsuario.objects.create(user=self.medico, veterinaria=self.vet_a, rol="VET", is_approved=True)
+        self.recepcion = User.objects.create_user(username="recepcion", password="testpass123")
+        PerfilUsuario.objects.create(user=self.recepcion, veterinaria=self.vet_a, rol="RECEPCION", is_approved=True)
+        self.ajeno = User.objects.create_user(username="ajeno", password="testpass123")
+        PerfilUsuario.objects.create(user=self.ajeno, veterinaria=self.vet_b, rol="ADMIN", is_approved=True)
+
+    def _cliente(self, user):
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Token {Token.objects.get_or_create(user=user)[0].key}')
+        return client
+
+    def _respuesta_expo(self, tickets):
+        from unittest.mock import MagicMock
+        respuesta = MagicMock()
+        respuesta.json.return_value = {'data': tickets}
+        respuesta.raise_for_status.return_value = None
+        return respuesta
+
+    def test_registrar_dispositivo_y_reasignarlo_a_otro_usuario(self):
+        from apps.api.models import DispositivoPush
+        r = self._cliente(self.medico).post(
+            reverse('api:registrar_dispositivo'), {'token': self.TOKEN, 'plataforma': 'android'}, format='json')
+        self.assertEqual(r.status_code, 204)
+        self.assertEqual(DispositivoPush.objects.get(token=self.TOKEN).usuario, self.medico)
+
+        # Mismo celular, ahora inicia sesión otra persona: el token pasa a ser suyo.
+        self._cliente(self.recepcion).post(reverse('api:registrar_dispositivo'), {'token': self.TOKEN}, format='json')
+        self.assertEqual(DispositivoPush.objects.get(token=self.TOKEN).usuario, self.recepcion)
+        self.assertEqual(DispositivoPush.objects.count(), 1)
+
+    def test_token_invalido_es_rechazado(self):
+        r = self._cliente(self.medico).post(reverse('api:registrar_dispositivo'), {'token': 'cualquier-cosa'}, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_cerrar_sesion_desactiva_el_celular(self):
+        from apps.api.models import DispositivoPush
+        DispositivoPush.objects.create(usuario=self.medico, token=self.TOKEN)
+        self._cliente(self.medico).post(reverse('api:cerrar_sesion'), {'token_push': self.TOKEN}, format='json')
+        self.assertFalse(DispositivoPush.objects.get(token=self.TOKEN).activo)
+
+    def test_enviar_push_solo_a_la_clinica_y_desactiva_desinstalados(self):
+        from unittest.mock import patch
+        from apps.api.models import DispositivoPush
+        from apps.api.push import enviar_push, usuarios_de_la_veterinaria
+
+        DispositivoPush.objects.create(usuario=self.medico, token='ExponentPushToken[medico]')
+        DispositivoPush.objects.create(usuario=self.recepcion, token='ExponentPushToken[recepcion]')
+        DispositivoPush.objects.create(usuario=self.ajeno, token='ExponentPushToken[ajeno]')
+
+        tickets = [
+            {'status': 'ok', 'id': '1'},
+            {'status': 'error', 'details': {'error': 'DeviceNotRegistered'}},
+        ]
+        with patch('apps.api.push.requests.post', return_value=self._respuesta_expo(tickets)) as post:
+            aceptados = enviar_push(usuarios_de_la_veterinaria(self.vet_a), 'Hola', 'Prueba', {'url': '/'})
+
+        self.assertEqual(aceptados, 1)
+        destinos = sorted(m['to'] for m in post.call_args.kwargs['json'])
+        self.assertEqual(destinos, ['ExponentPushToken[medico]', 'ExponentPushToken[recepcion]'])
+        # El que Expo informó como desinstalado deja de recibir.
+        desactivados = DispositivoPush.objects.filter(activo=False).count()
+        self.assertEqual(desactivados, 1)
+
+    def test_falla_de_red_no_rompe_nada(self):
+        import requests
+        from unittest.mock import patch
+        from apps.api.models import DispositivoPush
+        from apps.api.push import enviar_push, usuarios_de_la_veterinaria
+
+        DispositivoPush.objects.create(usuario=self.medico, token=self.TOKEN)
+        with patch('apps.api.push.requests.post', side_effect=requests.ConnectionError('sin red')):
+            self.assertEqual(enviar_push(usuarios_de_la_veterinaria(self.vet_a), 'Hola', 'Prueba'), 0)
+        self.assertTrue(DispositivoPush.objects.get(token=self.TOKEN).activo)
+
+    def test_nueva_solicitud_de_turno_avisa_al_staff_de_esa_clinica(self):
+        from unittest.mock import patch
+        from apps.turnos.models import SolicitudTurnoWeb
+        with patch('apps.api.signals.enviar_push_en_segundo_plano') as avisar:
+            SolicitudTurnoWeb.objects.create(
+                veterinaria=self.vet_a, nombre_tutor='Juan Perez', telefono='381', nombre_mascota='Firulais',
+                motivo='Vacuna', fecha_deseada='2026-10-02',
+            )
+        usuarios = avisar.call_args.args[0]
+        self.assertEqual(set(usuarios), {self.medico, self.recepcion})
+        self.assertIn('Firulais', avisar.call_args.kwargs['cuerpo'])
+        self.assertIn('02/10', avisar.call_args.kwargs['cuerpo'])
+
+    def test_resumen_diario(self):
+        from unittest.mock import patch
+        from django.core.management import call_command
+        from django.utils import timezone
+        from apps.api.models import DispositivoPush
+        from apps.turnos.models import Turno
+
+        cliente = Cliente.objects.create(veterinaria=self.vet_a, nombre="Juan", apellido="Perez", dni="1", telefono="1")
+        mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais")
+        Turno.objects.create(veterinaria=self.vet_a, mascota=mascota, fecha_hora=timezone.now())
+        DispositivoPush.objects.create(usuario=self.medico, token=self.TOKEN)
+
+        with patch('apps.api.push.requests.post',
+                   return_value=self._respuesta_expo([{'status': 'ok', 'id': '1'}])) as post:
+            call_command('notificar_resumen_diario', stdout=open('NUL' if __import__('os').name == 'nt' else '/dev/null', 'w'))
+
+        mensaje = post.call_args.kwargs['json'][0]
+        self.assertIn('1 turno hoy', mensaje['body'])
+        self.assertIn('Clinica A', mensaje['title'])
+
+    def test_solicitudes_pendientes_y_cambio_de_estado(self):
+        from apps.turnos.models import SolicitudTurnoWeb
+        from unittest.mock import patch
+        with patch('apps.api.signals.enviar_push_en_segundo_plano'):
+            propia = SolicitudTurnoWeb.objects.create(
+                veterinaria=self.vet_a, nombre_tutor='Juan', telefono='381', nombre_mascota='Firulais',
+                motivo='x', fecha_deseada='2026-10-02')
+            SolicitudTurnoWeb.objects.create(
+                veterinaria=self.vet_b, nombre_tutor='Ana', telefono='1', nombre_mascota='Michi',
+                motivo='x', fecha_deseada='2026-10-02')
+
+        client = self._cliente(self.recepcion)
+        lista = client.get(reverse('api:solicitud-list'), {'pendientes': 1})
+        self.assertEqual([s['id'] for s in lista.data['results']], [propia.id])
+
+        r = client.post(reverse('api:solicitud-estado', args=[propia.id]), {'estado': 'CONTACTADO'}, format='json')
+        self.assertEqual(r.data['estado'], 'CONTACTADO')
+        self.assertEqual(client.get(reverse('api:solicitud-list'), {'pendientes': 1}).data['count'], 0)

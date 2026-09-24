@@ -14,14 +14,15 @@ from apps.historia_clinica import views as vistas_web
 from apps.historia_clinica.ia import ResumenIADeshabilitado, ResumenIAError, generar_resumen_clinico
 from apps.historia_clinica.models import Internacion, Receta
 from apps.inventario.models import Producto
-from apps.turnos.models import Turno, Veterinario
+from apps.turnos.models import SolicitudTurnoWeb, Turno, Veterinario
 from apps.usuarios.audit import registrar_auditoria
 from apps.usuarios.decorators import es_veterinario_o_admin
 from apps.ventas.models import Venta
 
+from .models import DispositivoPush
 from .permissions import EsUsuarioAprobadoDeLaVeterinaria, EsVeterinarioOAdmin
 from .serializers import (
-    AltaInternacionSerializer, ClienteSerializer, ConsultaMedicaSerializer, EstudioMedicoSerializer,
+    AltaInternacionSerializer, ClienteSerializer, DispositivoPushSerializer, SolicitudTurnoWebSerializer, ConsultaMedicaSerializer, EstudioMedicoSerializer,
     EvolucionInternacionSerializer, InternacionResumenSerializer, InternacionSerializer,
     MascotaDetalleSerializer, ProductoSerializer, RecetaSerializer, RegistroDesparasitacionSerializer,
     RegistroVacunaSerializer, TurnoSerializer, VentaSerializer, VeterinarioSerializer,
@@ -390,6 +391,31 @@ class TurnoViewSet(TenantEditableViewSet):
         return Response(TurnoSerializer(turno).data)
 
 
+class SolicitudTurnoWebViewSet(TenantReadOnlyViewSet):
+    """Pedidos de turno hechos por clientes desde el Portal. ?pendientes=1 para los sin revisar."""
+
+    queryset = SolicitudTurnoWeb.objects.all().order_by('-creado_el')
+    serializer_class = SolicitudTurnoWebSerializer
+    tenant_field = 'veterinaria'
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.request.query_params.get('pendientes'):
+            qs = qs.filter(estado='PENDIENTE')
+        return qs
+
+    @action(detail=True, methods=['post'])
+    def estado(self, request, pk=None):
+        """Igual que turnos.views.actualizar_estado_solicitud: contactado o descartado."""
+        solicitud = self.get_object()
+        nuevo_estado = request.data.get('estado')
+        if nuevo_estado not in dict(SolicitudTurnoWeb.ESTADOS):
+            raise ValidationError({'estado': 'El estado especificado no es válido.'})
+        solicitud.estado = nuevo_estado
+        solicitud.save(update_fields=['estado'])
+        return Response(SolicitudTurnoWebSerializer(solicitud).data)
+
+
 class VentaViewSet(TenantReadOnlyViewSet):
     queryset = Venta.objects.select_related('cliente').prefetch_related('detalles__producto').all().order_by('-fecha_hora')
     serializer_class = VentaSerializer
@@ -419,7 +445,30 @@ def yo(request):
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([EsUsuarioAprobadoDeLaVeterinaria])
+def registrar_dispositivo(request):
+    """La app avisa su token de Expo al iniciar sesión. Si el celular ya estaba registrado a
+    nombre de otro usuario (equipo compartido), pasa a ser del que inició sesión ahora."""
+    serializer = DispositivoPushSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    DispositivoPush.objects.update_or_create(
+        token=serializer.validated_data['token'],
+        defaults={
+            'usuario': request.user,
+            'plataforma': serializer.validated_data['plataforma'],
+            'activo': True,
+        },
+    )
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([EsUsuarioAprobadoDeLaVeterinaria])
 def cerrar_sesion(request):
-    """Revoca el token del dispositivo: al cerrar sesión, ese celular pierde el acceso."""
+    """Revoca el token del dispositivo: al cerrar sesión, ese celular pierde el acceso y deja
+    de recibir notificaciones (si la app manda su token de push)."""
+    token_push = request.data.get('token_push')
+    if token_push:
+        DispositivoPush.objects.filter(token=token_push, usuario=request.user).update(activo=False)
     request.auth.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)

@@ -16,6 +16,10 @@ Usa la API REST de Django en `apps/api/` con login por token.
 - **Acciones médicas:** consulta, vacuna, receta, estudio con la cámara, desparasitación e internación.
   Solo las ven los roles VET y ADMIN, igual que en la web.
 - **Internados:** sala de internación, controles (evoluciones con signos vitales), alta o cierre, e informe en PDF.
+- **Notificaciones push:** una por cada solicitud de turno web nueva, y un resumen diario (turnos de hoy,
+  internados, solicitudes pendientes y vacunas que vencen en la semana).
+- **Más:** solicitudes de turno web (contactar por WhatsApp, marcar como contactada o descartada) y accesos a
+  la web para lo que es de escritorio: inventario, ventas y caja, compras, recordatorios y configuración.
 
 ## Correr en desarrollo
 
@@ -85,6 +89,15 @@ npx eas-cli@latest update --channel preview --environment preview --message "Qu�
   llega a los APK viejos, porque el `runtimeVersion` usa la política `fingerprint`. En ese caso hay que
   generar un APK nuevo.
 - Antes de publicar, probá los cambios con Expo Go.
+
+## Notificaciones push
+
+- **Android:** necesita Firebase. Hay que tener `google-services.json` en esta carpeta, declarado en `app.json`
+  (`android.googleServicesFile`), y la clave de la cuenta de servicio (FCM V1) subida con
+  `npx eas-cli@latest credentials`. Esa clave **no** se commitea (ver `.gitignore`).
+- **Expo Go en Android no recibe push:** para probar notificaciones hace falta el APK.
+- **Resumen diario:** va por cron en el VPS, a las 8:
+  `0 8 * * * cd /var/www/vet_system_new && docker compose exec -T web python manage.py notificar_resumen_diario >> /var/log/vetersystem_push.log 2>&1`
 
 ## Publicar en Google Play
 

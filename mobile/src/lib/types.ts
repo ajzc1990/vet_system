@@ -184,3 +184,19 @@ export type Historia = {
   internaciones_activas: Internacion[];
   resumen_ia: { texto: string; generado_el: string } | null;
 };
+
+export type SolicitudTurno = {
+  id: number;
+  nombre_tutor: string;
+  telefono: string;
+  email: string | null;
+  nombre_mascota: string;
+  especie: string | null;
+  motivo: string;
+  fecha_deseada: string;
+  franja_preferida: string;
+  franja_preferida_display: string;
+  estado: 'PENDIENTE' | 'CONTACTADO' | 'DESCARTADO';
+  estado_display: string;
+  creado_el: string;
+};

@@ -41,3 +41,7 @@ example
 # generated native folders
 /ios
 /android
+
+# Clave privada de Firebase (cuenta de servicio para FCM): se sube a EAS, nunca a git.
+*firebase-adminsdk*.json
+service-account*.json

@@ -326,3 +326,31 @@ class AltaInternacionSerializer(serializers.Serializer):
     """Mismas reglas que AltaInternacionForm: estado de cierre y epicrisis obligatoria."""
     estado = serializers.ChoiceField(choices=[c for c in Internacion.ESTADOS if c[0] != 'INTERNADO'])
     resumen_alta = serializers.CharField()
+
+
+# ==============================================================================
+# APP MÓVIL, FASE 2: notificaciones push y solicitudes de turno web
+# ==============================================================================
+
+from apps.turnos.models import SolicitudTurnoWeb
+
+from .models import DispositivoPush
+
+
+class DispositivoPushSerializer(serializers.Serializer):
+    token = serializers.RegexField(r'^(ExponentPushToken|ExpoPushToken)\[.+\]$', max_length=255)
+    plataforma = serializers.ChoiceField(choices=['android', 'ios'], required=False, default='')
+
+
+class SolicitudTurnoWebSerializer(serializers.ModelSerializer):
+    franja_preferida_display = serializers.CharField(source='get_franja_preferida_display', read_only=True)
+    estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+
+    class Meta:
+        model = SolicitudTurnoWeb
+        fields = [
+            'id', 'nombre_tutor', 'telefono', 'email', 'nombre_mascota', 'especie', 'motivo',
+            'fecha_deseada', 'franja_preferida', 'franja_preferida_display', 'estado', 'estado_display',
+            'creado_el',
+        ]
+        read_only_fields = fields

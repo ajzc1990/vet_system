@@ -3,6 +3,7 @@ import { createContext, use, useCallback, useEffect, useState, type PropsWithChi
 import { Platform } from 'react-native';
 
 import { api, ApiError, configurarSesion } from '@/lib/api';
+import { registrarNotificaciones, tokenPush, type EstadoNotificaciones } from '@/lib/notificaciones';
 import type { Usuario } from '@/lib/types';
 
 const CLAVE_TOKEN = 'vetersystem.token';
@@ -20,6 +21,7 @@ const almacen = {
 type Sesion = {
   usuario: Usuario | null;
   cargando: boolean;
+  notificaciones: EstadoNotificaciones | null;
   iniciarSesion: (username: string, password: string) => Promise<void>;
   cerrarSesion: () => Promise<void>;
 };
@@ -35,6 +37,19 @@ export function useSesion() {
 export function SesionProvider({ children }: PropsWithChildren) {
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [notificaciones, setNotificaciones] = useState<EstadoNotificaciones | null>(null);
+
+  // Cada vez que hay un usuario logueado (login o app reabierta) se registra el celular
+  // para recibir avisos; el servidor lo asocia a ese usuario.
+  const username = usuario?.username;
+  useEffect(() => {
+    if (!username) return;
+    let vigente = true;
+    registrarNotificaciones().then((estado) => vigente && setNotificaciones(estado));
+    return () => {
+      vigente = false;
+    };
+  }, [username]);
 
   const olvidarSesion = useCallback(async () => {
     configurarSesion(null);
@@ -78,7 +93,7 @@ export function SesionProvider({ children }: PropsWithChildren) {
 
   const cerrarSesion = useCallback(async () => {
     try {
-      await api('logout/', { method: 'POST' });
+      await api('logout/', { method: 'POST', body: { token_push: tokenPush() } });
     } catch {
       // Si el servidor no responde igual se cierra la sesión en el dispositivo.
     }
@@ -86,6 +101,6 @@ export function SesionProvider({ children }: PropsWithChildren) {
   }, [olvidarSesion]);
 
   return (
-    <SesionContext value={{ usuario, cargando, iniciarSesion, cerrarSesion }}>{children}</SesionContext>
+    <SesionContext value={{ usuario, cargando, notificaciones, iniciarSesion, cerrarSesion }}>{children}</SesionContext>
   );
 }

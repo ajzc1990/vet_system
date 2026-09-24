@@ -30,10 +30,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="perfil"
+        name="mas"
         options={{
-          title: 'Mi cuenta',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" size={size} color={color} />,
+          title: 'Más',
+          tabBarIcon: ({ color, size }) => <Ionicons name="menu" size={size} color={color} />,
         }}
       />
     </Tabs>
