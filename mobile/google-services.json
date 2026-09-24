@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "782237857436",
+    "project_id": "vetersystem",
+    "storage_bucket": "vetersystem.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:782237857436:android:fdb667b752d57679559f59",
+        "android_client_info": {
+          "package_name": "com.vetersystem.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_08Fhfw7YRda3gSj9p8NVB-O134NNI_Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

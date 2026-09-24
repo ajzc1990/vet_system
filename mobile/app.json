@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.vetersystem.app"
+      "package": "com.vetersystem.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
