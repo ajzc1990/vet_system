@@ -63,9 +63,17 @@ def enviar_push(usuarios, titulo, cuerpo, data=None):
         for dispositivo, ticket in zip(lote, tickets):
             if ticket.get('status') == 'ok':
                 aceptados += 1
-            elif (ticket.get('details') or {}).get('error') == 'DeviceNotRegistered':
+                continue
+            error = (ticket.get('details') or {}).get('error')
+            if error == 'DeviceNotRegistered':
                 # La app se desinstaló o el token venció: dejar de mandarle.
                 DispositivoPush.objects.filter(pk=dispositivo.pk).update(activo=False)
+            else:
+                # Ej. InvalidCredentials si falta o venció la clave de Firebase en EAS.
+                logger.warning(
+                    "Expo rechazó un push para %s: %s (%s)",
+                    dispositivo.usuario, ticket.get('message'), error,
+                )
     return aceptados
 
 
