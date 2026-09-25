@@ -1,11 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState, type ReactNode } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Boton, Fila, Insignia, Seccion, Tarjeta, Texto, type IconName } from '@/components/ui';
+import { VersionApp } from '@/components/version-app';
 import { Spacing } from '@/constants/theme';
 import { API_URL } from '@/lib/api';
 import { useSesion } from '@/lib/session';
@@ -106,12 +106,15 @@ export default function Mas() {
         </Fila>
       )}
 
+      <Seccion titulo="Versión de la app">
+        <VersionApp />
+      </Seccion>
+
       <Boton titulo="Cerrar sesión" icono="log-out-outline" variante="peligro" cargando={saliendo} onPress={confirmarSalida} />
 
-      <Texto variante="secundario" style={{ textAlign: 'center' }}>
-        VeterSystem móvil v{Constants.expoConfig?.version}
-        {__DEV__ ? `\n${API_URL}` : ''}
-      </Texto>
+      {__DEV__ && (
+        <Texto variante="secundario" style={{ textAlign: 'center' }}>{API_URL}</Texto>
+      )}
     </ScrollView>
   );
 }
