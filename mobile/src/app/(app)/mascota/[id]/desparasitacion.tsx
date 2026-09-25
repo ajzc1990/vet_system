@@ -1,12 +1,14 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { SelectorFechaHora } from '@/components/fecha-hora';
 import { Formulario, useEnvio } from '@/components/formulario';
-import { Campo, Chips, Texto } from '@/components/ui';
+import { Campo, Chips, EstadoCarga, Texto } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { aISO, sumarDias } from '@/lib/fechas';
+import { api } from '@/lib/api';
+import { aISO, desdeISO, sumarDias } from '@/lib/fechas';
+import type { Desparasitacion } from '@/lib/types';
 
 const TIPOS = [
   { valor: 'INTERNA', etiqueta: 'Interna' },
@@ -20,14 +22,29 @@ const PROXIMA = [
   { valor: 180, etiqueta: '6 meses' },
 ];
 
-export default function RegistrarDesparasitacion() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { enviar, enviando, errores } = useEnvio(`mascotas/${id}/desparasitaciones/`);
+/** Registrar una desparasitación o corregir una existente con ?editar=ID. */
+export default function FormularioDesparasitacion() {
+  const { id, editar } = useLocalSearchParams<{ id: string; editar?: string }>();
+  const { enviar, enviando, errores } = useEnvio(editar ? `desparasitaciones/${editar}/` : `mascotas/${id}/desparasitaciones/`);
+  const [cargando, setCargando] = useState(!!editar);
   const [tipo, setTipo] = useState('INTERNA');
   const [producto, setProducto] = useState('');
   const [dosis, setDosis] = useState('');
   const [aplicacion, setAplicacion] = useState<Date | null>(new Date());
   const [proxima, setProxima] = useState<Date | null>(sumarDias(new Date(), 90));
+
+  useEffect(() => {
+    if (!editar) return;
+    api<Desparasitacion>(`desparasitaciones/${editar}/`)
+      .then((d) => {
+        setTipo(d.tipo);
+        setProducto(d.producto);
+        setDosis(d.dosis ?? '');
+        setAplicacion(desdeISO(d.fecha_aplicacion));
+        setProxima(d.fecha_proxima_dosis ? desdeISO(d.fecha_proxima_dosis) : null);
+      })
+      .finally(() => setCargando(false));
+  }, [editar]);
 
   function guardar() {
     enviar(
@@ -38,12 +55,16 @@ export default function RegistrarDesparasitacion() {
         fecha_aplicacion: aplicacion ? aISO(aplicacion) : undefined,
         fecha_proxima_dosis: proxima ? aISO(proxima) : null,
       },
-      'Desparasitación registrada',
+      editar ? 'Desparasitación corregida' : 'Desparasitación registrada',
+      { method: editar ? 'PATCH' : 'POST' },
     );
   }
 
+  if (cargando) return <EstadoCarga cargando error={null} />;
+
   return (
-    <Formulario onGuardar={guardar} enviando={enviando} tituloBoton="Registrar">
+    <Formulario onGuardar={guardar} enviando={enviando} tituloBoton={editar ? 'Guardar cambios' : 'Registrar'}>
+      {editar && <Stack.Screen options={{ title: 'Editar desparasitación' }} />}
       <View style={{ gap: Spacing.xs }}>
         <Texto variante="etiqueta">Tipo</Texto>
         <Chips opciones={TIPOS} valor={tipo} onCambiar={setTipo} />

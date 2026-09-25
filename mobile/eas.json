@@ -9,8 +9,7 @@
       "android": {
         "buildType": "apk"
       },
-      "channel": "preview",
-      "autoIncrement": true
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,

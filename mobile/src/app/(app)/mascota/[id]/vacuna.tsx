@@ -1,85 +1,90 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 
+import { SelectorFechaHora } from '@/components/fecha-hora';
 import { Formulario, useEnvio } from '@/components/formulario';
-import { Campo, Seccion } from '@/components/ui';
-import { Radius, Spacing } from '@/constants/theme';
+import { Campo, Chips, EstadoCarga, Seccion } from '@/components/ui';
+import { Spacing } from '@/constants/theme';
+import { api } from '@/lib/api';
 import { aISO, desdeISO, sumarDias } from '@/lib/fechas';
-import { useTheme } from '@/lib/use-theme';
+import type { Vacuna } from '@/lib/types';
 
-// Esquemas habituales de revacunación, para no tener que tipear la fecha en el celular.
+// Esquemas habituales de revacunación, para no tener que buscar la fecha en el calendario.
 const ATAJOS = [
-  { etiqueta: 'Sin próxima', dias: null },
-  { etiqueta: '21 días', dias: 21 },
-  { etiqueta: '30 días', dias: 30 },
-  { etiqueta: '1 año', dias: 365 },
+  { valor: 0, etiqueta: 'Sin próxima' },
+  { valor: 21, etiqueta: '21 días' },
+  { valor: 30, etiqueta: '30 días' },
+  { valor: 365, etiqueta: '1 año' },
 ];
 
-const SUGERENCIAS = ['Quíntuple', 'Séxtuple', 'Antirrábica', 'Triple felina', 'Tos de las perreras'];
+const SUGERENCIAS = ['Quíntuple', 'Séxtuple', 'Antirrábica', 'Triple felina', 'Tos de las perreras'].map((s) => ({
+  valor: s,
+  etiqueta: s,
+}));
 
-export default function RegistrarVacuna() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const { enviar, enviando, errores } = useEnvio(`mascotas/${id}/vacunas/`);
+/** Registrar una vacuna o corregir una existente con ?editar=ID_VACUNA. */
+export default function FormularioVacuna() {
+  const { id, editar } = useLocalSearchParams<{ id: string; editar?: string }>();
+  const { enviar, enviando, errores } = useEnvio(editar ? `vacunas/${editar}/` : `mascotas/${id}/vacunas/`);
+  const [cargando, setCargando] = useState(!!editar);
   const [nombre, setNombre] = useState('');
   const [lote, setLote] = useState('');
-  const [aplicacion, setAplicacion] = useState(aISO(new Date()));
-  const [proxima, setProxima] = useState(aISO(sumarDias(new Date(), 365)));
+  const [aplicacion, setAplicacion] = useState<Date | null>(new Date());
+  const [proxima, setProxima] = useState<Date | null>(sumarDias(new Date(), 365));
   const [observaciones, setObservaciones] = useState('');
 
-  function aplicarAtajo(dias: number | null) {
-    if (dias === null) return setProxima('');
-    const base = /^\d{4}-\d{2}-\d{2}$/.test(aplicacion) ? desdeISO(aplicacion) : new Date();
-    setProxima(aISO(sumarDias(base, dias)));
-  }
+  useEffect(() => {
+    if (!editar) return;
+    api<Vacuna>(`vacunas/${editar}/`)
+      .then((v) => {
+        setNombre(v.nombre_vacuna);
+        setLote(v.lote ?? '');
+        setAplicacion(desdeISO(v.fecha_aplicacion));
+        setProxima(v.fecha_proxima_dosis ? desdeISO(v.fecha_proxima_dosis) : null);
+        setObservaciones(v.observaciones ?? '');
+      })
+      .finally(() => setCargando(false));
+  }, [editar]);
 
   function guardar() {
     enviar(
       {
         nombre_vacuna: nombre.trim(),
         lote: lote.trim() || null,
-        fecha_aplicacion: aplicacion,
-        fecha_proxima_dosis: proxima || null,
+        fecha_aplicacion: aplicacion ? aISO(aplicacion) : undefined,
+        fecha_proxima_dosis: proxima ? aISO(proxima) : null,
         observaciones: observaciones.trim() || null,
       },
-      'Vacuna registrada',
+      editar ? 'Vacuna corregida' : 'Vacuna registrada',
+      { method: editar ? 'PATCH' : 'POST' },
     );
   }
 
+  if (cargando) return <EstadoCarga cargando error={null} />;
+
   return (
-    <Formulario onGuardar={guardar} enviando={enviando} tituloBoton="Registrar vacuna">
+    <Formulario onGuardar={guardar} enviando={enviando} tituloBoton={editar ? 'Guardar cambios' : 'Registrar vacuna'}>
+      {editar && <Stack.Screen options={{ title: 'Editar vacuna' }} />}
+
       <Campo etiqueta="Vacuna *" value={nombre} onChangeText={setNombre} error={errores.nombre_vacuna} />
-      <View style={styles.chips}>
-        {SUGERENCIAS.map((s) => (
-          <Chip key={s} texto={s} activo={nombre === s} onPress={() => setNombre(s)} />
-        ))}
-      </View>
+      <Chips opciones={SUGERENCIAS} valor={nombre} onCambiar={setNombre} />
 
       <Campo etiqueta="N° de lote" value={lote} onChangeText={setLote} autoCapitalize="characters" error={errores.lote} />
 
-      <Campo
-        etiqueta="Fecha de aplicación (AAAA-MM-DD)"
-        value={aplicacion}
-        onChangeText={setAplicacion}
-        keyboardType="numbers-and-punctuation"
-        error={errores.fecha_aplicacion}
-      />
+      <SelectorFechaHora etiqueta="Fecha de aplicación" valor={aplicacion} onCambiar={setAplicacion}
+        error={errores.fecha_aplicacion} />
 
       <Seccion titulo="Próxima dosis">
-        <View style={styles.chips}>
-          {ATAJOS.map((a) => (
-            <Chip key={a.etiqueta} texto={a.etiqueta} onPress={() => aplicarAtajo(a.dias)}
-              activo={a.dias === null ? proxima === '' : false} />
-          ))}
+        <View style={{ gap: Spacing.sm }}>
+          <Chips
+            opciones={ATAJOS}
+            valor={null}
+            onCambiar={(dias) => setProxima(dias ? sumarDias(aplicacion ?? new Date(), dias) : null)}
+          />
+          <SelectorFechaHora etiqueta="Fecha" valor={proxima} onCambiar={setProxima} opcional
+            error={errores.fecha_proxima_dosis} />
         </View>
-        <Campo
-          etiqueta="Fecha (AAAA-MM-DD)"
-          value={proxima}
-          onChangeText={setProxima}
-          placeholder="Sin revacunación"
-          keyboardType="numbers-and-punctuation"
-          error={errores.fecha_proxima_dosis}
-        />
       </Seccion>
 
       <Campo etiqueta="Observaciones" value={observaciones} onChangeText={setObservaciones}
@@ -87,17 +92,3 @@ export default function RegistrarVacuna() {
     </Formulario>
   );
 }
-
-function Chip({ texto, activo, onPress }: { texto: string; activo: boolean; onPress: () => void }) {
-  const t = useTheme();
-  return (
-    <Pressable onPress={onPress} style={[styles.chip, { backgroundColor: activo ? t.primary : t.primaryLight }]}>
-      <Text style={{ color: activo ? t.onPrimary : t.primaryDark, fontWeight: '600' }}>{texto}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  chip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: Radius.lg },
-});

@@ -12,7 +12,9 @@ from rest_framework.response import Response
 from apps.clientes.models import Cliente, Mascota
 from apps.historia_clinica import views as vistas_web
 from apps.historia_clinica.ia import ResumenIADeshabilitado, ResumenIAError, generar_resumen_clinico
-from apps.historia_clinica.models import Internacion, Receta
+from apps.historia_clinica.models import (
+    ConsultaMedica, Internacion, Receta, RegistroDesparasitacion, RegistroVacuna,
+)
 from apps.inventario.models import Producto
 from apps.turnos.models import SolicitudTurnoWeb, Turno, Veterinario
 from apps.usuarios.audit import registrar_auditoria
@@ -22,7 +24,7 @@ from apps.ventas.models import Venta
 from .models import DispositivoPush
 from .permissions import EsUsuarioAprobadoDeLaVeterinaria, EsVeterinarioOAdmin
 from .serializers import (
-    AltaInternacionSerializer, ClienteSerializer, DispositivoPushSerializer, SolicitudTurnoWebSerializer, ConsultaMedicaSerializer, EstudioMedicoSerializer,
+    AltaInternacionSerializer, ClienteSerializer, ConsultaMedicaEdicionSerializer, DispositivoPushSerializer, SolicitudTurnoWebSerializer, ConsultaMedicaSerializer, EstudioMedicoSerializer,
     EvolucionInternacionSerializer, InternacionResumenSerializer, InternacionSerializer,
     MascotaDetalleSerializer, ProductoSerializer, RecetaSerializer, RegistroDesparasitacionSerializer,
     RegistroVacunaSerializer, TurnoSerializer, VentaSerializer, VeterinarioSerializer,
@@ -341,6 +343,44 @@ class RecetaViewSet(TenantReadOnlyViewSet):
     def pdf(self, request, pk=None):
         receta = self.get_object()
         return _pdf_de_la_web(request, vistas_web.descargar_receta_digital_pdf, receta_id=receta.id)
+
+
+class RegistroClinicoEditableViewSet(mixins.UpdateModelMixin, TenantReadOnlyViewSet):
+    """Ver y corregir (PATCH) un registro clínico ya cargado. Igual que la web, sólo VET/ADMIN
+    pueden modificar la historia clínica; no se expone borrado."""
+
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_permissions(self):
+        if self.request.method == 'PATCH':
+            return [EsUsuarioAprobadoDeLaVeterinaria(), EsVeterinarioOAdmin()]
+        return super().get_permissions()
+
+    def perform_update(self, serializer):
+        registro = serializer.save()
+        registrar_auditoria(
+            self.request, 'EDITAR', modelo=registro.__class__.__name__, objeto_id=registro.pk,
+            descripcion=f"Edición de {registro._meta.verbose_name.lower()} de {registro.mascota.nombre} (app móvil)",
+            veterinaria=registro.mascota.cliente.veterinaria,
+        )
+
+
+class ConsultaViewSet(RegistroClinicoEditableViewSet):
+    queryset = ConsultaMedica.objects.select_related('mascota__cliente', 'veterinario')
+    serializer_class = ConsultaMedicaEdicionSerializer
+    tenant_field = 'mascota__cliente__veterinaria'
+
+
+class VacunaViewSet(RegistroClinicoEditableViewSet):
+    queryset = RegistroVacuna.objects.select_related('mascota__cliente', 'veterinario')
+    serializer_class = RegistroVacunaSerializer
+    tenant_field = 'mascota__cliente__veterinaria'
+
+
+class DesparasitacionViewSet(RegistroClinicoEditableViewSet):
+    queryset = RegistroDesparasitacion.objects.select_related('mascota__cliente')
+    serializer_class = RegistroDesparasitacionSerializer
+    tenant_field = 'mascota__cliente__veterinaria'
 
 
 class ProductoViewSet(TenantReadOnlyViewSet):

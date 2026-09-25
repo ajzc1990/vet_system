@@ -557,3 +557,85 @@ class NotificacionesPushTests(TestCase):
         r = client.post(reverse('api:solicitud-estado', args=[propia.id]), {'estado': 'CONTACTADO'}, format='json')
         self.assertEqual(r.data['estado'], 'CONTACTADO')
         self.assertEqual(client.get(reverse('api:solicitud-list'), {'pendientes': 1}).data['count'], 0)
+
+
+class EdicionRegistrosClinicosTests(TestCase):
+    """Corregir consultas, vacunas y desparasitaciones desde la app."""
+
+    def setUp(self):
+        from django.utils import timezone
+        from apps.historia_clinica.models import ConsultaMedica, RegistroDesparasitacion, RegistroVacuna
+        from apps.turnos.models import Turno
+
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+        self.medico = User.objects.create_user(username="medico", password="testpass123")
+        PerfilUsuario.objects.create(user=self.medico, veterinaria=self.vet_a, rol="VET", is_approved=True)
+        self.recepcion = User.objects.create_user(username="recepcion", password="testpass123")
+        PerfilUsuario.objects.create(user=self.recepcion, veterinaria=self.vet_a, rol="RECEPCION", is_approved=True)
+
+        cliente_a = Cliente.objects.create(veterinaria=self.vet_a, nombre="Juan", apellido="Perez", dni="1", telefono="1")
+        cliente_b = Cliente.objects.create(veterinaria=self.vet_b, nombre="Ana", apellido="Gomez", dni="2", telefono="2")
+        self.mascota_a = Mascota.objects.create(cliente=cliente_a, nombre="Firulais")
+        mascota_b = Mascota.objects.create(cliente=cliente_b, nombre="Michi")
+
+        self.turno = Turno.objects.create(veterinaria=self.vet_a, mascota=self.mascota_a, fecha_hora=timezone.now())
+        self.consulta = ConsultaMedica.objects.create(
+            mascota=self.mascota_a, turno=self.turno, motivo_consulta='Vómitos', diagnostico='Gastritis', tratamiento='Dieta')
+        self.consulta_ajena = ConsultaMedica.objects.create(
+            mascota=mascota_b, motivo_consulta='x', diagnostico='x', tratamiento='x')
+        self.vacuna = RegistroVacuna.objects.create(mascota=self.mascota_a, nombre_vacuna='Quintuple',
+                                                    fecha_aplicacion='2026-09-01')
+        self.desparasitacion = RegistroDesparasitacion.objects.create(
+            mascota=self.mascota_a, producto='Total Full', fecha_aplicacion='2026-09-01')
+
+    def _cliente(self, user):
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Token {Token.objects.get_or_create(user=user)[0].key}')
+        return client
+
+    def test_veterinario_corrige_una_consulta(self):
+        r = self._cliente(self.medico).patch(
+            reverse('api:consulta-detail', args=[self.consulta.id]),
+            {'diagnostico': 'Gastroenteritis', 'temperatura_c': '39.2'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.consulta.refresh_from_db()
+        self.assertEqual(self.consulta.diagnostico, 'Gastroenteritis')
+        self.assertEqual(self.consulta.motivo_consulta, 'Vómitos')  # PATCH parcial: lo demás queda
+
+    def test_no_se_puede_cambiar_el_turno_de_una_consulta(self):
+        from django.utils import timezone
+        from apps.turnos.models import Turno
+        otro = Turno.objects.create(veterinaria=self.vet_a, mascota=self.mascota_a, fecha_hora=timezone.now())
+        self._cliente(self.medico).patch(
+            reverse('api:consulta-detail', args=[self.consulta.id]), {'turno': otro.id}, format='json')
+        self.consulta.refresh_from_db()
+        self.assertEqual(self.consulta.turno_id, self.turno.id)
+
+    def test_recepcion_puede_ver_pero_no_editar(self):
+        client = self._cliente(self.recepcion)
+        self.assertEqual(client.get(reverse('api:consulta-detail', args=[self.consulta.id])).status_code, 200)
+        r = client.patch(reverse('api:consulta-detail', args=[self.consulta.id]), {'diagnostico': 'x'}, format='json')
+        self.assertEqual(r.status_code, 403)
+
+    def test_no_se_puede_editar_la_consulta_de_otra_clinica(self):
+        r = self._cliente(self.medico).patch(
+            reverse('api:consulta-detail', args=[self.consulta_ajena.id]), {'diagnostico': 'hack'}, format='json')
+        self.assertEqual(r.status_code, 404)
+
+    def test_corregir_vacuna_y_desparasitacion(self):
+        client = self._cliente(self.medico)
+        r = client.patch(reverse('api:vacuna-detail', args=[self.vacuna.id]),
+                         {'lote': 'L-123', 'fecha_proxima_dosis': '2027-09-01'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+        self.vacuna.refresh_from_db()
+        self.assertEqual(self.vacuna.lote, 'L-123')
+        self.assertEqual(str(self.vacuna.fecha_aplicacion), '2026-09-01')  # no se pisó con "hoy"
+
+        r = client.patch(reverse('api:desparasitacion-detail', args=[self.desparasitacion.id]),
+                         {'dosis': '1 comprimido'}, format='json')
+        self.assertEqual(r.status_code, 200, r.data)
+
+    def test_no_se_expone_borrado(self):
+        r = self._cliente(self.medico).delete(reverse('api:vacuna-detail', args=[self.vacuna.id]))
+        self.assertEqual(r.status_code, 405)

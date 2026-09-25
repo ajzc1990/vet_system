@@ -193,7 +193,10 @@ export default function FichaPaciente() {
           <Tarjeta key={v.id}>
             <View style={styles.cabecera}>
               <Texto style={{ fontWeight: '600', flexShrink: 1 }}>{v.nombre_vacuna}</Texto>
-              <Texto variante="secundario">{fechaCorta(v.fecha_aplicacion)}</Texto>
+              <View style={styles.accionesSeccion}>
+                <Texto variante="secundario">{fechaCorta(v.fecha_aplicacion)}</Texto>
+                {usuario?.puede_atender && <BotonEditar ruta="vacuna" mascotaId={id} registroId={v.id} />}
+              </View>
             </View>
             {v.fecha_proxima_dosis && (
               <Insignia
@@ -208,7 +211,7 @@ export default function FichaPaciente() {
       <Seccion titulo="Consultas">
         {h.consultas.length === 0 && <Texto variante="secundario">Sin consultas registradas.</Texto>}
         {h.consultas.map((c) => (
-          <TarjetaConsulta key={c.id} consulta={c} />
+          <TarjetaConsulta key={c.id} consulta={c} mascotaId={id} puedeEditar={!!usuario?.puede_atender} />
         ))}
       </Seccion>
 
@@ -262,7 +265,10 @@ export default function FichaPaciente() {
             <Tarjeta key={d.id}>
               <View style={styles.cabecera}>
                 <Texto style={{ fontWeight: '600', flexShrink: 1 }}>{d.producto}</Texto>
-                <Texto variante="secundario">{fechaCorta(d.fecha_aplicacion)}</Texto>
+                <View style={styles.accionesSeccion}>
+                  <Texto variante="secundario">{fechaCorta(d.fecha_aplicacion)}</Texto>
+                  {usuario?.puede_atender && <BotonEditar ruta="desparasitacion" mascotaId={id} registroId={d.id} />}
+                </View>
               </View>
               <Texto variante="secundario">{d.tipo_display}</Texto>
               {d.fecha_proxima_dosis && (
@@ -276,6 +282,22 @@ export default function FichaPaciente() {
         </Seccion>
       )}
     </ScrollView>
+  );
+}
+
+function BotonEditar({ ruta, mascotaId, registroId }: {
+  ruta: 'vacuna' | 'desparasitacion';
+  mascotaId: string;
+  registroId: number;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      hitSlop={10}
+      accessibilityLabel="Corregir"
+      onPress={() => router.push({ pathname: `/mascota/[id]/${ruta}`, params: { id: mascotaId, editar: registroId } })}>
+      <Ionicons name="create-outline" size={18} color={t.primary} />
+    </Pressable>
   );
 }
 
@@ -301,7 +323,11 @@ function Dato({ icono, valor, etiqueta }: { icono: IconName; valor: string; etiq
   );
 }
 
-function TarjetaConsulta({ consulta: c }: { consulta: Consulta }) {
+function TarjetaConsulta({ consulta: c, mascotaId, puedeEditar }: {
+  consulta: Consulta;
+  mascotaId: string;
+  puedeEditar: boolean;
+}) {
   const t = useTheme();
   const [abierta, setAbierta] = useState(false);
   const signos = [
@@ -329,6 +355,10 @@ function TarjetaConsulta({ consulta: c }: { consulta: Consulta }) {
           <Detalle titulo="Tratamiento" texto={c.tratamiento} />
           <Detalle titulo="Notas internas" texto={c.observaciones_privadas} />
           {c.veterinario_nombre && <Fila icono="medkit-outline">{c.veterinario_nombre}</Fila>}
+          {puedeEditar && (
+            <Boton titulo="Corregir consulta" icono="create-outline" variante="secundario"
+              onPress={() => router.push({ pathname: '/mascota/[id]/consulta', params: { id: mascotaId, editar: c.id } })} />
+          )}
         </View>
       )}
     </Tarjeta>

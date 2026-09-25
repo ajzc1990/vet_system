@@ -174,6 +174,13 @@ class ConsultaMedicaSerializer(serializers.ModelSerializer):
 FECHA_DE_HOY = {'default': timezone.localdate}
 
 
+class ConsultaMedicaEdicionSerializer(ConsultaMedicaSerializer):
+    """Al editar no se puede cambiar el turno vinculado (ya quedó completado al crearla)."""
+
+    class Meta(ConsultaMedicaSerializer.Meta):
+        read_only_fields = ConsultaMedicaSerializer.Meta.read_only_fields + ['turno']
+
+
 class RegistroVacunaSerializer(serializers.ModelSerializer):
     veterinario_nombre = serializers.SerializerMethodField()
     fecha_aplicacion = serializers.DateField(**FECHA_DE_HOY)

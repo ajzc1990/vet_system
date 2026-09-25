@@ -94,6 +94,7 @@ export type Vacuna = {
 
 export type Desparasitacion = {
   id: number;
+  tipo: string;
   tipo_display: string;
   producto: string;
   dosis: string | null;
