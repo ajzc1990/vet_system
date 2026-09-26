@@ -3,13 +3,15 @@
 {% block title %}{{ titulo }} - VeterSystem{% endblock %}
 
 {% block content %}
-<div class="container py-2" style="max-width: 780px;">
+<div class="container py-4">
     <div class="mb-3">
         <a href="{% url 'clientes:detalle_historia_clinica' mascota.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
             <i class="bi bi-arrow-left me-1"></i> Volver a Historia Clínica
         </a>
     </div>
 
+    <div class="row justify-content-center">
+    <div class="col-lg-10">
     <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
         <div class="card-header bg-danger text-white py-3 px-4">
             <h5 class="fw-bold mb-0 fs-6 d-flex align-items-center gap-2">
@@ -69,6 +71,8 @@
                 </div>
             </form>
         </div>
+    </div>
+    </div>
     </div>
 </div>
 {% endblock %}
