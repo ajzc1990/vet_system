@@ -308,8 +308,10 @@ class ResumenClinicoIATests(TestCase):
 
         self.client.force_login(self.user_a)
 
+    @override_settings(IA_RESUMENES_ENABLED=False)
     def test_boton_no_aparece_ni_genera_si_la_funcion_esta_deshabilitada(self):
-        # IA_RESUMENES_ENABLED es False por defecto en settings de test.
+        # Forzado explícito: no depender del valor real de settings/.env (que puede
+        # estar en True en un entorno de desarrollo con API key real cargada).
         response = self.client.post(reverse('historia_clinica:generar_resumen_ia', args=[self.mascota_a.id]))
 
         self.assertRedirects(response, reverse('clientes:detalle_historia_clinica', args=[self.mascota_a.id]))
