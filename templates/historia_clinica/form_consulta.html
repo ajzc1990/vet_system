@@ -3,7 +3,7 @@
 {% block title %}{{ titulo|default:"Nueva Consulta" }} - VeterSystem{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid py-4">
     <!-- Botón Volver al Expediente -->
     <div class="mb-4">
         <a href="{% url 'historia_clinica:expediente_mascota' mascota.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">

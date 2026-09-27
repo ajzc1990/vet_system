@@ -3,7 +3,7 @@
 {% block title %}Historia Clínica: {{ mascota.nombre }} - VeterSystem{% endblock %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid py-4">
     <!-- Enlace de regreso al Cliente -->
     <div class="mb-3">
         <a href="{% url 'clientes:detalle_cliente' mascota.cliente.id %}" class="btn btn-light btn-sm border shadow-sm px-3 py-2 fw-semibold rounded-3 text-secondary">
