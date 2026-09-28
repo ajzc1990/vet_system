@@ -159,6 +159,11 @@
                         <div class="col-md-4">
                             <label class="form-label fw-bold text-dark small mb-1">Diagnóstico *</label>
                             {{ form.diagnostico }}
+                            <datalist id="listaDiagnosticos">
+                                {% for d in diagnosticos_historial %}
+                                    <option value="{{ d }}"></option>
+                                {% endfor %}
+                            </datalist>
                         </div>
 
                         <div class="col-md-4">

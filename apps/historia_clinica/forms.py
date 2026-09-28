@@ -78,7 +78,7 @@ class ConsultaMedicaForm(forms.ModelForm):
             'motivo_consulta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Decaimiento y vómitos desde hace 24hs'}),
             'anamnesis': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Síntomas referidos por el tutor...'}),
             'examen_clinico': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Hallazgos a la palpación, auscultación, mucosas...'}),
-            'diagnostico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Gastroenteritis aguda / Otitis externa'}),
+            'diagnostico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Gastroenteritis aguda / Otitis externa', 'list': 'listaDiagnosticos', 'autocomplete': 'off'}),
             'tratamiento': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Medicamentos recetados, dosis y plan de acción...'}),
             'observaciones_privadas': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Notas internas solo visibles para el equipo...'}),
         }
@@ -335,7 +335,7 @@ class RecetaForm(forms.ModelForm):
         widgets = {
             'veterinario': forms.Select(attrs={'class': 'form-select'}),
             'consulta': forms.Select(attrs={'class': 'form-select'}),
-            'diagnostico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Otitis externa bacteriana'}),
+            'diagnostico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Otitis externa bacteriana', 'list': 'listaDiagnosticos', 'autocomplete': 'off'}),
             'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Indicaciones generales, recomendaciones para el tutor...'}),
         }
 
@@ -357,7 +357,7 @@ class RecetaForm(forms.ModelForm):
 class ItemRecetaForm(forms.Form):
     medicamento = forms.CharField(
         max_length=200, required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Amoxicilina 500mg'}),
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Amoxicilina 500mg', 'list': 'listaMedicamentos', 'autocomplete': 'off'}),
         label="Medicamento"
     )
     dosis = forms.CharField(

@@ -240,11 +240,13 @@ def detalle_historia_clinica(request, mascota_id):
         productos_desparasitantes = Producto.objects.filter(veterinaria=vet, stock_actual__gt=0).order_by('nombre')
         nombres_vacunas_historial = RegistroVacuna.objects.filter(veterinaria=vet).exclude(nombre_vacuna='').order_by().values_list('nombre_vacuna', flat=True).distinct()
         nombres_desparasitantes_historial = RegistroDesparasitacion.objects.filter(veterinaria=vet).exclude(producto='').order_by().values_list('producto', flat=True).distinct()
+        diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct()
     else:
         productos_vacunas = Producto.objects.none()
         productos_desparasitantes = Producto.objects.none()
         nombres_vacunas_historial = []
         nombres_desparasitantes_historial = []
+        diagnosticos_historial = []
 
     if request.method == 'POST' and not es_veterinario_o_admin(request.user):
         messages.error(request, "Acceso denegado: Esta función requiere permisos de Médico Veterinario.")
@@ -311,6 +313,7 @@ def detalle_historia_clinica(request, mascota_id):
         'productos_desparasitantes': productos_desparasitantes,
         'nombres_vacunas_historial': nombres_vacunas_historial,
         'nombres_desparasitantes_historial': nombres_desparasitantes_historial,
+        'diagnosticos_historial': diagnosticos_historial,
     }
     return render(request, 'clientes/historia_clinica.html', context)
 
@@ -343,11 +346,14 @@ def editar_consulta(request, consulta_id):
     else:
         form = ConsultaMedicaForm(instance=consulta, veterinaria=vet)
 
+    diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct() if vet else []
+
     context = {
         'form': form,
         'consulta': consulta,
         'mascota': mascota,
-        'titulo': f'Editar Consulta'
+        'titulo': f'Editar Consulta',
+        'diagnosticos_historial': diagnosticos_historial,
     }
     return render(request, 'clientes/form_consulta.html', context)
 

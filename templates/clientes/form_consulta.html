@@ -99,6 +99,11 @@
                             <div class="col-12">
                                 <label class="form-label fw-bold text-dark small mb-1">Diagnóstico Presuntivo / Definitivo</label>
                                 {{ form.diagnostico }}
+                                <datalist id="listaDiagnosticos">
+                                    {% for d in diagnosticos_historial %}
+                                        <option value="{{ d }}"></option>
+                                    {% endfor %}
+                                </datalist>
                                 {% if form.diagnostico.errors %}
                                     <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.diagnostico.errors|striptags }}</div>
                                 {% endif %}

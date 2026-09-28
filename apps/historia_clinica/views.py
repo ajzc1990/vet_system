@@ -155,10 +155,13 @@ def nueva_consulta(request, mascota_id):
     else:
         form = ConsultaMedicaForm(veterinaria=vet)
 
+    diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct() if vet else []
+
     return render(request, 'historia_clinica/form_consulta.html', {
         'form': form,
         'mascota': mascota,
-        'titulo': f'Nueva Consulta: {mascota.nombre}'
+        'titulo': f'Nueva Consulta: {mascota.nombre}',
+        'diagnosticos_historial': diagnosticos_historial,
     })
 
 
@@ -505,11 +508,16 @@ def nueva_receta(request, mascota_id):
         form = RecetaForm(veterinaria=vet, mascota=mascota)
         formset = ItemRecetaFormSet()
 
+    medicamentos_historial = ItemReceta.objects.filter(receta__veterinaria=vet).exclude(medicamento='').order_by().values_list('medicamento', flat=True).distinct() if vet else []
+    diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct() if vet else []
+
     return render(request, 'historia_clinica/form_receta.html', {
         'form': form,
         'formset': formset,
         'mascota': mascota,
-        'titulo': f'Nueva Receta: {mascota.nombre}'
+        'titulo': f'Nueva Receta: {mascota.nombre}',
+        'medicamentos_historial': medicamentos_historial,
+        'diagnosticos_historial': diagnosticos_historial,
     })
 
 
