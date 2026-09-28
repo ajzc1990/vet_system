@@ -746,9 +746,25 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    {% if productos_vacunas %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Elegir del Inventario</label>
+                        <select id="selectProductoVacuna" class="form-select">
+                            <option value="">-- Seleccionar (opcional, completa el nombre solo) --</option>
+                            {% for p in productos_vacunas %}
+                                <option value="{{ p.nombre }}">{{ p.nombre }} ({{ p.stock_actual }} en stock)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark small mb-1">Nombre de la Vacuna *</label>
-                        <input type="text" name="nombre_vacuna" class="form-control" required placeholder="Ej: Séxtuple, Quintuple, Antirrábica">
+                        <input type="text" name="nombre_vacuna" id="inputNombreVacuna" class="form-control" required placeholder="Ej: Séxtuple, Quintuple, Antirrábica" list="listaVacunas" autocomplete="off">
+                        <datalist id="listaVacunas">
+                            {% for nombre in nombres_vacunas_historial %}
+                                <option value="{{ nombre }}"></option>
+                            {% endfor %}
+                        </datalist>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
@@ -785,9 +801,25 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    {% if productos_desparasitantes %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Elegir del Inventario</label>
+                        <select id="selectProductoDesparasitante" class="form-select">
+                            <option value="">-- Seleccionar (opcional, completa el nombre solo) --</option>
+                            {% for p in productos_desparasitantes %}
+                                <option value="{{ p.nombre }}">{{ p.nombre }} ({{ p.stock_actual }} en stock)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark small mb-1">Producto / Fármaco *</label>
-                        <input type="text" name="producto" class="form-control" required placeholder="Ej: Total Full, Pipeta, Drontal">
+                        <input type="text" name="producto" id="inputProductoDesparasitante" class="form-control" required placeholder="Ej: Total Full, Pipeta, Drontal" list="listaDesparasitantes" autocomplete="off">
+                        <datalist id="listaDesparasitantes">
+                            {% for nombre in nombres_desparasitantes_historial %}
+                                <option value="{{ nombre }}"></option>
+                            {% endfor %}
+                        </datalist>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-md-6">
@@ -826,6 +858,21 @@
                 }
             });
         }
+
+        // Al elegir un insumo del inventario, autocompleta el nombre para no tipearlo dos veces.
+        function vincularAutocompletado(selectId, inputId) {
+            const select = document.getElementById(selectId);
+            const input = document.getElementById(inputId);
+            if (select && input) {
+                select.addEventListener("change", function() {
+                    if (select.value) {
+                        input.value = select.value;
+                    }
+                });
+            }
+        }
+        vincularAutocompletado("selectProductoVacuna", "inputNombreVacuna");
+        vincularAutocompletado("selectProductoDesparasitante", "inputProductoDesparasitante");
     });
 </script>
 {% endblock %}

@@ -232,6 +232,20 @@ def detalle_historia_clinica(request, mascota_id):
 
     resumen_ia = getattr(mascota, 'resumen_ia', None)
 
+    # Insumos y nombres ya usados antes, para autocompletar los modales de
+    # Vacuna/Desparasitación y que el veterinario tenga que tipear lo menos posible.
+    from apps.inventario.models import Producto
+    if vet:
+        productos_vacunas = Producto.objects.filter(veterinaria=vet, tipo='VACUNA', stock_actual__gt=0).order_by('nombre')
+        productos_desparasitantes = Producto.objects.filter(veterinaria=vet, stock_actual__gt=0).order_by('nombre')
+        nombres_vacunas_historial = RegistroVacuna.objects.filter(veterinaria=vet).exclude(nombre_vacuna='').order_by().values_list('nombre_vacuna', flat=True).distinct()
+        nombres_desparasitantes_historial = RegistroDesparasitacion.objects.filter(veterinaria=vet).exclude(producto='').order_by().values_list('producto', flat=True).distinct()
+    else:
+        productos_vacunas = Producto.objects.none()
+        productos_desparasitantes = Producto.objects.none()
+        nombres_vacunas_historial = []
+        nombres_desparasitantes_historial = []
+
     if request.method == 'POST' and not es_veterinario_o_admin(request.user):
         messages.error(request, "Acceso denegado: Esta función requiere permisos de Médico Veterinario.")
         return redirect('clientes:detalle_historia_clinica', mascota_id=mascota.id)
@@ -293,6 +307,10 @@ def detalle_historia_clinica(request, mascota_id):
         'resumen_ia': resumen_ia,
         'ia_resumenes_habilitado': settings.IA_RESUMENES_ENABLED,
         'form': form,
+        'productos_vacunas': productos_vacunas,
+        'productos_desparasitantes': productos_desparasitantes,
+        'nombres_vacunas_historial': nombres_vacunas_historial,
+        'nombres_desparasitantes_historial': nombres_desparasitantes_historial,
     }
     return render(request, 'clientes/historia_clinica.html', context)
 
