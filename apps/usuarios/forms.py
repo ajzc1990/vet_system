@@ -90,3 +90,51 @@ class RegistroForm(forms.ModelForm):
         if p1 and p2 and p1 != p2:
             self.add_error('password_confirm', "Las contraseñas ingresadas no coinciden.")
         return cleaned_data
+
+
+class CrearUsuarioEquipoForm(forms.ModelForm):
+    """Para que el ADMIN de una veterinaria sume directamente a un miembro de su propio
+    equipo (veterinario, recepción), sin pasar por el registro público ni depender de
+    que el superusuario lo apruebe a mano."""
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': '••••••••'}),
+        label="Contraseña Inicial *",
+        min_length=8,
+        help_text="La persona puede cambiarla después desde su perfil.",
+    )
+    rol = forms.ChoiceField(
+        choices=PerfilUsuario.ROLES,
+        initial='VET',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label="Rol en la Veterinaria *",
+    )
+    telefono = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: +54 381 1234567'}),
+        label="Teléfono de Contacto",
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de usuario'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@ejemplo.com'}),
+        }
+        labels = {
+            'username': 'Usuario *',
+            'first_name': 'Nombre',
+            'last_name': 'Apellido',
+            'email': 'Correo Electrónico *',
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not email:
+            raise forms.ValidationError("El correo electrónico es obligatorio.")
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Este correo electrónico ya se encuentra registrado.")
+        return email

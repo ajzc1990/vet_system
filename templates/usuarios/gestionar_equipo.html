@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Equipo - VeterSystem{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-people-fill text-primary"></i> Gestión de Equipo
+            </h2>
+            <p class="text-muted small mb-0">Sumá, aprobá y administrá los usuarios de {{ veterinaria.nombre }}.</p>
+        </div>
+        <button type="button" class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+            <i class="bi bi-person-plus-fill"></i> Agregar Usuario
+        </button>
+    </div>
+
+    {% if not miembros %}
+    <div class="card border-0 shadow-lg rounded-4">
+        <div class="card-body text-center py-5 text-muted">Todavía no hay usuarios cargados en el equipo.</div>
+    </div>
+    {% else %}
+
+    <!-- Tarjetas (celular) -->
+    <div class="d-md-none d-flex flex-column gap-2">
+        {% for m in miembros %}
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <span class="fw-bold text-dark small">{{ m.user.get_full_name|default:m.user.username }}</span>
+                    {% if m.is_approved %}
+                        <span class="badge bg-success-subtle text-success-emphasis border px-2 py-1 rounded-pill extra-small fw-bold">Aprobado</span>
+                    {% else %}
+                        <span class="badge bg-warning-subtle text-dark border px-2 py-1 rounded-pill extra-small fw-bold">Pendiente</span>
+                    {% endif %}
+                </div>
+                <div class="extra-small text-muted mb-2">{{ m.user.username }} &bull; {{ m.user.email|default:"sin email" }}</div>
+                <div class="small text-secondary mb-2">{{ m.get_rol_display }}</div>
+
+                {% if m.user_id == request.user.id %}
+                    <span class="extra-small text-muted fst-italic">Tu propia cuenta</span>
+                {% else %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% if not m.is_approved %}
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                            <input type="hidden" name="accion" value="aprobar">
+                            <button type="submit" class="btn btn-sm btn-success fw-bold rounded-2">Aprobar</button>
+                        </form>
+                        <form method="post" class="d-inline" onsubmit="return confirm('¿Rechazar y eliminar la solicitud de {{ m.user.username }}?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                            <input type="hidden" name="accion" value="rechazar">
+                            <button type="submit" class="btn btn-sm btn-outline-danger fw-bold rounded-2">Rechazar</button>
+                        </form>
+                    {% else %}
+                        <form method="post" class="d-inline" onsubmit="return confirm('¿Revocar el acceso de {{ m.user.username }}?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                            <input type="hidden" name="accion" value="revocar">
+                            <button type="submit" class="btn btn-sm btn-outline-danger fw-bold rounded-2">Revocar acceso</button>
+                        </form>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Tabla (escritorio / tablet) -->
+    <div class="card border-0 shadow-lg rounded-4 overflow-hidden d-none d-md-block">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light border-bottom">
+                        <tr class="text-uppercase text-secondary extra-small fw-extrabold" style="font-size: 0.78rem;">
+                            <th class="ps-4 py-3">Usuario</th>
+                            <th class="py-3">Contacto</th>
+                            <th class="py-3">Rol</th>
+                            <th class="py-3">Estado</th>
+                            <th class="py-3 pe-4 text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in miembros %}
+                        <tr>
+                            <td class="ps-4 py-3">
+                                <div class="fw-semibold text-dark small">{{ m.user.get_full_name|default:m.user.username }}</div>
+                                <div class="extra-small text-muted">@{{ m.user.username }}</div>
+                            </td>
+                            <td class="py-3 text-secondary small">{{ m.user.email|default:"-" }}</td>
+                            <td class="py-3">
+                                {% if m.user_id == request.user.id %}
+                                    <span class="small text-secondary">{{ m.get_rol_display }}</span>
+                                {% else %}
+                                    <form method="post" class="d-inline-flex align-items-center gap-1">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                                        <input type="hidden" name="accion" value="cambiar_rol">
+                                        <select name="rol" class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()">
+                                            {% for valor, etiqueta in roles %}
+                                                <option value="{{ valor }}" {% if m.rol == valor %}selected{% endif %}>{{ etiqueta }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </form>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                {% if m.is_approved %}
+                                    <span class="badge bg-success-subtle text-success-emphasis border px-3 py-1.5 rounded-pill fw-bold">Aprobado</span>
+                                {% else %}
+                                    <span class="badge bg-warning-subtle text-dark border px-3 py-1.5 rounded-pill fw-bold">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 pe-4 text-end">
+                                {% if m.user_id == request.user.id %}
+                                    <span class="extra-small text-muted fst-italic">Tu propia cuenta</span>
+                                {% elif not m.is_approved %}
+                                    <form method="post" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                                        <input type="hidden" name="accion" value="aprobar">
+                                        <button type="submit" class="btn btn-sm btn-success fw-bold rounded-2 me-1">Aprobar</button>
+                                    </form>
+                                    <form method="post" class="d-inline" onsubmit="return confirm('¿Rechazar y eliminar la solicitud de {{ m.user.username }}?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                                        <input type="hidden" name="accion" value="rechazar">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger fw-bold rounded-2">Rechazar</button>
+                                    </form>
+                                {% else %}
+                                    <form method="post" class="d-inline" onsubmit="return confirm('¿Revocar el acceso de {{ m.user.username }}? No va a poder iniciar sesión hasta que lo vuelvas a aprobar.');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="perfil_id" value="{{ m.id }}">
+                                        <input type="hidden" name="accion" value="revocar">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger fw-bold rounded-2">Revocar acceso</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal: Agregar Usuario -->
+<div class="modal fade" id="modalNuevoUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="crear">
+                <div class="modal-header bg-primary text-white py-3 px-4">
+                    <h5 class="modal-title fw-bold fs-6"><i class="bi bi-person-plus-fill me-2"></i>Agregar Usuario al Equipo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.username.label }}</label>
+                            {{ form_nuevo.username }}
+                            {% if form_nuevo.username.errors %}<div class="text-danger extra-small mt-1">{{ form_nuevo.username.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.email.label }}</label>
+                            {{ form_nuevo.email }}
+                            {% if form_nuevo.email.errors %}<div class="text-danger extra-small mt-1">{{ form_nuevo.email.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.first_name.label }}</label>
+                            {{ form_nuevo.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.last_name.label }}</label>
+                            {{ form_nuevo.last_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.rol.label }}</label>
+                            {{ form_nuevo.rol }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.telefono.label }}</label>
+                            {{ form_nuevo.telefono }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.password.label }}</label>
+                            {{ form_nuevo.password }}
+                            <div class="form-text extra-small">{{ form_nuevo.password.help_text }}</div>
+                            {% if form_nuevo.password.errors %}<div class="text-danger extra-small mt-1">{{ form_nuevo.password.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 px-4">
+                    <button type="button" class="btn btn-outline-secondary fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if form_nuevo.errors %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new bootstrap.Modal(document.getElementById('modalNuevoUsuario')).show();
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -14,7 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
 
 from .models import PerfilUsuario, Veterinaria, MensajeContacto, RegistroAuditoria, Plan, Suscripcion
-from .forms import RegistroForm, ConfigVeterinariaForm
+from .forms import RegistroForm, ConfigVeterinariaForm, CrearUsuarioEquipoForm
 from .utils import get_veterinaria_activa
 from .audit import registrar_auditoria
 from .decorators import requerir_rol_admin
@@ -420,4 +420,87 @@ def auditoria_view(request):
         'acciones': RegistroAuditoria.ACCIONES,
         'accion_filtro': accion_filtro,
         'ocultar_datos_sensibles': ocultar_datos_sensibles,
+    })
+
+
+# ==============================================================================
+# GESTIÓN DE EQUIPO
+# ==============================================================================
+
+@login_required
+@requerir_rol_admin
+def gestionar_equipo(request):
+    """Permite al ADMIN de una veterinaria sumar, aprobar, cambiar el rol o revocar el
+    acceso de su propio equipo, sin depender de que el superusuario lo haga a mano
+    desde el Django admin."""
+    vet = get_veterinaria_activa(request)
+    if not vet:
+        messages.error(request, "No tenés una veterinaria activa para gestionar el equipo.")
+        return redirect('dashboard:index')
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+
+        if accion == 'crear':
+            form = CrearUsuarioEquipoForm(request.POST)
+            if form.is_valid():
+                nuevo_usuario = form.save(commit=False)
+                nuevo_usuario.set_password(form.cleaned_data['password'])
+                nuevo_usuario.save()
+
+                PerfilUsuario.objects.create(
+                    user=nuevo_usuario,
+                    veterinaria=vet,
+                    rol=form.cleaned_data['rol'],
+                    telefono=form.cleaned_data.get('telefono', ''),
+                    is_approved=True,
+                )
+                registrar_auditoria(
+                    request, 'CREAR', modelo='PerfilUsuario', objeto_id=nuevo_usuario.id,
+                    descripcion=f"'{nuevo_usuario.username}' agregado al equipo de {vet.nombre}.",
+                )
+                messages.success(request, f"'{nuevo_usuario.username}' fue agregado al equipo correctamente.")
+                return redirect('usuarios:gestionar_equipo')
+
+            miembros = PerfilUsuario.objects.filter(veterinaria=vet).select_related('user').order_by('is_approved', 'user__username')
+            messages.error(request, "Revisá los datos del nuevo integrante.")
+            return render(request, 'usuarios/gestionar_equipo.html', {
+                'miembros': miembros, 'form_nuevo': form, 'veterinaria': vet,
+            })
+
+        perfil = get_object_or_404(PerfilUsuario, pk=request.POST.get('perfil_id'), veterinaria=vet)
+        if perfil.user_id == request.user.id:
+            messages.error(request, "No podés modificar tu propio acceso desde esta pantalla.")
+            return redirect('usuarios:gestionar_equipo')
+
+        if accion == 'aprobar':
+            perfil.is_approved = True
+            perfil.save()
+            messages.success(request, f"Acceso aprobado para '{perfil.user.username}'.")
+        elif accion == 'revocar':
+            perfil.is_approved = False
+            perfil.save()
+            messages.success(request, f"Acceso revocado para '{perfil.user.username}'.")
+        elif accion == 'cambiar_rol':
+            nuevo_rol = request.POST.get('rol')
+            if nuevo_rol in dict(PerfilUsuario.ROLES):
+                perfil.rol = nuevo_rol
+                perfil.save()
+                messages.success(request, f"Rol de '{perfil.user.username}' actualizado a {perfil.get_rol_display()}.")
+        elif accion == 'rechazar':
+            username = perfil.user.username
+            perfil.user.delete()  # cascada borra el PerfilUsuario
+            messages.success(request, f"Solicitud de '{username}' rechazada.")
+
+        registrar_auditoria(
+            request, 'EDITAR', modelo='PerfilUsuario', objeto_id=perfil.pk if accion != 'rechazar' else None,
+            descripcion=f"Gestión de equipo en {vet.nombre}: acción '{accion}' sobre usuario del equipo.",
+        )
+        return redirect('usuarios:gestionar_equipo')
+
+    miembros = PerfilUsuario.objects.filter(veterinaria=vet).select_related('user').order_by('is_approved', 'user__username')
+    return render(request, 'usuarios/gestionar_equipo.html', {
+        'miembros': miembros,
+        'form_nuevo': CrearUsuarioEquipoForm(),
+        'veterinaria': vet,
     })

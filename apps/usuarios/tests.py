@@ -697,3 +697,103 @@ class AlertasStockBadgeTests(TestCase):
         response = self.client.get(reverse('portal:home'))
 
         self.assertEqual(response.context['productos_bajo_stock_count'], 0)
+
+
+class GestionarEquipoTests(TestCase):
+    """Antes, la única forma de aprobar/crear usuarios de una veterinaria era que el
+    superusuario entrara al Django admin a mano. Esta pantalla le da al ADMIN de cada
+    clínica control directo sobre su propio equipo, sin depender de VeterSystem."""
+
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.admin_a = User.objects.create_user(username="admin_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.admin_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        self.pendiente_a = User.objects.create_user(username="pendiente_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.pendiente_a, veterinaria=self.vet_a, rol="VET", is_approved=False)
+
+        self.vet_user_a = User.objects.create_user(username="vet_user_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.vet_user_a, veterinaria=self.vet_a, rol="VET", is_approved=True)
+
+        admin_b = User.objects.create_user(username="admin_b", password="testpass123")
+        PerfilUsuario.objects.create(user=admin_b, veterinaria=self.vet_b, rol="ADMIN", is_approved=True)
+        self.miembro_b = User.objects.create_user(username="miembro_b", password="testpass123")
+        self.perfil_b = PerfilUsuario.objects.create(user=self.miembro_b, veterinaria=self.vet_b, rol="VET", is_approved=False)
+
+        self.client.force_login(self.admin_a)
+
+    def test_solo_ve_el_equipo_de_su_propia_veterinaria(self):
+        response = self.client.get(reverse('usuarios:gestionar_equipo'))
+
+        usernames = [m.user.username for m in response.context['miembros']]
+        self.assertIn('pendiente_a', usernames)
+        self.assertIn('vet_user_a', usernames)
+        self.assertNotIn('miembro_b', usernames)
+
+    def test_un_vet_no_puede_acceder_a_la_pantalla(self):
+        self.client.force_login(self.vet_user_a)
+        response = self.client.get(reverse('usuarios:gestionar_equipo'))
+        self.assertRedirects(response, reverse('dashboard:index'))
+
+    def test_crear_usuario_queda_aprobado_y_vinculado_a_la_veterinaria_del_admin(self):
+        response = self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'crear',
+            'username': 'recepcion_nueva', 'email': 'recepcion@nueva.com',
+            'first_name': 'Nueva', 'last_name': 'Recepcionista',
+            'rol': 'RECEPCION', 'password': 'passwordseguro123',
+        })
+
+        self.assertRedirects(response, reverse('usuarios:gestionar_equipo'))
+        perfil = PerfilUsuario.objects.get(user__username='recepcion_nueva')
+        self.assertEqual(perfil.veterinaria, self.vet_a)
+        self.assertEqual(perfil.rol, 'RECEPCION')
+        self.assertTrue(perfil.is_approved)
+        self.assertTrue(perfil.user.check_password('passwordseguro123'))
+
+    def test_aprobar_usuario_pendiente(self):
+        perfil = PerfilUsuario.objects.get(user=self.pendiente_a)
+        self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'aprobar', 'perfil_id': perfil.id})
+
+        perfil.refresh_from_db()
+        self.assertTrue(perfil.is_approved)
+
+    def test_revocar_acceso_de_usuario_aprobado(self):
+        perfil = PerfilUsuario.objects.get(user=self.vet_user_a)
+        self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'revocar', 'perfil_id': perfil.id})
+
+        perfil.refresh_from_db()
+        self.assertFalse(perfil.is_approved)
+
+    def test_rechazar_elimina_al_usuario_y_su_perfil(self):
+        perfil = PerfilUsuario.objects.get(user=self.pendiente_a)
+        self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'rechazar', 'perfil_id': perfil.id})
+
+        self.assertFalse(User.objects.filter(username='pendiente_a').exists())
+        self.assertFalse(PerfilUsuario.objects.filter(pk=perfil.id).exists())
+
+    def test_cambiar_rol(self):
+        perfil = PerfilUsuario.objects.get(user=self.vet_user_a)
+        self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'cambiar_rol', 'perfil_id': perfil.id, 'rol': 'ADMIN',
+        })
+
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.rol, 'ADMIN')
+
+    def test_no_puede_modificar_su_propio_acceso(self):
+        perfil_propio = PerfilUsuario.objects.get(user=self.admin_a)
+        self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'revocar', 'perfil_id': perfil_propio.id})
+
+        perfil_propio.refresh_from_db()
+        self.assertTrue(perfil_propio.is_approved)
+
+    def test_no_puede_gestionar_un_perfil_de_otra_veterinaria(self):
+        response = self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'aprobar', 'perfil_id': self.perfil_b.id,
+        })
+
+        self.assertEqual(response.status_code, 404)
+        self.perfil_b.refresh_from_db()
+        self.assertFalse(self.perfil_b.is_approved)

@@ -450,6 +450,7 @@
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:configurar_veterinaria' %}"><i class="bi bi-gear me-2"></i> Configurar Clínica</a></li>
                         {% endif %}
                         {% if user.is_superuser or user.perfil.rol == 'ADMIN' %}
+                            <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:gestionar_equipo' %}"><i class="bi bi-people me-2"></i> Gestión de Equipo</a></li>
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:mi_suscripcion' %}"><i class="bi bi-credit-card-2-front me-2"></i> Mi Suscripción</a></li>
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:auditoria' %}"><i class="bi bi-shield-lock me-2"></i> Auditoría</a></li>
                         {% endif %}

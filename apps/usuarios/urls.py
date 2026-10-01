@@ -18,6 +18,9 @@ urlpatterns = [
     # Perfil / Configuración de la Veterinaria
     path('mi-veterinaria/', views.configurar_veterinaria, name='configurar_veterinaria'),
 
+    # Gestión de Equipo (usuarios de la veterinaria)
+    path('equipo/', views.gestionar_equipo, name='gestionar_equipo'),
+
     # Suscripciones / Billing
     path('mi-suscripcion/', views.mi_suscripcion, name='mi_suscripcion'),
     path('suscripciones/', views.panel_suscripciones, name='panel_suscripciones'),
