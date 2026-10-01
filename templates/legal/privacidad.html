@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Política de Privacidad - VeterSystem</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+        .fw-extrabold { font-weight: 800 !important; }
+        .extra-small { font-size: 0.8rem; }
+        .text-primary { color: #6366f1 !important; }
+        .bg-primary { background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%) !important; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+        }
+
+        .legal-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #6366f1 100%);
+        }
+
+        .legal-doc h2 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-top: 2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .legal-doc p, .legal-doc li {
+            color: #334155;
+            line-height: 1.7;
+        }
+
+        .legal-doc ul {
+            padding-left: 1.2rem;
+        }
+
+        .legal-doc table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .legal-doc th, .legal-doc td {
+            border: 1px solid #e2e8f0;
+            padding: 0.6rem 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .legal-doc th {
+            background: #f1f5f9;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<header class="legal-header py-4">
+    <div class="container">
+        <a href="{% url 'landing' %}" class="text-decoration-none d-inline-flex align-items-center gap-2">
+            <div class="bg-primary text-white p-2 rounded-3 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                <i class="bi bi-heart-pulse-fill fs-4"></i>
+            </div>
+            <span class="fs-3 fw-extrabold text-white">Veter<span style="color:#a5b4fc;">System</span></span>
+        </a>
+    </div>
+</header>
+
+<main class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="bg-white rounded-4 shadow-sm p-4 p-md-5 legal-doc">
+                <h1 class="fw-extrabold mb-1" style="font-size: 1.75rem;">Política de Privacidad</h1>
+                <p class="text-muted extra-small mb-4">Última actualización: 1 de octubre de 2026</p>
+
+                <p>
+                    Esta Política de Privacidad explica qué datos personales recolecta VeterSystem, con qué
+                    finalidad, y qué derechos tenés sobre ellos, de acuerdo con la Ley 25.326 de Protección de
+                    los Datos Personales de la República Argentina.
+                </p>
+
+                <h2>1. Responsable del tratamiento</h2>
+                <p>
+                    El responsable de los datos personales procesados a través de VeterSystem es
+                    <strong>Agustín Zelaya Cossio</strong>, contacto:
+                    <a href="mailto:agustinzelayacossio@gmail.com">agustinzelayacossio@gmail.com</a>.
+                </p>
+
+                <h2>2. Dos tipos de datos distintos</h2>
+                <p>
+                    Es importante distinguir dos categorías de datos personales en VeterSystem:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Datos de la Veterinaria y su personal</strong> (quien contrata el servicio): nombre
+                        de la clínica, datos de contacto, usuarios del sistema y sus roles. De estos datos,
+                        VeterSystem es responsable directo del tratamiento.
+                    </li>
+                    <li>
+                        <strong>Datos de los clientes y pacientes de cada Veterinaria</strong> (tutores y sus
+                        mascotas): son cargados por la propia clínica para prestar sus servicios veterinarios.
+                        Respecto de estos datos, la Veterinaria es la responsable del tratamiento frente a sus
+                        propios clientes, y VeterSystem actúa únicamente como encargado del tratamiento,
+                        alojándolos y procesándolos técnicamente para que el sistema funcione, sin usarlos para
+                        fines propios.
+                    </li>
+                </ul>
+
+                <h2>3. Qué datos recolectamos</h2>
+                <table class="mb-3">
+                    <tr><th>Categoría</th><th>Ejemplos</th></tr>
+                    <tr>
+                        <td>Cuenta y contacto</td>
+                        <td>Nombre de la veterinaria, email, teléfono, dirección, CUIT (si lo cargás).</td>
+                    </tr>
+                    <tr>
+                        <td>Usuarios del sistema</td>
+                        <td>Nombre de usuario, email, rol (administrador, veterinario, recepción), contraseña
+                            (almacenada de forma encriptada, nunca en texto plano).</td>
+                    </tr>
+                    <tr>
+                        <td>Clientes y mascotas de la clínica</td>
+                        <td>Nombre, DNI, teléfono, email, dirección del tutor; nombre, especie, raza e historia
+                            clínica de la mascota.</td>
+                    </tr>
+                    <tr>
+                        <td>Uso del sistema</td>
+                        <td>Registro de auditoría de acciones relevantes (quién hizo qué y cuándo), dirección IP
+                            de inicio de sesión, con fines de seguridad.</td>
+                    </tr>
+                    <tr>
+                        <td>Pagos</td>
+                        <td>VeterSystem no almacena datos de tarjetas: los pagos se procesan directamente por
+                            Mercado Pago.</td>
+                    </tr>
+                </table>
+
+                <h2>4. Para qué usamos los datos</h2>
+                <ul>
+                    <li>Prestar el servicio: hacer funcionar el sistema de gestión veterinaria.</li>
+                    <li>Gestionar el acceso, la facturación y el soporte a cada cuenta.</li>
+                    <li>Enviar comunicaciones operativas del sistema (por ejemplo, recordatorios de turno por
+                        WhatsApp, cuando la clínica tiene esa función activada).</li>
+                    <li>Mantener un registro de auditoría por motivos de seguridad y trazabilidad.</li>
+                    <li>Mejorar el sistema y corregir errores.</li>
+                </ul>
+                <p>
+                    VeterSystem no vende datos personales a terceros, ni los usa con fines publicitarios ajenos
+                    al servicio.
+                </p>
+
+                <h2>5. Con quién compartimos datos</h2>
+                <p>
+                    Para poder prestar el servicio, algunos datos se comparten con proveedores que actúan como
+                    encargados del tratamiento, bajo sus propias políticas de privacidad:
+                </p>
+                <ul>
+                    <li><strong>Mercado Pago</strong>: para procesar pagos de suscripciones y, si la clínica lo
+                        activa, cobros por QR a sus propios clientes.</li>
+                    <li><strong>Twilio</strong>: para el envío de recordatorios de turno por WhatsApp, únicamente
+                        en las clínicas que activan esta función.</li>
+                    <li><strong>Anthropic</strong>: para generar resúmenes clínicos con inteligencia artificial,
+                        únicamente en las clínicas que activan esta función (se envían datos clínicos de la
+                        mascota, sin datos de contacto del tutor, al prestador de IA).</li>
+                    <li><strong>Hostinger</strong>: proveedor de infraestructura donde se aloja el servidor y la
+                        base de datos.</li>
+                </ul>
+
+                <h2>6. Seguridad</h2>
+                <p>
+                    Cada veterinaria accede únicamente a sus propios datos: el sistema está diseñado para que
+                    ninguna clínica pueda ver información de otra. Las contraseñas se almacenan encriptadas, las
+                    conexiones al sistema se hacen por HTTPS, y se realizan copias de seguridad periódicas de la
+                    base de datos.
+                </p>
+
+                <h2>7. Conservación de los datos</h2>
+                <p>
+                    Conservamos los datos mientras la cuenta esté activa. Si una cuenta se da de baja, los datos
+                    se conservan por un plazo razonable por si la clínica decide reactivar el servicio, y luego
+                    pueden eliminarse a pedido, salvo que una norma legal exija conservarlos por más tiempo.
+                </p>
+
+                <h2>8. Tus derechos (Ley 25.326)</h2>
+                <p>
+                    Como titular de tus datos personales, tenés derecho a acceder a ellos, rectificarlos,
+                    actualizarlos o solicitar su eliminación, de forma gratuita, escribiendo a
+                    <a href="mailto:agustinzelayacossio@gmail.com">agustinzelayacossio@gmail.com</a>. Si tus datos
+                    personales fueron cargados por una veterinaria como su cliente (no por vos directamente),
+                    también podés ejercer estos derechos contactando directamente a esa clínica.
+                </p>
+                <p>
+                    La Agencia de Acceso a la Información Pública, en su carácter de Órgano de Control de la Ley
+                    25.326, tiene la atribución de atender las denuncias y reclamos que se interpongan con
+                    relación al incumplimiento de las normas sobre protección de datos personales.
+                </p>
+
+                <h2>9. Cookies y datos técnicos</h2>
+                <p>
+                    VeterSystem usa únicamente una cookie técnica de sesión, necesaria para mantenerte
+                    conectado mientras usás el sistema. No usamos cookies de publicidad ni de seguimiento de
+                    terceros.
+                </p>
+
+                <h2>10. Cambios a esta Política</h2>
+                <p>
+                    Podemos actualizar esta Política de Privacidad. Si el cambio es significativo, lo vamos a
+                    comunicar por los medios de contacto que tengamos registrados antes de que entre en vigencia.
+                </p>
+
+                <h2>11. Contacto</h2>
+                <p>
+                    Ante cualquier consulta sobre esta Política o para ejercer tus derechos, escribí a
+                    <a href="mailto:agustinzelayacossio@gmail.com">agustinzelayacossio@gmail.com</a>.
+                </p>
+
+                <div class="mt-5 pt-4 border-top">
+                    <a href="{% url 'landing' %}" class="text-muted text-decoration-none extra-small">
+                        <i class="bi bi-arrow-left me-1"></i> Volver a la página principal
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

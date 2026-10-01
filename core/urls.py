@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
+from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -16,6 +17,10 @@ urlpatterns = [
 
     # Demo pública de un clic (loguea directo como el admin de la veterinaria demo)
     path('demo/', usuario_views.entrar_a_demo, name='entrar_a_demo'),
+
+    # Páginas legales
+    path('terminos/', TemplateView.as_view(template_name='legal/terminos.html'), name='terminos'),
+    path('privacidad/', TemplateView.as_view(template_name='legal/privacidad.html'), name='privacidad'),
 
     # Dashboard Operativo Centralizado
     path('dashboard/', include(('apps.dashboard.urls', 'dashboard'), namespace='dashboard')),

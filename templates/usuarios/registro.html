@@ -217,6 +217,14 @@
             </div>
         {% endif %}
 
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="aceptaTerminos" required>
+            <label class="form-check-label extra-small text-muted" for="aceptaTerminos">
+                Leí y acepto los <a href="{% url 'terminos' %}" target="_blank">Términos y Condiciones</a>
+                y la <a href="{% url 'privacidad' %}" target="_blank">Política de Privacidad</a>.
+            </label>
+        </div>
+
         <button type="submit" class="btn btn-primary btn-primary-custom w-100 shadow-sm mb-3">
             <i class="bi bi-send-fill me-2"></i> Enviar Solicitud de Registro
         </button>
