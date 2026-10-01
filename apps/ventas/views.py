@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from django.http import HttpResponse
 
@@ -14,7 +15,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-from .models import Venta, DetalleVenta, CajaDiaria
+from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja
 from .forms import VentaForm
 from apps.inventario.models import MovimientoStock
 from apps.usuarios.utils import get_veterinaria_activa
@@ -33,9 +34,12 @@ def lista_ventas(request):
         ventas = Venta.objects.filter(veterinaria=vet).select_related('cliente', 'vendedor').order_by('-fecha_hora') if vet else Venta.objects.none()
         caja_activa = CajaDiaria.objects.filter(veterinaria=vet, estado='ABIERTA').first() if vet else None
 
+    gastos_caja_activa = caja_activa.gastos.select_related('usuario').all() if caja_activa else None
+
     return render(request, 'ventas/lista_ventas.html', {
         'ventas': ventas,
-        'caja_activa': caja_activa
+        'caja_activa': caja_activa,
+        'gastos_caja_activa': gastos_caja_activa,
     })
 
 
@@ -135,6 +139,39 @@ def registrar_venta(request):
 
 
 @login_required
+def registrar_gasto(request):
+    """Registra una salida de efectivo de la caja activa (pago a un service, flete,
+    insumos de urgencia, etc.), para que el arqueo final no dé un faltante irreal."""
+    vet = get_veterinaria_activa(request)
+    caja_activa = CajaDiaria.objects.filter(veterinaria=vet, estado='ABIERTA').first() if vet else CajaDiaria.objects.filter(estado='ABIERTA').first()
+
+    if not caja_activa:
+        messages.warning(request, "No hay una caja abierta para registrar el gasto.")
+        return redirect('ventas:lista_ventas')
+
+    if request.method == 'POST':
+        concepto = request.POST.get('concepto', '').strip()
+        monto = request.POST.get('monto') or 0
+
+        if not concepto or not float(monto or 0) > 0:
+            messages.error(request, "Completá el concepto y un monto mayor a cero.")
+        else:
+            gasto = GastoCaja.objects.create(
+                caja=caja_activa,
+                concepto=concepto,
+                monto=monto,
+                usuario=request.user,
+            )
+            registrar_auditoria(
+                request, 'CREAR', modelo='GastoCaja', objeto_id=gasto.id,
+                descripcion=f"Gasto de caja #{caja_activa.id}: {gasto.concepto} (-${gasto.monto})"
+            )
+            messages.success(request, f"Gasto '{gasto.concepto}' registrado por ${gasto.monto}.")
+
+    return redirect('ventas:lista_ventas')
+
+
+@login_required
 def abrir_caja(request):
     """Abre la caja diaria para el turno de atención actual."""
     vet = get_veterinaria_activa(request)
@@ -197,11 +234,16 @@ def cerrar_caja(request, caja_id):
         messages.success(request, f"Caja #{caja.id} cerrada correctamente.")
         return redirect('ventas:lista_ventas')
 
+    ventas_efectivo = caja.ventas.filter(medio_pago='EFECTIVO').aggregate(total=Sum('total'))['total'] or 0
+
     return render(request, 'ventas/cerrar_caja.html', {
         'caja': caja,
         'total_efectivo': caja.total_efectivo,
+        'ventas_efectivo': ventas_efectivo,
         'total_digital': caja.total_digital_tarjetas,
         'total_general': caja.total_general_ventas,
+        'total_gastos': caja.total_gastos,
+        'gastos': caja.gastos.select_related('usuario').all(),
     })
 
 

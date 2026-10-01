@@ -45,9 +45,13 @@ class CajaDiaria(models.Model):
         return f"Caja #{self.id} - {self.fecha_apertura.strftime('%d/%m/%Y %H:%M')} ({self.get_estado_display()})"
 
     @property
+    def total_gastos(self):
+        return self.gastos.aggregate(total=models.Sum('monto'))['total'] or 0
+
+    @property
     def total_efectivo(self):
         ventas_efectivo = self.ventas.filter(medio_pago='EFECTIVO').aggregate(total=models.Sum('total'))['total'] or 0
-        return self.monto_inicial + ventas_efectivo
+        return self.monto_inicial + ventas_efectivo - self.total_gastos
 
     @property
     def total_digital_tarjetas(self):
@@ -100,6 +104,32 @@ class Venta(models.Model):
     def __str__(self):
         cliente_str = f"{self.cliente.nombre} {self.cliente.apellido}" if self.cliente else "Consumidor Final"
         return f"Venta #{self.id} - {cliente_str} (${self.total})"
+
+
+class GastoCaja(models.Model):
+    """Salida de efectivo de la caja en el momento: pago a un service, un flete,
+    insumos de urgencia, etc. Se descuenta del efectivo esperado al arquear."""
+    caja = models.ForeignKey(
+        CajaDiaria,
+        on_delete=models.CASCADE,
+        related_name='gastos'
+    )
+    concepto = models.CharField(max_length=255, verbose_name="Concepto / Motivo")
+    monto = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto")
+    fecha_hora = models.DateTimeField(default=timezone.now)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True
+    )
+
+    class Meta:
+        verbose_name = "Gasto de Caja"
+        verbose_name_plural = "Gastos de Caja"
+        ordering = ['-fecha_hora']
+
+    def __str__(self):
+        return f"{self.concepto} (-${self.monto})"
 
 
 class DetalleVenta(models.Model):

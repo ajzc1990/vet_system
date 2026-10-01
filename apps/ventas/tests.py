@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from apps.usuarios.models import PerfilUsuario, Veterinaria
 from apps.inventario.models import Producto
-from .models import Venta, DetalleVenta
+from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja
 
 
 class VentasTenantIsolationTests(TestCase):
@@ -73,3 +73,66 @@ class ExportarVentasCsvTests(TestCase):
         contenido = response.content.decode('utf-8-sig')
         self.assertIn('1500.00', contenido)
         self.assertNotIn('9999.00', contenido)
+
+
+class GastoCajaTests(TestCase):
+    """Un gasto/salida de efectivo (pago a un service, flete, etc.) debe descontarse
+    del efectivo esperado de la caja, y respetar el aislamiento multi-tenant."""
+
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.user_a = User.objects.create_user(username="user_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        self.caja_a = CajaDiaria.objects.create(veterinaria=self.vet_a, monto_inicial=1000, estado='ABIERTA')
+        self.caja_b = CajaDiaria.objects.create(veterinaria=self.vet_b, monto_inicial=500, estado='ABIERTA')
+
+        self.client.force_login(self.user_a)
+
+    def test_el_gasto_se_descuenta_del_efectivo_esperado(self):
+        Venta.objects.create(veterinaria=self.vet_a, caja=self.caja_a, medio_pago='EFECTIVO', total=300)
+        GastoCaja.objects.create(caja=self.caja_a, concepto="Pago al delivery", monto=200, usuario=self.user_a)
+
+        self.caja_a.refresh_from_db()
+        # 1000 inicial + 300 venta - 200 gasto = 1100
+        self.assertEqual(self.caja_a.total_efectivo, 1100)
+        self.assertEqual(self.caja_a.total_gastos, 200)
+
+    def test_registrar_gasto_vista_crea_el_registro_en_la_caja_activa(self):
+        response = self.client.post(reverse('ventas:registrar_gasto'), {
+            'concepto': 'Compra de insumos de limpieza',
+            'monto': '450.50',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        gasto = GastoCaja.objects.get(caja=self.caja_a)
+        self.assertEqual(gasto.concepto, 'Compra de insumos de limpieza')
+        self.assertEqual(str(gasto.monto), '450.50')
+        self.assertEqual(gasto.usuario, self.user_a)
+
+    def test_no_registra_gasto_sin_concepto_ni_monto_valido(self):
+        self.client.post(reverse('ventas:registrar_gasto'), {'concepto': '', 'monto': '100'})
+        self.client.post(reverse('ventas:registrar_gasto'), {'concepto': 'Algo', 'monto': '0'})
+
+        self.assertEqual(GastoCaja.objects.filter(caja=self.caja_a).count(), 0)
+
+    def test_sin_caja_abierta_no_se_puede_registrar_gasto(self):
+        self.caja_a.estado = 'CERRADA'
+        self.caja_a.save()
+
+        response = self.client.post(reverse('ventas:registrar_gasto'), {'concepto': 'Algo', 'monto': '100'})
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        self.assertEqual(GastoCaja.objects.count(), 0)
+
+    def test_lista_ventas_solo_muestra_los_gastos_de_la_caja_del_tenant_activo(self):
+        GastoCaja.objects.create(caja=self.caja_a, concepto="Gasto A", monto=100)
+        GastoCaja.objects.create(caja=self.caja_b, concepto="Gasto B", monto=999)
+
+        response = self.client.get(reverse('ventas:lista_ventas'))
+
+        gastos = list(response.context['gastos_caja_activa'])
+        self.assertEqual(len(gastos), 1)
+        self.assertEqual(gastos[0].concepto, "Gasto A")

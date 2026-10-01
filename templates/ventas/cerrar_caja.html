@@ -37,8 +37,15 @@
 
                             <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary-subtle">
                                 <span class="text-muted small fw-medium">Ventas en Efectivo acumuladas:</span>
-                                <span class="fw-bold text-success">+ ${{ total_efectivo|add:caja.monto_inicial|floatformat:2 }}</span>
+                                <span class="fw-bold text-success">+ ${{ ventas_efectivo|floatformat:2 }}</span>
                             </div>
+
+                            {% if total_gastos > 0 %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary-subtle">
+                                <span class="text-muted small fw-medium">Gastos y Salidas de Caja:</span>
+                                <span class="fw-bold text-danger">- ${{ total_gastos|floatformat:2 }}</span>
+                            </div>
+                            {% endif %}
 
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="text-muted small fw-medium">Cobros Digitales (Tarjeta / MP):</span>
@@ -54,6 +61,22 @@
                             </div>
                         </div>
                     </div>
+
+                    {% if gastos %}
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-dark text-uppercase extra-small tracking-wider mb-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-dash-circle text-warning fs-6"></i> Detalle de Gastos del Turno
+                        </h6>
+                        <ul class="list-unstyled d-flex flex-column gap-1 mb-0 small">
+                            {% for g in gastos %}
+                            <li class="d-flex justify-content-between border-bottom pb-1">
+                                <span class="text-secondary">{{ g.fecha_hora|date:"H:i" }} hs &bull; {{ g.concepto }}</span>
+                                <span class="fw-bold text-danger">-${{ g.monto|floatformat:2 }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
 
                     <!-- Formulario de Arqueo -->
                     <form method="POST" novalidate>

@@ -26,6 +26,9 @@
             <a href="{% url 'ventas:registrar_venta' %}" class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
                 <i class="bi bi-plus-circle-fill"></i> Nueva Venta
             </a>
+            <button type="button" class="btn btn-outline-warning text-dark fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGasto">
+                <i class="bi bi-dash-circle-fill"></i> Registrar Gasto
+            </button>
             <a href="{% url 'ventas:cerrar_caja' caja_activa.id %}" class="btn btn-outline-danger fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm">
                 <i class="bi bi-lock-fill"></i> Cerrar Caja (#{{ caja_activa.id }})
             </a>
@@ -51,10 +54,15 @@
                 </div>
             </div>
         </div>
-        <div>
+        <div class="text-md-end">
             <span class="badge bg-white text-success-emphasis border border-success-subtle px-3 py-2 rounded-pill fw-extrabold fs-6 shadow-sm">
                 <i class="bi bi-cash-stack me-1"></i> Efectivo en Caja: ${{ caja_activa.total_efectivo|floatformat:2 }}
             </span>
+            {% if caja_activa.total_gastos > 0 %}
+                <div class="small text-danger fw-semibold mt-1">
+                    <i class="bi bi-dash-circle me-1"></i>Gastos del turno: -${{ caja_activa.total_gastos|floatformat:2 }}
+                </div>
+            {% endif %}
         </div>
     </div>
 {% else %}
@@ -72,6 +80,39 @@
             <i class="bi bi-key-fill me-1"></i> Abrir Ahora
         </a>
     </div>
+{% endif %}
+
+{% if gastos_caja_activa %}
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h6 class="fw-bold text-dark mb-0"><i class="bi bi-dash-circle text-warning me-2"></i>Gastos y Salidas de esta Caja</h6>
+        <span class="badge bg-danger-subtle text-danger-emphasis border border-danger-subtle fw-bold px-3 py-1 rounded-pill">Total: -${{ caja_activa.total_gastos|floatformat:2 }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Hora</th>
+                        <th>Concepto</th>
+                        <th>Registrado por</th>
+                        <th class="text-end pe-3">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for g in gastos_caja_activa %}
+                    <tr>
+                        <td class="ps-3">{{ g.fecha_hora|date:"H:i" }} hs</td>
+                        <td>{{ g.concepto }}</td>
+                        <td class="text-secondary">{% if g.usuario %}{{ g.usuario.get_full_name|default:g.usuario.username }}{% else %}-{% endif %}</td>
+                        <td class="text-end pe-3 fw-bold text-danger">-${{ g.monto|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endif %}
 
 {% if not ventas %}
@@ -201,6 +242,40 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Modal Registrar Gasto -->
+{% if caja_activa %}
+<div class="modal fade" id="modalGasto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="{% url 'ventas:registrar_gasto' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-dark py-3 px-4">
+                    <h5 class="modal-title fw-bold fs-6"><i class="bi bi-dash-circle-fill me-2"></i>Registrar Gasto o Salida de Caja</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Concepto / Motivo *</label>
+                        <input type="text" name="concepto" class="form-control" required placeholder="Ej: Pago al delivery, Compra de insumos de limpieza">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-1">Monto *</label>
+                        <input type="number" name="monto" class="form-control" step="0.01" min="0.01" required placeholder="Ej: 2500.00">
+                    </div>
+                    <div class="alert alert-light border small text-muted mb-0">
+                        <i class="bi bi-info-circle me-1"></i> Se descuenta del efectivo esperado al cerrar esta caja.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top py-2 px-4">
+                    <button type="button" class="btn btn-outline-secondary fw-semibold rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold px-4 rounded-3 shadow">Registrar Gasto</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

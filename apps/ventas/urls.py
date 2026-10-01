@@ -13,6 +13,7 @@ urlpatterns = [
     # Gestión de Caja Diaria
     path('caja/abrir/', views.abrir_caja, name='abrir_caja'),
     path('caja/<int:caja_id>/cerrar/', views.cerrar_caja, name='cerrar_caja'),
+    path('caja/gasto/', views.registrar_gasto, name='registrar_gasto'),
 
     # NUEVO: Reporte de Control de Cajas y Arqueos
     path('cajas/reporte/', views.reporte_cajas, name='reporte_cajas'),
