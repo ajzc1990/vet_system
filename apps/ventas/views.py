@@ -68,7 +68,7 @@ def exportar_ventas_csv(request):
     for v in ventas:
         cliente_str = f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Consumidor Final"
         vendedor_str = (v.vendedor.get_full_name() or v.vendedor.username) if v.vendedor else '-'
-        productos_str = '; '.join(f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all())
+        productos_str = '; '.join(f"{d.cantidad}x {d.nombre_item}" for d in v.detalles.all())
         writer.writerow([
             v.id, v.fecha_hora.strftime('%d/%m/%Y %H:%M'), cliente_str, vendedor_str,
             v.get_medio_pago_display(), productos_str, f"{v.total:.2f}",
@@ -129,12 +129,25 @@ def registrar_venta(request):
                 continue
             items.append((producto, cantidad))
 
+        # Cargo personalizado (sin Producto de catálogo): para algo puntual como el
+        # costo variable de una Internación, que no tiene sentido cargar como Producto.
+        cargo_descripcion = (request.POST.get('cargo_descripcion') or '').strip()
+        cargo_monto = None
+        if cargo_descripcion:
+            try:
+                cargo_monto = Decimal(request.POST.get('cargo_monto') or '0')
+            except InvalidOperation:
+                cargo_monto = None
+            if not cargo_monto or cargo_monto <= 0:
+                messages.error(request, "El cargo adicional necesita un monto mayor a $0.")
+                return _rerender(form)
+
         if not form.is_valid():
             messages.error(request, "Por favor revisa los datos ingresados en el formulario de venta.")
             return _rerender(form)
 
-        if not items:
-            messages.error(request, "Agregá al menos un producto o servicio a la venta.")
+        if not items and not cargo_monto:
+            messages.error(request, "Agregá al menos un producto, servicio o cargo a la venta.")
             return _rerender(form)
 
         # Validar stock disponible (no aplica a Servicios)
@@ -155,11 +168,12 @@ def registrar_venta(request):
         # Solo admite un ítem por cobro: el flujo de confirmación asíncrona de MP
         # está pensado para un producto/servicio puntual, no para un carrito entero.
         if medio_pago == 'QR_MP':
-            if len(items) > 1:
+            if len(items) > 1 or cargo_monto:
                 messages.error(
                     request,
-                    "El cobro por QR / Mercado Pago solo admite un producto o servicio por cobro. "
-                    "Elegí otro medio de pago para carritos con varios ítems, o cobrá cada uno por separado."
+                    "El cobro por QR / Mercado Pago solo admite un producto o servicio por cobro, y no "
+                    "admite cargos personalizados. Elegí otro medio de pago para carritos con varios "
+                    "ítems, o cobrá cada uno por separado."
                 )
                 return _rerender(form)
 
@@ -223,11 +237,21 @@ def registrar_venta(request):
                 precio_unitario=producto.precio_venta or 0,
             )
 
+        if cargo_monto:
+            DetalleVenta.objects.create(
+                venta=venta,
+                descripcion_personalizada=cargo_descripcion,
+                cantidad=1,
+                precio_unitario=cargo_monto,
+            )
+
         subtotal = venta.subtotal_sin_descuento
         venta.total = subtotal - (subtotal * descuento_porcentaje / 100)
         venta.save(update_fields=['total'])
 
         detalle_str = ", ".join(f"{p.nombre} x{c}" for p, c in items)
+        if cargo_monto:
+            detalle_str = f"{detalle_str}, {cargo_descripcion}" if detalle_str else cargo_descripcion
         registrar_auditoria(
             request, 'CREAR', modelo='Venta', objeto_id=venta.id,
             descripcion=f"Venta #{venta.id} registrada por ${venta.total} ({detalle_str})"
@@ -236,13 +260,22 @@ def registrar_venta(request):
         messages.success(request, f"¡Venta #{venta.id} registrada con éxito! Total: ${venta.total}")
         return redirect('ventas:lista_ventas')
     else:
-        form = VentaForm(veterinaria=vet)
+        # Permite llegar desde una Consulta o Internación con el cliente y el cargo
+        # (ej. el costo estimado de la estadía) ya precargados, para no tener que
+        # buscar de nuevo al cliente ni tipear el monto a mano.
+        initial = {}
+        cliente_id = request.GET.get('cliente_id')
+        if cliente_id:
+            initial['cliente'] = cliente_id
+        form = VentaForm(veterinaria=vet, initial=initial)
 
     return render(request, 'ventas/form_venta.html', {
         'form': form,
         'vet': vet,
         'caja_activa': caja_activa,
         'productos_disponibles': productos_disponibles,
+        'cargo_descripcion_inicial': request.GET.get('cargo_descripcion', ''),
+        'cargo_monto_inicial': request.GET.get('cargo_monto', ''),
     })
 
 
@@ -524,7 +557,7 @@ def descargar_ticket_pdf(request, venta_id):
     tabla_data = [["Producto", "Cant.", "Precio Unit.", "Subtotal"]]
     for d in venta.detalles.all():
         tabla_data.append([
-            d.producto.nombre,
+            d.nombre_item,
             str(d.cantidad),
             f"${d.precio_unitario:.2f}",
             f"${d.subtotal:.2f}"

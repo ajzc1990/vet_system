@@ -158,6 +158,52 @@ class RegistrarVentaCarritoTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Venta.objects.exists())
 
+    def test_cobra_un_cargo_personalizado_sin_producto_de_catalogo(self):
+        """Para cobrar algo puntual (ej. el costo variable de una Internación) sin
+        tener que crear un Producto/Servicio en el catálogo para esa cifra única."""
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [''], 'cantidad': [''], 'medio_pago': 'EFECTIVO',
+            'cargo_descripcion': 'Internación Firulais (5 días)', 'cargo_monto': '270000',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        venta = Venta.objects.get()
+        self.assertEqual(venta.total, 270000)
+        detalle = venta.detalles.get()
+        self.assertIsNone(detalle.producto)
+        self.assertEqual(detalle.descripcion_personalizada, 'Internación Firulais (5 días)')
+        self.assertEqual(detalle.nombre_item, 'Internación Firulais (5 días)')
+
+    def test_combina_items_de_catalogo_con_un_cargo_personalizado(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.amoxicilina.id], 'cantidad': [1], 'medio_pago': 'EFECTIVO',
+            'cargo_descripcion': 'Consulta', 'cargo_monto': '3000',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        venta = Venta.objects.get()
+        self.assertEqual(venta.detalles.count(), 2)
+        self.assertEqual(venta.total, 3500)  # 500 (amoxicilina) + 3000 (cargo)
+
+    def test_cargo_personalizado_sin_monto_no_registra_venta(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [''], 'cantidad': [''], 'medio_pago': 'EFECTIVO',
+            'cargo_descripcion': 'Internación', 'cargo_monto': '0',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Venta.objects.exists())
+
+    def test_qr_mp_no_admite_cargo_personalizado(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [''], 'cantidad': [''], 'medio_pago': 'QR_MP',
+            'cargo_descripcion': 'Internación', 'cargo_monto': '270000',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CobroQR.objects.exists())
+        self.assertFalse(Venta.objects.exists())
+
 
 class ExportarVentasCsvTests(TestCase):
     def test_exporta_csv_solo_con_las_ventas_del_tenant_activo(self):

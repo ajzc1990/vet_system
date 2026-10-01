@@ -295,6 +295,11 @@
                                         <a href="{% url 'historia_clinica:descargar_receta_pdf' consulta.id %}" class="btn btn-sm btn-light border text-primary fw-bold rounded-2 px-3 shadow-sm d-inline-flex align-items-center gap-1" title="Imprimir Receta PDF">
                                             <i class="bi bi-printer-fill text-primary"></i> Receta PDF
                                         </a>
+                                        {% if mascota.cliente %}
+                                        <a href="{% url 'ventas:registrar_venta' %}?cliente_id={{ mascota.cliente.id }}&cargo_descripcion=Consulta%20{{ mascota.nombre|urlencode }}%20%28{{ consulta.fecha_hora|date:'d/m/Y'|urlencode }}%29" class="btn btn-sm btn-success fw-bold rounded-2 px-3 shadow-sm d-inline-flex align-items-center gap-1" title="Cobrar esta consulta">
+                                            <i class="bi bi-cash-coin"></i> Cobrar
+                                        </a>
+                                        {% endif %}
 
                                         {% if user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                                             <a href="{% url 'clientes:editar_consulta' consulta.id %}" class="btn btn-sm btn-light border text-secondary rounded-2">

@@ -39,6 +39,11 @@
                     <a href="{% url 'historia_clinica:descargar_informe_internacion_pdf' internacion.id %}" class="btn btn-outline-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
                         <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Informe PDF
                     </a>
+                    {% if mascota.cliente %}
+                    <a href="{% url 'ventas:registrar_venta' %}?cliente_id={{ mascota.cliente.id }}&cargo_descripcion=Internaci%C3%B3n%20{{ mascota.nombre|urlencode }}%20%28{{ internacion.dias_internado|urlencode }}%20d%C3%ADas%29&cargo_monto={{ internacion.costo_estimado_estadia|stringformat:'s'|urlencode }}" class="btn btn-success fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-cash-coin"></i> Cobrar Internación
+                    </a>
+                    {% endif %}
                     {% if internacion.esta_activa and user.is_superuser or user.is_staff or user.perfil.rol == 'VET' or user.perfil.rol == 'ADMIN' or 'Veterinarios' in user.groups.all %}
                         {% if internacion.esta_activa %}
                         <button class="btn btn-success fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1" type="button" data-bs-toggle="modal" data-bs-target="#modalAlta">

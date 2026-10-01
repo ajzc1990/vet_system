@@ -81,6 +81,27 @@
                             <i class="bi bi-plus-lg me-1"></i> Agregar línea
                         </button>
 
+                        <!-- Cargo personalizado (sin producto de catálogo, ej. una Internación) -->
+                        <div class="row g-3 mb-4 p-3 bg-light rounded-4 border">
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-receipt text-primary me-1"></i> Cargo adicional (opcional)
+                                </label>
+                                <div class="form-text text-muted extra-small mt-0 mb-2">
+                                    Para cobrar algo puntual que no está en el catálogo, como el costo de una internación.
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" name="cargo_descripcion" id="id_cargo_descripcion" class="form-control form-control-sm" placeholder="Ej: Internación - Firulais (5 días)" value="{{ cargo_descripcion_inicial }}">
+                            </div>
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="cargo_monto" id="id_cargo_monto" class="form-control" step="0.01" min="0" placeholder="Monto" value="{{ cargo_monto_inicial }}">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row g-3 mb-4">
                             <!-- Medio de Pago -->
                             <div class="col-md-6">
@@ -181,6 +202,8 @@
         var template = document.getElementById('templateFila');
         var btnAgregar = document.getElementById('btnAgregarFila');
         var inputDescuento = document.getElementById('id_descuento_porcentaje');
+        var inputCargoDescripcion = document.getElementById('id_cargo_descripcion');
+        var inputCargoMonto = document.getElementById('id_cargo_monto');
         var selectMedioPago = document.getElementById('id_medio_pago');
         var elSubtotal = document.getElementById('resumenSubtotal');
         var elDescuento = document.getElementById('resumenDescuento');
@@ -218,6 +241,11 @@
                 subtotalGeneral += recalcularFila(fila);
             });
 
+            var cargoMonto = parseFloat(inputCargoMonto.value) || 0;
+            if (inputCargoDescripcion.value.trim() && cargoMonto > 0) {
+                subtotalGeneral += cargoMonto;
+            }
+
             var descuentoPct = parseFloat(inputDescuento.value) || 0;
             var montoDescuento = subtotalGeneral * descuentoPct / 100;
             var total = subtotalGeneral - montoDescuento;
@@ -227,7 +255,8 @@
             elTotal.textContent = '$' + total.toFixed(2);
 
             var filasConProducto = Array.from(tbody.querySelectorAll('.selector-producto')).filter(function(s) { return s.value; }).length;
-            avisoQR.classList.toggle('d-none', !(selectMedioPago.value === 'QR_MP' && filasConProducto > 1));
+            var hayCargo = inputCargoDescripcion.value.trim() && cargoMonto > 0;
+            avisoQR.classList.toggle('d-none', !(selectMedioPago.value === 'QR_MP' && (filasConProducto > 1 || hayCargo)));
         }
 
         btnAgregar.addEventListener('click', agregarFila);
@@ -248,9 +277,12 @@
         tbody.addEventListener('input', recalcular);
         tbody.addEventListener('change', recalcular);
         inputDescuento.addEventListener('input', recalcular);
+        inputCargoDescripcion.addEventListener('input', recalcular);
+        inputCargoMonto.addEventListener('input', recalcular);
         selectMedioPago.addEventListener('change', recalcular);
 
         agregarFila();
+        recalcular();
     })();
 </script>
 {% endblock %}

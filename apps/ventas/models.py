@@ -197,7 +197,12 @@ class GastoCaja(models.Model):
 
 class DetalleVenta(models.Model):
     venta = models.ForeignKey(Venta, on_delete=models.CASCADE, related_name='detalles')
-    producto = models.ForeignKey('inventario.Producto', on_delete=models.PROTECT)
+    producto = models.ForeignKey('inventario.Producto', on_delete=models.PROTECT, null=True, blank=True)
+    descripcion_personalizada = models.CharField(
+        max_length=255, blank=True,
+        verbose_name="Descripción (cargo sin producto de catálogo)",
+        help_text="Para cobrar algo puntual (ej. una internación con costo variable) sin tener que crear un Producto/Servicio en el catálogo.",
+    )
     cantidad = models.PositiveIntegerField(default=1)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
@@ -219,5 +224,9 @@ class DetalleVenta(models.Model):
                 motivo=f"Venta #{self.venta.id} - Cliente: {cliente_str}"
             )
 
+    @property
+    def nombre_item(self):
+        return self.producto.nombre if self.producto else self.descripcion_personalizada
+
     def __str__(self):
-        return f"{self.cantidad}x {self.producto.nombre} (${self.subtotal})"
+        return f"{self.cantidad}x {self.nombre_item} (${self.subtotal})"
