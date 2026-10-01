@@ -111,3 +111,34 @@ class PrecioVentaObligatorioTests(TestCase):
 
         self.assertRedirects(response, reverse('inventario:lista_productos'))
         self.assertTrue(Producto.objects.filter(nombre='Amoxicilina 500mg').exists())
+
+
+class ProductoServicioTests(TestCase):
+    """Un Servicio (consulta, cirugía, baño) no lleva control de stock: se puede
+    cargar sin completar stock_actual/stock_minimo y nunca entra en las alertas
+    de bajo stock ni en las sugerencias de compra."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Servicios")
+        self.user = User.objects.create_user(username="admin_servicios", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        self.client.force_login(self.user)
+
+    def test_se_puede_crear_un_servicio_sin_cargar_stock(self):
+        response = self.client.post(reverse('inventario:nuevo_producto'), {
+            'nombre': 'Consulta General', 'tipo': 'SERVICIO', 'precio_costo': '0', 'precio_venta': '3000',
+        })
+
+        self.assertRedirects(response, reverse('inventario:lista_productos'))
+        servicio = Producto.objects.get(nombre='Consulta General')
+        self.assertEqual(servicio.stock_actual, 0)
+        self.assertEqual(servicio.stock_minimo, 0)
+        self.assertFalse(servicio.bajo_stock)
+
+    def test_un_servicio_nunca_cuenta_como_bajo_stock(self):
+        servicio = Producto.objects.create(veterinaria=self.vet, nombre="Baño y Peluquería", tipo='SERVICIO', precio_venta=5000)
+
+        response = self.client.get(reverse('inventario:lista_productos') + '?filtro=bajo_stock')
+
+        self.assertEqual(response.context['cant_bajo_stock'], 0)
+        self.assertNotIn(servicio, list(response.context['productos']))

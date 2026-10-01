@@ -31,7 +31,7 @@ def lista_productos(request):
 
     # Contadores para las tarjetas/KPIs de la cabecera
     total_productos = qs_base.count()
-    cant_bajo_stock = qs_base.filter(stock_actual__lte=F('stock_minimo')).count()
+    cant_bajo_stock = qs_base.exclude(tipo='SERVICIO').filter(stock_actual__lte=F('stock_minimo')).count()
     cant_vencidos = qs_base.filter(fecha_vencimiento__lt=hoy).count()
     cant_proximo_vencer = qs_base.filter(
         fecha_vencimiento__gte=hoy,
@@ -43,7 +43,7 @@ def lista_productos(request):
     productos = qs_base
 
     if filtro == 'bajo_stock':
-        productos = productos.filter(stock_actual__lte=F('stock_minimo'))
+        productos = productos.exclude(tipo='SERVICIO').filter(stock_actual__lte=F('stock_minimo'))
     elif filtro == 'vencidos':
         productos = productos.filter(fecha_vencimiento__lt=hoy)
     elif filtro == 'proximo_vencer':
@@ -76,7 +76,7 @@ def exportar_productos_csv(request):
     limite_vencimiento = hoy + timedelta(days=30)
     filtro = request.GET.get('filtro')
     if filtro == 'bajo_stock':
-        productos = productos.filter(stock_actual__lte=F('stock_minimo'))
+        productos = productos.exclude(tipo='SERVICIO').filter(stock_actual__lte=F('stock_minimo'))
     elif filtro == 'vencidos':
         productos = productos.filter(fecha_vencimiento__lt=hoy)
     elif filtro == 'proximo_vencer':

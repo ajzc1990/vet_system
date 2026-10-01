@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.utils import timezone
 from django.http import HttpResponse
 
@@ -21,7 +21,7 @@ from reportlab.lib import colors
 from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja, CobroQR
 from .forms import VentaForm
 from .pagos import mp_configurado_para, crear_preferencia_cobro, obtener_pago_para
-from apps.inventario.models import MovimientoStock
+from apps.inventario.models import MovimientoStock, Producto
 from apps.usuarios.utils import get_veterinaria_activa
 from apps.usuarios.audit import registrar_auditoria
 
@@ -80,107 +80,169 @@ def exportar_ventas_csv(request):
 @login_required
 @transaction.atomic
 def registrar_venta(request):
-    """Punto de Venta (POS) con validación de caja abierta y descuento de stock."""
+    """Punto de Venta (POS): carrito con varios productos y/o servicios, descuento
+    opcional sobre el total, validación de caja abierta y descuento de stock (los
+    Servicios no llevan stock, así que nunca lo descuentan)."""
     vet = get_veterinaria_activa(request)
 
     # Verificar que exista una caja abierta
     caja_activa = CajaDiaria.objects.filter(veterinaria=vet, estado='ABIERTA').first() if vet else CajaDiaria.objects.filter(estado='ABIERTA').first()
-    
+
     if not caja_activa:
         messages.warning(request, "Debes abrir la Caja Diaria antes de registrar ventas.")
         return redirect('ventas:abrir_caja')
 
     vet_venta = vet or (caja_activa.veterinaria if caja_activa else None)
 
+    productos_disponibles = (
+        Producto.objects.filter(veterinaria=vet_venta).filter(Q(tipo='SERVICIO') | Q(stock_actual__gt=0)).order_by('nombre')
+        if vet_venta else Producto.objects.none()
+    )
+
+    def _rerender(form):
+        return render(request, 'ventas/form_venta.html', {
+            'form': form, 'vet': vet, 'caja_activa': caja_activa,
+            'productos_disponibles': productos_disponibles,
+        })
+
     if request.method == 'POST':
         form = VentaForm(request.POST, veterinaria=vet)
-        if form.is_valid():
-            producto = form.cleaned_data['producto']
-            cantidad = form.cleaned_data['cantidad']
 
-            # Validar stock disponible
-            if producto.stock_actual < cantidad:
+        # El carrito viaja como filas paralelas (una fila = un producto_id + una
+        # cantidad, en el mismo orden) en vez de un único producto/cantidad.
+        producto_ids = request.POST.getlist('producto_id')
+        cantidades = request.POST.getlist('cantidad')
+
+        items = []
+        for pid, cant_str in zip(producto_ids, cantidades):
+            if not pid or not cant_str:
+                continue
+            try:
+                cantidad = int(cant_str)
+            except ValueError:
+                continue
+            if cantidad < 1:
+                continue
+            try:
+                producto = productos_disponibles.get(pk=pid)
+            except Producto.DoesNotExist:
+                continue
+            items.append((producto, cantidad))
+
+        if not form.is_valid():
+            messages.error(request, "Por favor revisa los datos ingresados en el formulario de venta.")
+            return _rerender(form)
+
+        if not items:
+            messages.error(request, "Agregá al menos un producto o servicio a la venta.")
+            return _rerender(form)
+
+        # Validar stock disponible (no aplica a Servicios)
+        for producto, cantidad in items:
+            if not producto.es_servicio and producto.stock_actual < cantidad:
                 messages.error(
                     request,
                     f"Stock insuficiente de '{producto.nombre}'. Disponible: {producto.stock_actual} unidades."
                 )
-                return render(request, 'ventas/form_venta.html', {'form': form, 'vet': vet, 'caja_activa': caja_activa})
+                return _rerender(form)
 
-            # Cobro por QR/Mercado Pago: no se crea la Venta todavía. Se crea un
-            # CobroQR pendiente y se redirige al Checkout de MP; la Venta real (con
-            # su descuento de stock) recién se crea cuando el webhook confirma el pago.
-            if form.cleaned_data['medio_pago'] == 'QR_MP':
-                if not mp_configurado_para(vet_venta):
-                    messages.warning(
-                        request,
-                        "Esta clínica todavía no configuró su cuenta de Mercado Pago. "
-                        "Configurala en \"Configurar Clínica\" o elegí otro medio de pago."
-                    )
-                    return render(request, 'ventas/form_venta.html', {'form': form, 'vet': vet, 'caja_activa': caja_activa})
+        medio_pago = form.cleaned_data['medio_pago']
+        descuento_porcentaje = form.cleaned_data.get('descuento_porcentaje') or 0
 
-                precio_unitario = producto.precio_venta or 0
-                cobro = CobroQR.objects.create(
-                    veterinaria=vet_venta,
-                    caja=caja_activa,
-                    producto=producto,
-                    cantidad=cantidad,
-                    precio_unitario=precio_unitario,
-                    total=precio_unitario * cantidad,
-                    cliente=form.cleaned_data.get('cliente'),
-                    vendedor=request.user,
-                    observaciones=form.cleaned_data.get('observaciones'),
+        # Cobro por QR/Mercado Pago: no se crea la Venta todavía. Se crea un
+        # CobroQR pendiente y se redirige al Checkout de MP; la Venta real (con
+        # su descuento de stock) recién se crea cuando el webhook confirma el pago.
+        # Solo admite un ítem por cobro: el flujo de confirmación asíncrona de MP
+        # está pensado para un producto/servicio puntual, no para un carrito entero.
+        if medio_pago == 'QR_MP':
+            if len(items) > 1:
+                messages.error(
+                    request,
+                    "El cobro por QR / Mercado Pago solo admite un producto o servicio por cobro. "
+                    "Elegí otro medio de pago para carritos con varios ítems, o cobrá cada uno por separado."
                 )
+                return _rerender(form)
 
-                try:
-                    preferencia = crear_preferencia_cobro(cobro, request)
-                    init_point = preferencia.get('init_point') or preferencia.get('sandbox_init_point')
-                except Exception:
-                    init_point = None
+            if not mp_configurado_para(vet_venta):
+                messages.warning(
+                    request,
+                    "Esta clínica todavía no configuró su cuenta de Mercado Pago. "
+                    "Configurala en \"Configurar Clínica\" o elegí otro medio de pago."
+                )
+                return _rerender(form)
 
-                if not init_point:
-                    cobro.delete()
-                    messages.error(request, "No se pudo iniciar el cobro por Mercado Pago. Intentá nuevamente.")
-                    return render(request, 'ventas/form_venta.html', {'form': form, 'vet': vet, 'caja_activa': caja_activa})
-
-                cobro.mp_preference_id = preferencia.get('id')
-                cobro.save(update_fields=['mp_preference_id'])
-                return redirect(init_point)
-
-            # Crear Venta
-            venta = form.save(commit=False)
-            if vet:
-                venta.veterinaria = vet
-            venta.caja = caja_activa
-            venta.vendedor = request.user
+            producto, cantidad = items[0]
             precio_unitario = producto.precio_venta or 0
-            venta.total = precio_unitario * cantidad
-            venta.save()
+            subtotal = precio_unitario * cantidad
+            total = subtotal - (subtotal * descuento_porcentaje / 100)
 
-            # Crear Detalle (DetalleVenta.save() ya descuenta stock y crea MovimientoStock)
+            cobro = CobroQR.objects.create(
+                veterinaria=vet_venta,
+                caja=caja_activa,
+                producto=producto,
+                cantidad=cantidad,
+                precio_unitario=precio_unitario,
+                descuento_porcentaje=descuento_porcentaje,
+                total=total,
+                cliente=form.cleaned_data.get('cliente'),
+                vendedor=request.user,
+                observaciones=form.cleaned_data.get('observaciones'),
+            )
+
+            try:
+                preferencia = crear_preferencia_cobro(cobro, request)
+                init_point = preferencia.get('init_point') or preferencia.get('sandbox_init_point')
+            except Exception:
+                init_point = None
+
+            if not init_point:
+                cobro.delete()
+                messages.error(request, "No se pudo iniciar el cobro por Mercado Pago. Intentá nuevamente.")
+                return _rerender(form)
+
+            cobro.mp_preference_id = preferencia.get('id')
+            cobro.save(update_fields=['mp_preference_id'])
+            return redirect(init_point)
+
+        # Crear Venta con uno o varios ítems
+        venta = form.save(commit=False)
+        if vet:
+            venta.veterinaria = vet
+        venta.caja = caja_activa
+        venta.vendedor = request.user
+        venta.total = 0  # se recalcula abajo, una vez creados los detalles
+        venta.save()
+
+        # Crear Detalle por cada ítem (DetalleVenta.save() ya descuenta stock y crea
+        # MovimientoStock, salvo que el producto sea un Servicio).
+        for producto, cantidad in items:
             DetalleVenta.objects.create(
                 venta=venta,
                 producto=producto,
                 cantidad=cantidad,
-                precio_unitario=precio_unitario,
-                subtotal=venta.total
+                precio_unitario=producto.precio_venta or 0,
             )
 
-            registrar_auditoria(
-                request, 'CREAR', modelo='Venta', objeto_id=venta.id,
-                descripcion=f"Venta #{venta.id} registrada por ${venta.total} ({producto.nombre} x{cantidad})"
-            )
+        subtotal = venta.subtotal_sin_descuento
+        venta.total = subtotal - (subtotal * descuento_porcentaje / 100)
+        venta.save(update_fields=['total'])
 
-            messages.success(request, f"¡Venta #{venta.id} registrada con éxito! Total: ${venta.total}")
-            return redirect('ventas:lista_ventas')
-        else:
-            messages.error(request, "Por favor revisa los datos ingresados en el formulario de venta.")
+        detalle_str = ", ".join(f"{p.nombre} x{c}" for p, c in items)
+        registrar_auditoria(
+            request, 'CREAR', modelo='Venta', objeto_id=venta.id,
+            descripcion=f"Venta #{venta.id} registrada por ${venta.total} ({detalle_str})"
+        )
+
+        messages.success(request, f"¡Venta #{venta.id} registrada con éxito! Total: ${venta.total}")
+        return redirect('ventas:lista_ventas')
     else:
         form = VentaForm(veterinaria=vet)
 
     return render(request, 'ventas/form_venta.html', {
         'form': form,
         'vet': vet,
-        'caja_activa': caja_activa
+        'caja_activa': caja_activa,
+        'productos_disponibles': productos_disponibles,
     })
 
 
@@ -213,6 +275,7 @@ def _confirmar_cobro_qr(cobro, payment_id=None):
                 cliente=cobro.cliente,
                 vendedor=cobro.vendedor,
                 medio_pago='QR_MP',
+                descuento_porcentaje=cobro.descuento_porcentaje,
                 total=cobro.total,
                 observaciones=cobro.observaciones,
             )
@@ -467,6 +530,10 @@ def descargar_ticket_pdf(request, venta_id):
             f"${d.subtotal:.2f}"
         ])
     
+    if venta.descuento_porcentaje:
+        tabla_data.append(["Subtotal", "", "", f"${venta.subtotal_sin_descuento:.2f}"])
+        tabla_data.append([f"Descuento ({venta.descuento_porcentaje:g}%)", "", "", f"-${venta.monto_descuento:.2f}"])
+
     tabla_data.append(["TOTAL", "", "", f"${venta.total:.2f}"])
 
     t = Table(tabla_data, colWidths=[240, 60, 100, 100])

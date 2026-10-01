@@ -57,6 +57,108 @@ class DetalleVentaStockTests(TestCase):
         self.assertEqual(MovimientoStock.objects.filter(producto=producto, tipo='SALIDA').count(), 1)
 
 
+class RegistrarVentaCarritoTests(TestCase):
+    """El Punto de Venta ahora admite varios ítems por venta (antes solo permitía
+    un producto a la vez), Servicios sin stock (consulta, baño, cirugía) y un
+    descuento porcentual aplicado sobre el total."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica POS")
+        self.user = User.objects.create_user(username="admin_pos", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        self.caja = CajaDiaria.objects.create(veterinaria=self.vet, estado='ABIERTA', monto_inicial=0)
+
+        self.amoxicilina = Producto.objects.create(veterinaria=self.vet, nombre="Amoxicilina", stock_actual=10, precio_venta=500)
+        self.vacuna = Producto.objects.create(veterinaria=self.vet, nombre="Vacuna Quintuple", stock_actual=5, precio_venta=1000)
+        self.consulta = Producto.objects.create(veterinaria=self.vet, nombre="Consulta General", tipo='SERVICIO', precio_venta=3000)
+
+        self.client.force_login(self.user)
+
+    def test_vende_varios_items_en_una_sola_venta(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.amoxicilina.id, self.vacuna.id],
+            'cantidad': [2, 1],
+            'medio_pago': 'EFECTIVO',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        venta = Venta.objects.get()
+        self.assertEqual(venta.detalles.count(), 2)
+        self.assertEqual(venta.total, 2000)  # 2*500 + 1*1000
+
+    def test_aplica_descuento_porcentual_al_total(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.amoxicilina.id],
+            'cantidad': [2],
+            'medio_pago': 'EFECTIVO',
+            'descuento_porcentaje': '10',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        venta = Venta.objects.get()
+        self.assertEqual(venta.descuento_porcentaje, 10)
+        self.assertEqual(venta.subtotal_sin_descuento, 1000)
+        self.assertEqual(venta.total, 900)  # 1000 - 10%
+
+    def test_vende_un_servicio_sin_descontar_stock_ni_exigirlo(self):
+        from apps.inventario.models import MovimientoStock
+
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.consulta.id],
+            'cantidad': [1],
+            'medio_pago': 'EFECTIVO',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        venta = Venta.objects.get()
+        self.assertEqual(venta.total, 3000)
+        self.consulta.refresh_from_db()
+        self.assertEqual(self.consulta.stock_actual, 0)  # nunca se tocó
+        self.assertFalse(MovimientoStock.objects.filter(producto=self.consulta).exists())
+
+    def test_stock_insuficiente_en_un_item_no_registra_ninguna_venta(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.amoxicilina.id, self.vacuna.id],
+            'cantidad': [2, 999],
+            'medio_pago': 'EFECTIVO',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Venta.objects.exists())
+        self.amoxicilina.refresh_from_db()
+        self.assertEqual(self.amoxicilina.stock_actual, 10)  # nada se descontó
+
+    def test_qr_mp_rechaza_carrito_con_mas_de_un_item(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.amoxicilina.id, self.vacuna.id],
+            'cantidad': [1, 1],
+            'medio_pago': 'QR_MP',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CobroQR.objects.exists())
+        self.assertFalse(Venta.objects.exists())
+
+    def test_carrito_vacio_no_registra_venta(self):
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [''], 'cantidad': [''], 'medio_pago': 'EFECTIVO',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Venta.objects.exists())
+
+    def test_no_se_puede_vender_un_producto_de_otra_veterinaria(self):
+        otra_vet = Veterinaria.objects.create(nombre="Otra Clinica")
+        producto_ajeno = Producto.objects.create(veterinaria=otra_vet, nombre="Producto Ajeno", stock_actual=10, precio_venta=100)
+
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [producto_ajeno.id], 'cantidad': [1], 'medio_pago': 'EFECTIVO',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Venta.objects.exists())
+
+
 class ExportarVentasCsvTests(TestCase):
     def test_exporta_csv_solo_con_las_ventas_del_tenant_activo(self):
         vet_a = Veterinaria.objects.create(nombre="Clinica A")
@@ -216,7 +318,7 @@ class CobroQRTests(TestCase):
         mock_crear_pref.return_value = {'id': 'pref-123', 'init_point': 'https://mp.example.com/checkout/pref-123'}
 
         response = self.client.post(reverse('ventas:registrar_venta'), {
-            'producto': self.producto.id, 'cantidad': 2, 'medio_pago': 'QR_MP',
+            'producto_id': [self.producto.id], 'cantidad': [2], 'medio_pago': 'QR_MP',
         })
 
         self.assertRedirects(response, 'https://mp.example.com/checkout/pref-123', fetch_redirect_response=False)
@@ -237,7 +339,7 @@ class CobroQRTests(TestCase):
         self.client.force_login(user_b)
 
         response = self.client.post(reverse('ventas:registrar_venta'), {
-            'producto': producto_b.id, 'cantidad': 1, 'medio_pago': 'QR_MP',
+            'producto_id': [producto_b.id], 'cantidad': [1], 'medio_pago': 'QR_MP',
         })
 
         self.assertEqual(response.status_code, 200)

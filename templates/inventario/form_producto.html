@@ -68,9 +68,10 @@
                             </div>
                         </div>
 
-                        <hr class="opacity-10 my-4">
+                        <hr class="opacity-10 my-4" id="separadorStock">
 
-                        <!-- Control de Stock y Vencimiento -->
+                        <!-- Control de Stock y Vencimiento (no aplica a Servicios) -->
+                        <div id="seccionStock">
                         <h6 class="fw-bold text-primary text-uppercase extra-small tracking-wider mb-3">
                             <i class="bi bi-boxes me-1"></i> Existencias y Fechas
                         </h6>
@@ -107,6 +108,7 @@
                                     <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_vencimiento.errors.0 }}</div>
                                 {% endif %}
                             </div>
+                        </div>
                         </div>
 
                         <hr class="opacity-10 my-4">
@@ -154,4 +156,21 @@
         </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        var selectTipo = document.getElementById('{{ form.tipo.id_for_label }}');
+        var seccionStock = document.getElementById('seccionStock');
+        var separador = document.getElementById('separadorStock');
+
+        function actualizar() {
+            var esServicio = selectTipo.value === 'SERVICIO';
+            seccionStock.classList.toggle('d-none', esServicio);
+            separador.classList.toggle('d-none', esServicio);
+        }
+
+        selectTipo.addEventListener('change', actualizar);
+        actualizar();
+    })();
+</script>
 {% endblock %}

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Nueva Venta - VeterSystem{% endblock %}
 
@@ -12,7 +13,7 @@
     </div>
 
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-9">
             <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
                 <div class="card-header bg-primary text-white py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h3 class="card-title h5 mb-0 fw-bold d-flex align-items-center gap-2">
@@ -22,7 +23,7 @@
                         POS Mostrador
                     </span>
                 </div>
-                
+
                 <div class="card-body p-4 p-md-5">
 
                     {% if messages %}
@@ -34,9 +35,17 @@
                         {% endfor %}
                     {% endif %}
 
+                    {% if not productos_disponibles %}
+                        <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-4">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            No tenés productos con stock ni servicios cargados todavía.
+                            <a href="{% url 'inventario:nuevo_producto' %}">Cargá uno primero</a>.
+                        </div>
+                    {% endif %}
+
                     <form method="post" novalidate>
                         {% csrf_token %}
-                        
+
                         <!-- Cliente / Tutor -->
                         <div class="mb-4">
                             <label for="{{ form.cliente.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
@@ -51,37 +60,69 @@
                             {% endif %}
                         </div>
 
-                        <!-- Producto y Cantidad -->
+                        <!-- Carrito -->
+                        <label class="form-label fw-bold text-dark small mb-1">
+                            <i class="bi bi-box-seam-fill text-primary me-1"></i> Productos y Servicios *
+                        </label>
+                        <div class="table-responsive border rounded-3 mb-2">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr class="text-uppercase text-secondary extra-small fw-bold">
+                                        <th class="ps-3" style="width: 50%;">Producto / Servicio</th>
+                                        <th style="width: 15%;">Cantidad</th>
+                                        <th class="text-end" style="width: 20%;">Subtotal</th>
+                                        <th class="pe-3" style="width: 5%;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoCarrito"></tbody>
+                            </table>
+                        </div>
+                        <button type="button" id="btnAgregarFila" class="btn btn-sm btn-outline-primary fw-semibold rounded-3 mb-4">
+                            <i class="bi bi-plus-lg me-1"></i> Agregar línea
+                        </button>
+
                         <div class="row g-3 mb-4">
-                            <div class="col-md-8">
-                                <label for="{{ form.producto.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                    <i class="bi bi-box-seam-fill text-primary me-1"></i> Producto / Insumo *
+                            <!-- Medio de Pago -->
+                            <div class="col-md-6">
+                                <label for="{{ form.medio_pago.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-credit-card-2-front-fill text-primary me-1"></i> Medio de Pago *
                                 </label>
-                                {{ form.producto }}
-                                {% if form.producto.errors %}
-                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.producto.errors.0 }}</div>
+                                {{ form.medio_pago }}
+                                {% if form.medio_pago.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.medio_pago.errors.0 }}</div>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
-                                <label for="{{ form.cantidad.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                    <i class="bi bi-hash text-primary me-1"></i> Cantidad *
+                            <!-- Descuento -->
+                            <div class="col-md-6">
+                                <label for="{{ form.descuento_porcentaje.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-percent text-primary me-1"></i> {{ form.descuento_porcentaje.label }}
                                 </label>
-                                {{ form.cantidad }}
-                                {% if form.cantidad.errors %}
-                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.cantidad.errors.0 }}</div>
+                                {{ form.descuento_porcentaje }}
+                                {% if form.descuento_porcentaje.errors %}
+                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.descuento_porcentaje.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
 
-                        <!-- Medio de Pago -->
-                        <div class="mb-4">
-                            <label for="{{ form.medio_pago.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                <i class="bi bi-credit-card-2-front-fill text-primary me-1"></i> Medio de Pago *
-                            </label>
-                            {{ form.medio_pago }}
-                            {% if form.medio_pago.errors %}
-                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.medio_pago.errors.0 }}</div>
-                            {% endif %}
+                        <div id="avisoQRMultiItem" class="alert alert-warning border-0 rounded-3 shadow-sm d-none">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            El cobro por QR / Mercado Pago solo admite un producto o servicio por cobro. Sacá los ítems de más o elegí otro medio de pago.
+                        </div>
+
+                        <!-- Resumen -->
+                        <div class="bg-light rounded-4 p-3 mb-4">
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span>Subtotal</span>
+                                <span id="resumenSubtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span>Descuento</span>
+                                <span id="resumenDescuento">-$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold text-dark fs-5 pt-2 border-top mt-2">
+                                <span>Total</span>
+                                <span id="resumenTotal">$0.00</span>
+                            </div>
                         </div>
 
                         <!-- Notas u Observaciones -->
@@ -111,4 +152,105 @@
         </div>
     </div>
 </div>
+
+<template id="templateFila">
+    <tr class="fila-item">
+        <td class="ps-3">
+            <select name="producto_id" class="form-select form-select-sm selector-producto" required>
+                <option value="">-- Elegir producto o servicio --</option>
+                {% for p in productos_disponibles %}
+                <option value="{{ p.id }}" data-precio="{{ p.precio_venta|unlocalize }}" data-stock="{{ p.stock_actual|unlocalize }}" data-servicio="{% if p.es_servicio %}1{% else %}0{% endif %}">
+                    {{ p.nombre }} (${{ p.precio_venta|floatformat:2 }}){% if not p.es_servicio %} — Stock: {{ p.stock_actual }}{% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </td>
+        <td><input type="number" name="cantidad" min="1" value="1" class="form-control form-control-sm input-cantidad" required></td>
+        <td class="text-end subtotal-fila fw-semibold pe-2">$0.00</td>
+        <td class="pe-3 text-center">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-quitar-fila" title="Quitar línea">
+                <i class="bi bi-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+
+<script>
+    (function() {
+        var tbody = document.getElementById('cuerpoCarrito');
+        var template = document.getElementById('templateFila');
+        var btnAgregar = document.getElementById('btnAgregarFila');
+        var inputDescuento = document.getElementById('id_descuento_porcentaje');
+        var selectMedioPago = document.getElementById('id_medio_pago');
+        var elSubtotal = document.getElementById('resumenSubtotal');
+        var elDescuento = document.getElementById('resumenDescuento');
+        var elTotal = document.getElementById('resumenTotal');
+        var avisoQR = document.getElementById('avisoQRMultiItem');
+
+        function agregarFila() {
+            tbody.appendChild(template.content.cloneNode(true));
+            recalcular();
+        }
+
+        function recalcularFila(fila) {
+            var select = fila.querySelector('.selector-producto');
+            var opcion = select.selectedOptions[0];
+            var inputCantidad = fila.querySelector('.input-cantidad');
+            var cantidad = parseInt(inputCantidad.value, 10) || 0;
+            var precio = (opcion && opcion.value) ? parseFloat(opcion.dataset.precio || '0') : 0;
+            var esServicio = opcion ? opcion.dataset.servicio === '1' : false;
+            var stock = opcion ? parseInt(opcion.dataset.stock || '0', 10) : 0;
+
+            if (opcion && opcion.value && !esServicio) {
+                inputCantidad.max = stock;
+            } else {
+                inputCantidad.removeAttribute('max');
+            }
+
+            var subtotal = precio * cantidad;
+            fila.querySelector('.subtotal-fila').textContent = '$' + subtotal.toFixed(2);
+            return subtotal;
+        }
+
+        function recalcular() {
+            var subtotalGeneral = 0;
+            tbody.querySelectorAll('.fila-item').forEach(function(fila) {
+                subtotalGeneral += recalcularFila(fila);
+            });
+
+            var descuentoPct = parseFloat(inputDescuento.value) || 0;
+            var montoDescuento = subtotalGeneral * descuentoPct / 100;
+            var total = subtotalGeneral - montoDescuento;
+
+            elSubtotal.textContent = '$' + subtotalGeneral.toFixed(2);
+            elDescuento.textContent = '-$' + montoDescuento.toFixed(2);
+            elTotal.textContent = '$' + total.toFixed(2);
+
+            var filasConProducto = Array.from(tbody.querySelectorAll('.selector-producto')).filter(function(s) { return s.value; }).length;
+            avisoQR.classList.toggle('d-none', !(selectMedioPago.value === 'QR_MP' && filasConProducto > 1));
+        }
+
+        btnAgregar.addEventListener('click', agregarFila);
+
+        tbody.addEventListener('click', function(e) {
+            var btnQuitar = e.target.closest('.btn-quitar-fila');
+            if (!btnQuitar) return;
+            var fila = btnQuitar.closest('tr');
+            if (tbody.querySelectorAll('.fila-item').length > 1) {
+                fila.remove();
+            } else {
+                fila.querySelector('.selector-producto').value = '';
+                fila.querySelector('.input-cantidad').value = 1;
+            }
+            recalcular();
+        });
+
+        tbody.addEventListener('input', recalcular);
+        tbody.addEventListener('change', recalcular);
+        inputDescuento.addEventListener('input', recalcular);
+        selectMedioPago.addEventListener('change', recalcular);
+
+        agregarFila();
+    })();
+</script>
 {% endblock %}

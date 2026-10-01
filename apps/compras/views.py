@@ -130,10 +130,10 @@ def sugerencias_compra(request):
     vet = get_veterinaria_activa(request)
 
     if request.user.is_superuser and not vet:
-        productos = Producto.objects.filter(stock_actual__lte=F('stock_minimo'))
+        productos = Producto.objects.filter(stock_actual__lte=F('stock_minimo')).exclude(tipo='SERVICIO')
     else:
         productos = (
-            Producto.objects.filter(veterinaria=vet, stock_actual__lte=F('stock_minimo'))
+            Producto.objects.filter(veterinaria=vet, stock_actual__lte=F('stock_minimo')).exclude(tipo='SERVICIO')
             if vet else Producto.objects.none()
         )
     productos = productos.select_related('categoria').order_by('stock_actual')

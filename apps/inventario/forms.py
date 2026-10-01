@@ -46,6 +46,22 @@ class ProductoForm(forms.ModelForm):
         self.fields['precio_costo'].label = "Precio de Costo ($)"
         self.fields['precio_venta'].label = "Precio de Venta ($)"
 
+        # Un Servicio no lleva control de stock: estos campos se completan solos.
+        self.fields['stock_actual'].required = False
+        self.fields['stock_minimo'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('tipo') == 'SERVICIO':
+            cleaned_data['stock_actual'] = 0
+            cleaned_data['stock_minimo'] = 0
+        else:
+            if cleaned_data.get('stock_actual') is None:
+                self.add_error('stock_actual', "Este campo es obligatorio.")
+            if cleaned_data.get('stock_minimo') is None:
+                self.add_error('stock_minimo', "Este campo es obligatorio.")
+        return cleaned_data
+
     def clean_codigo_barras(self):
         codigo = self.cleaned_data.get('codigo_barras')
         if not codigo:

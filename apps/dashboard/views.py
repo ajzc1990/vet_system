@@ -46,7 +46,7 @@ def dashboard_principal(request):
     cant_internados = qs_internaciones.filter(estado='INTERNADO').count()
 
     # Alertas de Inventario
-    cant_bajo_stock = qs_productos.filter(stock_actual__lte=F('stock_minimo')).count()
+    cant_bajo_stock = qs_productos.exclude(tipo='SERVICIO').filter(stock_actual__lte=F('stock_minimo')).count()
     cant_proximo_vencer = qs_productos.filter(
         fecha_vencimiento__gte=hoy,
         fecha_vencimiento__lte=limite_vencimiento

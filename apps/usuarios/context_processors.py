@@ -69,6 +69,6 @@ def alertas_stock(request):
         return {'productos_bajo_stock_count': 0}
 
     filtro_tenant = {} if es_superuser_global else {'veterinaria': veterinaria}
-    count = Producto.objects.filter(stock_actual__lte=F('stock_minimo'), **filtro_tenant).count()
+    count = Producto.objects.exclude(tipo='SERVICIO').filter(stock_actual__lte=F('stock_minimo'), **filtro_tenant).count()
 
     return {'productos_bajo_stock_count': count}

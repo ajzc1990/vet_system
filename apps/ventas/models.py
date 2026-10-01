@@ -1,6 +1,7 @@
 # apps/ventas/models.py
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from apps.inventario.models import MovimientoStock
 
@@ -97,6 +98,11 @@ class Venta(models.Model):
     )
     fecha_hora = models.DateTimeField(auto_now_add=True)
     medio_pago = models.CharField(max_length=20, choices=MEDIOS_PAGO, default='EFECTIVO')
+    descuento_porcentaje = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="Descuento (%)",
+    )
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     observaciones = models.TextField(blank=True, null=True)
 
@@ -106,6 +112,14 @@ class Venta(models.Model):
     def __str__(self):
         cliente_str = f"{self.cliente.nombre} {self.cliente.apellido}" if self.cliente else "Consumidor Final"
         return f"Venta #{self.id} - {cliente_str} (${self.total})"
+
+    @property
+    def subtotal_sin_descuento(self):
+        return self.detalles.aggregate(total=models.Sum('subtotal'))['total'] or 0
+
+    @property
+    def monto_descuento(self):
+        return self.subtotal_sin_descuento * self.descuento_porcentaje / 100
 
 
 class CobroQR(models.Model):
@@ -128,6 +142,11 @@ class CobroQR(models.Model):
     producto = models.ForeignKey('inventario.Producto', on_delete=models.PROTECT)
     cantidad = models.PositiveIntegerField(default=1)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    descuento_porcentaje = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="Descuento (%)",
+    )
     total = models.DecimalField(max_digits=12, decimal_places=2)
     cliente = models.ForeignKey('clientes.Cliente', on_delete=models.SET_NULL, null=True, blank=True)
     vendedor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
@@ -190,7 +209,8 @@ class DetalleVenta(models.Model):
 
         # Si es una venta nueva, registramos el movimiento de stock. MovimientoStock.save()
         # ya descuenta self.producto.stock_actual: no hay que repetir el descuento acá.
-        if es_nuevo and self.producto:
+        # Los Servicios no llevan stock, así que no generan movimiento.
+        if es_nuevo and self.producto and not self.producto.es_servicio:
             cliente_str = f"{self.venta.cliente.nombre} {self.venta.cliente.apellido}" if self.venta.cliente else "Consumidor Final"
             MovimientoStock.objects.create(
                 producto=self.producto,

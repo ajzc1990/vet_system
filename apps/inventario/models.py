@@ -37,6 +37,7 @@ class Producto(models.Model):
         ('ALIMENTO', 'Alimento / Nutrición'),
         ('DESCARTABLE', 'Material Descartable'),
         ('OTRO', 'Otro insumo'),
+        ('SERVICIO', 'Servicio (consulta, cirugía, baño, etc.)'),
     ]
 
     veterinaria = models.ForeignKey(
@@ -76,11 +77,20 @@ class Producto(models.Model):
         ordering = ['nombre']
 
     def __str__(self):
+        if self.tipo == 'SERVICIO':
+            return self.nombre
         return f"{self.nombre} (Stock: {self.stock_actual})"
 
     @property
+    def es_servicio(self):
+        return self.tipo == 'SERVICIO'
+
+    @property
     def bajo_stock(self):
-        """Retorna True si el stock actual cayó por debajo o igual al mínimo."""
+        """Retorna True si el stock actual cayó por debajo o igual al mínimo. Los
+        servicios no llevan control de stock, así que nunca entran en esta alerta."""
+        if self.es_servicio:
+            return False
         return self.stock_actual <= self.stock_minimo
 
     @property

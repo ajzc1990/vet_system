@@ -62,7 +62,8 @@ class DetalleCompraForm(forms.Form):
         veterinaria = kwargs.pop('veterinaria', None)
         super().__init__(*args, **kwargs)
         self.fields['producto'].queryset = (
-            Producto.objects.filter(veterinaria=veterinaria) if veterinaria else Producto.objects.all()
+            Producto.objects.filter(veterinaria=veterinaria).exclude(tipo='SERVICIO') if veterinaria
+            else Producto.objects.exclude(tipo='SERVICIO')
         )
 
     def clean(self):

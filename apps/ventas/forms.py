@@ -1,27 +1,15 @@
 from django import forms
 from .models import Venta
-from apps.inventario.models import Producto
 from apps.clientes.models import Cliente
 
 class VentaForm(forms.ModelForm):
-    producto = forms.ModelChoiceField(
-        queryset=Producto.objects.none(),
-        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_producto'}),
-        label="Producto / Insumo *"
-    )
-    cantidad = forms.IntegerField(
-        min_value=1, 
-        initial=1, 
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'id': 'id_cantidad'}),
-        label="Cantidad *"
-    )
-
     class Meta:
         model = Venta
-        fields = ['cliente', 'medio_pago', 'observaciones']
+        fields = ['cliente', 'medio_pago', 'descuento_porcentaje', 'observaciones']
         widgets = {
             'cliente': forms.Select(attrs={'class': 'form-select'}),
-            'medio_pago': forms.Select(attrs={'class': 'form-select'}),
+            'medio_pago': forms.Select(attrs={'class': 'form-select', 'id': 'id_medio_pago'}),
+            'descuento_porcentaje': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '100', 'id': 'id_descuento_porcentaje'}),
             'observaciones': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Notas opcionales de la venta'}),
         }
 
@@ -31,13 +19,13 @@ class VentaForm(forms.ModelForm):
 
         if veterinaria:
             self.fields['cliente'].queryset = Cliente.objects.filter(veterinaria=veterinaria)
-            self.fields['producto'].queryset = Producto.objects.filter(veterinaria=veterinaria, stock_actual__gt=0)
         else:
             self.fields['cliente'].queryset = Cliente.objects.all()
-            self.fields['producto'].queryset = Producto.objects.filter(stock_actual__gt=0)
 
         self.fields['cliente'].required = False
         self.fields['cliente'].empty_label = "Consumidor Final / Cliente Ocasional"
+        self.fields['descuento_porcentaje'].required = False
+        self.fields['descuento_porcentaje'].label = "Descuento (%)"
 
         # 'MERCADO_PAGO' queda solo para mostrar ventas históricas (antes de separar
         # QR_MP y TRANSFERENCIA): no se ofrece como opción para ventas nuevas.
