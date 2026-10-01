@@ -234,13 +234,17 @@ def detalle_historia_clinica(request, mascota_id):
 
     # Insumos y nombres ya usados antes, para autocompletar los modales de
     # Vacuna/Desparasitación y que el veterinario tenga que tipear lo menos posible.
+    # Se filtra por la veterinaria DUEÑA de la mascota, no por la "veterinaria activa"
+    # de la sesión: para un superusuario sin clínica seleccionada esa última viene
+    # vacía, aunque la mascota sí pertenezca a una clínica concreta.
     from apps.inventario.models import Producto
-    if vet:
-        productos_vacunas = Producto.objects.filter(veterinaria=vet, tipo='VACUNA', stock_actual__gt=0).order_by('nombre')
-        productos_desparasitantes = Producto.objects.filter(veterinaria=vet, stock_actual__gt=0).order_by('nombre')
-        nombres_vacunas_historial = RegistroVacuna.objects.filter(veterinaria=vet).exclude(nombre_vacuna='').order_by().values_list('nombre_vacuna', flat=True).distinct()
-        nombres_desparasitantes_historial = RegistroDesparasitacion.objects.filter(veterinaria=vet).exclude(producto='').order_by().values_list('producto', flat=True).distinct()
-        diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct()
+    vet_mascota = vet or (mascota.cliente.veterinaria if mascota.cliente else None)
+    if vet_mascota:
+        productos_vacunas = Producto.objects.filter(veterinaria=vet_mascota, tipo='VACUNA', stock_actual__gt=0).order_by('nombre')
+        productos_desparasitantes = Producto.objects.filter(veterinaria=vet_mascota, stock_actual__gt=0).order_by('nombre')
+        nombres_vacunas_historial = RegistroVacuna.objects.filter(veterinaria=vet_mascota).exclude(nombre_vacuna='').order_by().values_list('nombre_vacuna', flat=True).distinct()
+        nombres_desparasitantes_historial = RegistroDesparasitacion.objects.filter(veterinaria=vet_mascota).exclude(producto='').order_by().values_list('producto', flat=True).distinct()
+        diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet_mascota).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct()
     else:
         productos_vacunas = Producto.objects.none()
         productos_desparasitantes = Producto.objects.none()
@@ -346,7 +350,8 @@ def editar_consulta(request, consulta_id):
     else:
         form = ConsultaMedicaForm(instance=consulta, veterinaria=vet)
 
-    diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct() if vet else []
+    vet_mascota = vet or (mascota.cliente.veterinaria if mascota.cliente else None)
+    diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet_mascota).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct() if vet_mascota else []
 
     context = {
         'form': form,
