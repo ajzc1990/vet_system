@@ -38,3 +38,9 @@ class VentaForm(forms.ModelForm):
 
         self.fields['cliente'].required = False
         self.fields['cliente'].empty_label = "Consumidor Final / Cliente Ocasional"
+
+        # 'MERCADO_PAGO' queda solo para mostrar ventas históricas (antes de separar
+        # QR_MP y TRANSFERENCIA): no se ofrece como opción para ventas nuevas.
+        self.fields['medio_pago'].choices = [
+            c for c in Venta.MEDIOS_PAGO if c[0] != 'MERCADO_PAGO'
+        ]

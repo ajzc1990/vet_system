@@ -7,7 +7,7 @@ class ConfigVeterinariaForm(forms.ModelForm):
     """Formulario para la configuración del perfil institucional de la clínica."""
     class Meta:
         model = Veterinaria
-        fields = ['nombre', 'cuit_rif', 'telefono', 'direccion', 'email_contacto', 'logo']
+        fields = ['nombre', 'cuit_rif', 'telefono', 'direccion', 'email_contacto', 'logo', 'mp_access_token']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Clínica Veterinaria Central'}),
             'cuit_rif': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 20-30123456-7'}),
@@ -15,6 +15,7 @@ class ConfigVeterinariaForm(forms.ModelForm):
             'direccion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Ej: Av. Marcos Paz 450'}),
             'email_contacto': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'contacto@veterinaria.com'}),
             'logo': forms.FileInput(attrs={'class': 'form-control'}),
+            'mp_access_token': forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'APP_USR-...', 'autocomplete': 'off'}, render_value=True),
         }
         labels = {
             'nombre': 'Nombre de la Clínica *',
@@ -23,6 +24,7 @@ class ConfigVeterinariaForm(forms.ModelForm):
             'direccion': 'Dirección Física',
             'email_contacto': 'Correo Electrónico de Contacto',
             'logo': 'Logo Institucional (para PDFs y Membretes)',
+            'mp_access_token': 'Access Token de Mercado Pago (cobro por QR)',
         }
 
 

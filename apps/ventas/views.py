@@ -1,9 +1,11 @@
 # apps/ventas/views.py
 import csv
+import json
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
@@ -15,8 +17,9 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja
+from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja, CobroQR
 from .forms import VentaForm
+from .pagos import mp_configurado_para, crear_preferencia_cobro, obtener_pago_para
 from apps.inventario.models import MovimientoStock
 from apps.usuarios.utils import get_veterinaria_activa
 from apps.usuarios.audit import registrar_auditoria
@@ -86,6 +89,8 @@ def registrar_venta(request):
         messages.warning(request, "Debes abrir la Caja Diaria antes de registrar ventas.")
         return redirect('ventas:abrir_caja')
 
+    vet_venta = vet or (caja_activa.veterinaria if caja_activa else None)
+
     if request.method == 'POST':
         form = VentaForm(request.POST, veterinaria=vet)
         if form.is_valid():
@@ -95,10 +100,50 @@ def registrar_venta(request):
             # Validar stock disponible
             if producto.stock_actual < cantidad:
                 messages.error(
-                    request, 
+                    request,
                     f"Stock insuficiente de '{producto.nombre}'. Disponible: {producto.stock_actual} unidades."
                 )
                 return render(request, 'ventas/form_venta.html', {'form': form, 'vet': vet, 'caja_activa': caja_activa})
+
+            # Cobro por QR/Mercado Pago: no se crea la Venta todavía. Se crea un
+            # CobroQR pendiente y se redirige al Checkout de MP; la Venta real (con
+            # su descuento de stock) recién se crea cuando el webhook confirma el pago.
+            if form.cleaned_data['medio_pago'] == 'QR_MP':
+                if not mp_configurado_para(vet_venta):
+                    messages.warning(
+                        request,
+                        "Esta clínica todavía no configuró su cuenta de Mercado Pago. "
+                        "Configurala en \"Configurar Clínica\" o elegí otro medio de pago."
+                    )
+                    return render(request, 'ventas/form_venta.html', {'form': form, 'vet': vet, 'caja_activa': caja_activa})
+
+                precio_unitario = producto.precio_venta or 0
+                cobro = CobroQR.objects.create(
+                    veterinaria=vet_venta,
+                    caja=caja_activa,
+                    producto=producto,
+                    cantidad=cantidad,
+                    precio_unitario=precio_unitario,
+                    total=precio_unitario * cantidad,
+                    cliente=form.cleaned_data.get('cliente'),
+                    vendedor=request.user,
+                    observaciones=form.cleaned_data.get('observaciones'),
+                )
+
+                try:
+                    preferencia = crear_preferencia_cobro(cobro, request)
+                    init_point = preferencia.get('init_point') or preferencia.get('sandbox_init_point')
+                except Exception:
+                    init_point = None
+
+                if not init_point:
+                    cobro.delete()
+                    messages.error(request, "No se pudo iniciar el cobro por Mercado Pago. Intentá nuevamente.")
+                    return render(request, 'ventas/form_venta.html', {'form': form, 'vet': vet, 'caja_activa': caja_activa})
+
+                cobro.mp_preference_id = preferencia.get('id')
+                cobro.save(update_fields=['mp_preference_id'])
+                return redirect(init_point)
 
             # Crear Venta
             venta = form.save(commit=False)
@@ -132,10 +177,107 @@ def registrar_venta(request):
         form = VentaForm(veterinaria=vet)
 
     return render(request, 'ventas/form_venta.html', {
-        'form': form, 
-        'vet': vet, 
+        'form': form,
+        'vet': vet,
         'caja_activa': caja_activa
     })
+
+
+def _confirmar_cobro_qr(cobro, payment_id=None):
+    """Si el pago de un CobroQR está aprobado en Mercado Pago, crea recién ahí la
+    Venta real (con su descuento de stock) y marca el cobro como aprobado. Es
+    idempotente: si ya estaba aprobado o la Venta ya existe, no hace nada de nuevo."""
+    if cobro.estado != 'PENDIENTE':
+        return cobro
+
+    payment_id = payment_id or cobro.mp_payment_id
+    if not payment_id:
+        return cobro
+
+    try:
+        pago = obtener_pago_para(cobro.veterinaria, payment_id)
+    except Exception:
+        return cobro
+
+    if str(pago.get('external_reference')) != str(cobro.id):
+        return cobro
+
+    cobro.mp_payment_id = str(payment_id)
+
+    if pago.get('status') == 'approved':
+        with transaction.atomic():
+            venta = Venta.objects.create(
+                veterinaria=cobro.veterinaria,
+                caja=cobro.caja,
+                cliente=cobro.cliente,
+                vendedor=cobro.vendedor,
+                medio_pago='QR_MP',
+                total=cobro.total,
+                observaciones=cobro.observaciones,
+            )
+            DetalleVenta.objects.create(
+                venta=venta,
+                producto=cobro.producto,
+                cantidad=cobro.cantidad,
+                precio_unitario=cobro.precio_unitario,
+                subtotal=cobro.total,
+            )
+            cobro.venta = venta
+            cobro.estado = 'APROBADO'
+            cobro.save()
+    elif pago.get('status') in ('rejected', 'cancelled'):
+        cobro.estado = 'RECHAZADO'
+        cobro.save()
+    else:
+        cobro.save(update_fields=['mp_payment_id'])
+
+    return cobro
+
+
+@login_required
+def ver_cobro_qr(request, cobro_id):
+    """Pantalla de espera/resultado de un cobro por QR. Re-consulta el pago contra
+    Mercado Pago por si el webhook todavía no llegó (hay latencia entre el back_url
+    de MP y la notificación)."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        cobro = get_object_or_404(CobroQR, pk=cobro_id)
+    else:
+        cobro = get_object_or_404(CobroQR, pk=cobro_id, veterinaria=vet)
+
+    if cobro.estado == 'PENDIENTE':
+        payment_id = request.GET.get('payment_id') or request.GET.get('collection_id')
+        cobro = _confirmar_cobro_qr(cobro, payment_id=payment_id)
+
+    return render(request, 'ventas/cobro_qr.html', {'cobro': cobro})
+
+
+@csrf_exempt
+def webhook_cobro_qr(request, cobro_id):
+    """Notificación de pago de Mercado Pago para un CobroQR puntual. El id del cobro
+    viaja en la propia URL (no en el body) para saber de entrada con qué cuenta/token
+    de qué clínica hay que consultar el pago, antes incluso de leer la notificación."""
+    cobro = CobroQR.objects.filter(pk=cobro_id).first()
+    if not cobro:
+        return HttpResponse(status=200)
+
+    topic = request.GET.get('type') or request.GET.get('topic')
+    payment_id = request.GET.get('data.id') or request.GET.get('id')
+
+    if not payment_id and request.method == 'POST' and request.body:
+        try:
+            body = json.loads(request.body)
+            topic = topic or body.get('type') or body.get('action', '').split('.')[0]
+            payment_id = payment_id or (body.get('data') or {}).get('id')
+        except (ValueError, TypeError):
+            pass
+
+    if not payment_id or (topic and topic != 'payment'):
+        return HttpResponse(status=200)
+
+    _confirmar_cobro_qr(cobro, payment_id=payment_id)
+    return HttpResponse(status=200)
 
 
 @login_required

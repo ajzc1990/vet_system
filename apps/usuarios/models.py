@@ -12,6 +12,14 @@ class Veterinaria(models.Model):
     creado = models.DateTimeField(auto_now_add=True)
     activo = models.BooleanField(default=True)
 
+    mp_access_token = models.CharField(
+        max_length=255, blank=True, null=True,
+        verbose_name="Access Token de Mercado Pago",
+        help_text="Access Token de PRODUCCIÓN de la cuenta de Mercado Pago de esta clínica (no la del superadmin), "
+                   "para cobrar ventas por QR. Se obtiene en mercadopago.com.ar/developers/panel. El dinero cobrado "
+                   "va directo a esta cuenta, VeterSystem no lo toca."
+    )
+
     class Meta:
         verbose_name = "Veterinaria"
         verbose_name_plural = "Veterinarias"

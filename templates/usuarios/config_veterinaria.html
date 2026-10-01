@@ -111,6 +111,27 @@
                             {% endif %}
                         </div>
 
+                        <div class="mb-4 p-3 bg-light rounded-4 border">
+                            <label class="form-label fw-bold text-dark small d-block mb-1">
+                                <i class="bi bi-qr-code text-primary me-1"></i> Cobro por QR / Mercado Pago
+                            </label>
+                            <small class="text-muted d-block mb-3">
+                                Para cobrar ventas por QR desde el Punto de Venta, pegá acá el <strong>Access Token de Producción</strong> de
+                                la cuenta de Mercado Pago <strong>de esta clínica</strong> (no la tuya personal). Se obtiene en
+                                <a href="https://www.mercadopago.com.ar/developers/panel" target="_blank" rel="noopener">mercadopago.com.ar/developers/panel</a> → Tus integraciones → Credenciales de producción.
+                                El dinero cobrado va directo a esa cuenta; VeterSystem nunca lo toca.
+                            </small>
+                            {{ form.mp_access_token }}
+                            {% if form.mp_access_token.errors %}
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.mp_access_token.errors|striptags }}</div>
+                            {% endif %}
+                            {% if veterinaria.mp_access_token %}
+                                <div class="small text-success fw-semibold mt-2"><i class="bi bi-check-circle-fill me-1"></i>Ya hay un token cargado. El cobro por QR está habilitado.</div>
+                            {% else %}
+                                <div class="small text-muted fw-semibold mt-2"><i class="bi bi-dash-circle me-1"></i>Sin token cargado: el cobro por QR no va a estar disponible en Ventas.</div>
+                            {% endif %}
+                        </div>
+
                         <div class="d-flex justify-content-end gap-2 border-top pt-4">
                             <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
                                 Cancelar

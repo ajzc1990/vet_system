@@ -1,10 +1,12 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
 from apps.usuarios.models import PerfilUsuario, Veterinaria
 from apps.inventario.models import Producto
-from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja
+from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja, CobroQR
 
 
 class VentasTenantIsolationTests(TestCase):
@@ -136,3 +138,126 @@ class GastoCajaTests(TestCase):
         gastos = list(response.context['gastos_caja_activa'])
         self.assertEqual(len(gastos), 1)
         self.assertEqual(gastos[0].concepto, "Gasto A")
+
+
+class CobroQRTests(TestCase):
+    """Cobro por QR/Mercado Pago: la Venta real (y el descuento de stock) solo se
+    crea cuando el pago queda aprobado, nunca antes, y usando la cuenta de MP propia
+    de cada clínica."""
+
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A", mp_access_token="TOKEN-CLINICA-A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")  # sin MP configurado
+
+        self.user_a = User.objects.create_user(username="user_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        self.producto = Producto.objects.create(veterinaria=self.vet_a, nombre="Amoxicilina", stock_actual=10, precio_venta=500)
+        self.caja = CajaDiaria.objects.create(veterinaria=self.vet_a, estado='ABIERTA', monto_inicial=0)
+
+        self.client.force_login(self.user_a)
+
+    @patch('apps.ventas.views.crear_preferencia_cobro')
+    def test_elegir_qr_crea_un_cobro_pendiente_y_redirige_sin_tocar_stock(self, mock_crear_pref):
+        mock_crear_pref.return_value = {'id': 'pref-123', 'init_point': 'https://mp.example.com/checkout/pref-123'}
+
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto': self.producto.id, 'cantidad': 2, 'medio_pago': 'QR_MP',
+        })
+
+        self.assertRedirects(response, 'https://mp.example.com/checkout/pref-123', fetch_redirect_response=False)
+        cobro = CobroQR.objects.get(veterinaria=self.vet_a)
+        self.assertEqual(cobro.estado, 'PENDIENTE')
+        self.assertEqual(cobro.total, 1000)
+        self.assertEqual(cobro.mp_preference_id, 'pref-123')
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock_actual, 10)  # sin descontar todavía
+        self.assertFalse(Venta.objects.exists())
+
+    def test_qr_no_disponible_si_la_clinica_no_configuro_mercado_pago(self):
+        producto_b = Producto.objects.create(veterinaria=self.vet_b, nombre="Meloxicam", stock_actual=5, precio_venta=300)
+        caja_b = CajaDiaria.objects.create(veterinaria=self.vet_b, estado='ABIERTA', monto_inicial=0)
+        user_b = User.objects.create_user(username="user_b", password="testpass123")
+        PerfilUsuario.objects.create(user=user_b, veterinaria=self.vet_b, rol="ADMIN", is_approved=True)
+        self.client.force_login(user_b)
+
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto': producto_b.id, 'cantidad': 1, 'medio_pago': 'QR_MP',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(CobroQR.objects.exists())
+
+    @patch('apps.ventas.views.obtener_pago_para')
+    def test_pago_aprobado_crea_la_venta_y_descuenta_stock(self, mock_obtener_pago):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=3, precio_unitario=500, total=1500,
+        )
+        mock_obtener_pago.return_value = {'status': 'approved', 'external_reference': str(cobro.id)}
+
+        response = self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro.id]) + '?payment_id=mp-999')
+
+        self.assertEqual(response.status_code, 200)
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.estado, 'APROBADO')
+        self.assertIsNotNone(cobro.venta)
+        self.assertEqual(cobro.venta.medio_pago, 'QR_MP')
+        self.assertEqual(cobro.venta.total, 1500)
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock_actual, 7)
+
+    @patch('apps.ventas.views.obtener_pago_para')
+    def test_pago_rechazado_no_crea_venta(self, mock_obtener_pago):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=1, precio_unitario=500, total=500,
+        )
+        mock_obtener_pago.return_value = {'status': 'rejected', 'external_reference': str(cobro.id)}
+
+        self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro.id]) + '?payment_id=mp-888')
+
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.estado, 'RECHAZADO')
+        self.assertFalse(Venta.objects.exists())
+
+    @patch('apps.ventas.views.obtener_pago_para')
+    def test_confirmar_dos_veces_no_duplica_la_venta(self, mock_obtener_pago):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=1, precio_unitario=500, total=500,
+        )
+        mock_obtener_pago.return_value = {'status': 'approved', 'external_reference': str(cobro.id)}
+
+        self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro.id]) + '?payment_id=mp-777')
+        self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro.id]) + '?payment_id=mp-777')
+
+        self.assertEqual(Venta.objects.filter(cobro_qr=cobro).count(), 1)
+
+    @patch('apps.ventas.views.obtener_pago_para')
+    def test_external_reference_que_no_coincide_no_confirma_el_cobro(self, mock_obtener_pago):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=1, precio_unitario=500, total=500,
+        )
+        mock_obtener_pago.return_value = {'status': 'approved', 'external_reference': '999999'}
+
+        self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro.id]) + '?payment_id=mp-666')
+
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.estado, 'PENDIENTE')
+        self.assertFalse(Venta.objects.exists())
+
+    def test_no_puede_ver_el_cobro_qr_de_otra_veterinaria(self):
+        cobro_b = CobroQR.objects.create(
+            veterinaria=self.vet_b,
+            caja=CajaDiaria.objects.create(veterinaria=self.vet_b, estado='ABIERTA'),
+            producto=Producto.objects.create(veterinaria=self.vet_b, nombre="Otro", stock_actual=1),
+            cantidad=1, precio_unitario=100, total=100,
+        )
+
+        response = self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro_b.id]))
+
+        self.assertEqual(response.status_code, 404)

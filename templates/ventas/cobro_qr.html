@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Cobro por QR - VeterSystem{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5">
+    <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+            {% if cobro.estado == 'APROBADO' %}
+                <div class="card-body text-center p-4 p-md-5">
+                    <div class="bg-success-subtle text-success-emphasis rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                        <i class="bi bi-check-circle-fill fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">¡Pago confirmado!</h5>
+                    <p class="text-muted small mb-4">
+                        {{ cobro.producto.nombre }} x{{ cobro.cantidad }} &bull; ${{ cobro.total|floatformat:2 }}
+                    </p>
+                    <div class="d-flex justify-content-center gap-2">
+                        {% if cobro.venta %}
+                        <a href="{% url 'ventas:descargar_ticket_pdf' cobro.venta.id %}" class="btn btn-outline-primary fw-bold px-4 py-2 rounded-3">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Ticket PDF
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'ventas:lista_ventas' %}" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm">
+                            Volver a Ventas
+                        </a>
+                    </div>
+                </div>
+            {% elif cobro.estado == 'RECHAZADO' %}
+                <div class="card-body text-center p-4 p-md-5">
+                    <div class="bg-danger-subtle text-danger-emphasis rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 70px; height: 70px;">
+                        <i class="bi bi-x-circle-fill fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-2">El pago no se completó</h5>
+                    <p class="text-muted small mb-4">
+                        {{ cobro.producto.nombre }} x{{ cobro.cantidad }} &bull; ${{ cobro.total|floatformat:2 }}
+                    </p>
+                    <a href="{% url 'ventas:registrar_venta' %}" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm">
+                        Intentar de Nuevo
+                    </a>
+                </div>
+            {% else %}
+                <div class="card-body text-center p-4 p-md-5">
+                    <div class="spinner-border text-warning mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+                    <h5 class="fw-bold text-dark mb-2">Esperando confirmación del pago...</h5>
+                    <p class="text-muted small mb-4">
+                        {{ cobro.producto.nombre }} x{{ cobro.cantidad }} &bull; ${{ cobro.total|floatformat:2 }}<br>
+                        Mercado Pago puede tardar unos segundos en avisarnos.
+                    </p>
+                    <a href="{% url 'ventas:ver_cobro_qr' cobro.id %}" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-3 shadow-sm">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Revisar Estado
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    </div>
+</div>
+{% endblock %}

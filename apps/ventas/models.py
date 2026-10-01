@@ -65,9 +65,11 @@ class CajaDiaria(models.Model):
 class Venta(models.Model):
     MEDIOS_PAGO = [
         ('EFECTIVO', 'Efectivo'),
-        ('MERCADO_PAGO', 'Mercado Pago / Transferencia'),
+        ('TRANSFERENCIA', 'Transferencia Bancaria'),
+        ('QR_MP', 'QR / Mercado Pago'),
         ('DEBITO', 'Tarjeta de Débito'),
         ('CREDITO', 'Tarjeta de Crédito'),
+        ('MERCADO_PAGO', 'Mercado Pago / Transferencia'),  # legado: ventas registradas antes de separar QR_MP y TRANSFERENCIA
     ]
 
     veterinaria = models.ForeignKey(
@@ -104,6 +106,48 @@ class Venta(models.Model):
     def __str__(self):
         cliente_str = f"{self.cliente.nombre} {self.cliente.apellido}" if self.cliente else "Consumidor Final"
         return f"Venta #{self.id} - {cliente_str} (${self.total})"
+
+
+class CobroQR(models.Model):
+    """Intento de cobro por QR/Mercado Pago, con la cuenta de MP propia de la
+    veterinaria. La Venta real (y el descuento de stock) recién se crea cuando el
+    webhook confirma el pago aprobado — así un cobro abandonado no deja ventas
+    fantasma ni descuenta stock de algo que nunca se pagó."""
+    ESTADOS = [
+        ('PENDIENTE', 'Pendiente de Pago'),
+        ('APROBADO', 'Aprobado'),
+        ('RECHAZADO', 'Rechazado'),
+    ]
+
+    veterinaria = models.ForeignKey(
+        'usuarios.Veterinaria',
+        on_delete=models.CASCADE,
+        related_name='cobros_qr'
+    )
+    caja = models.ForeignKey(CajaDiaria, on_delete=models.CASCADE, related_name='cobros_qr')
+    producto = models.ForeignKey('inventario.Producto', on_delete=models.PROTECT)
+    cantidad = models.PositiveIntegerField(default=1)
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    total = models.DecimalField(max_digits=12, decimal_places=2)
+    cliente = models.ForeignKey('clientes.Cliente', on_delete=models.SET_NULL, null=True, blank=True)
+    vendedor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    observaciones = models.TextField(blank=True, null=True)
+
+    mp_preference_id = models.CharField(max_length=100, blank=True, null=True)
+    mp_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(max_length=12, choices=ESTADOS, default='PENDIENTE')
+    venta = models.OneToOneField(Venta, on_delete=models.SET_NULL, null=True, blank=True, related_name='cobro_qr')
+
+    creado_el = models.DateTimeField(auto_now_add=True)
+    actualizado_el = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Cobro por QR"
+        verbose_name_plural = "Cobros por QR"
+        ordering = ['-creado_el']
+
+    def __str__(self):
+        return f"Cobro QR #{self.id} - {self.producto.nombre} (${self.total}) [{self.get_estado_display()}]"
 
 
 class GastoCaja(models.Model):
