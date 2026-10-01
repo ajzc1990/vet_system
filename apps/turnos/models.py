@@ -78,6 +78,7 @@ class Turno(models.Model):
         verbose_name="Estado"
     )
     observaciones = models.TextField(blank=True, null=True, verbose_name="Observaciones")
+    recordatorio_whatsapp_enviado = models.BooleanField(default=False, verbose_name="Recordatorio de WhatsApp enviado")
     creado = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
     actualizado = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
 

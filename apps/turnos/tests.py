@@ -1,13 +1,21 @@
 from datetime import timedelta
+from io import StringIO
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.core.management import call_command
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
 from apps.clientes.models import Cliente, Mascota
 from apps.usuarios.models import PerfilUsuario, Veterinaria
 from .models import Turno, SolicitudTurnoWeb
+from .whatsapp import (
+    RecordatoriosDeshabilitados,
+    RecordatorioWhatsAppError,
+    enviar_recordatorio_turno,
+)
 
 
 class TurnosTenantIsolationTests(TestCase):
@@ -229,3 +237,124 @@ class LinkRecordatorioWhatsappTests(TestCase):
         turno = Turno.objects.create(veterinaria=self.vet, mascota=self.mascota, fecha_hora=self.fecha_hora)
 
         self.assertIsNone(turno.link_recordatorio_whatsapp)
+
+
+@override_settings(
+    WHATSAPP_RECORDATORIOS_ENABLED=True,
+    TWILIO_ACCOUNT_SID='ACxxxx',
+    TWILIO_AUTH_TOKEN='token',
+    TWILIO_WHATSAPP_FROM='whatsapp:+14155238886',
+)
+class EnviarRecordatorioWhatsappTests(TestCase):
+    """Servicio apps/turnos/whatsapp.py: arma y manda el recordatorio vía Twilio,
+    reusando el mismo mensaje y la misma normalización de teléfono que el link wa.me."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica WhatsApp")
+        self.cliente = Cliente.objects.create(
+            veterinaria=self.vet, nombre="Laura", apellido="Diaz", dni="444", telefono="381 111-2222",
+        )
+        self.mascota = Mascota.objects.create(cliente=self.cliente, nombre="Rocky", especie="CANINO")
+        self.fecha_hora = timezone.now().replace(hour=15, minute=30, second=0, microsecond=0) + timedelta(days=1)
+        self.turno = Turno.objects.create(veterinaria=self.vet, mascota=self.mascota, fecha_hora=self.fecha_hora)
+
+    @override_settings(WHATSAPP_RECORDATORIOS_ENABLED=False)
+    def test_deshabilitado_lanza_excepcion(self):
+        with self.assertRaises(RecordatoriosDeshabilitados):
+            enviar_recordatorio_turno(self.turno)
+
+    def test_sin_telefono_lanza_error(self):
+        self.cliente.telefono = ""
+        self.cliente.save()
+        with self.assertRaises(RecordatorioWhatsAppError):
+            enviar_recordatorio_turno(self.turno)
+
+    @patch('twilio.rest.Client')
+    def test_envia_mensaje_con_twilio(self, mock_client_cls):
+        mock_instance = MagicMock()
+        mock_client_cls.return_value = mock_instance
+
+        enviar_recordatorio_turno(self.turno)
+
+        mock_client_cls.assert_called_once_with('ACxxxx', 'token')
+        mock_instance.messages.create.assert_called_once()
+        kwargs = mock_instance.messages.create.call_args.kwargs
+        self.assertEqual(kwargs['from_'], 'whatsapp:+14155238886')
+        self.assertEqual(kwargs['to'], 'whatsapp:+3811112222')
+        self.assertIn('Rocky', kwargs['body'])
+
+    @patch('twilio.rest.Client')
+    def test_error_de_twilio_se_traduce_a_excepcion_propia(self, mock_client_cls):
+        from twilio.base.exceptions import TwilioRestException
+
+        mock_instance = MagicMock()
+        mock_instance.messages.create.side_effect = TwilioRestException(500, 'uri', msg='fallo')
+        mock_client_cls.return_value = mock_instance
+
+        with self.assertRaises(RecordatorioWhatsAppError):
+            enviar_recordatorio_turno(self.turno)
+
+
+@override_settings(
+    WHATSAPP_RECORDATORIOS_ENABLED=True,
+    TWILIO_ACCOUNT_SID='ACxxxx',
+    TWILIO_AUTH_TOKEN='token',
+    TWILIO_WHATSAPP_FROM='whatsapp:+14155238886',
+)
+class EnviarRecordatoriosTurnosCommandTests(TestCase):
+    """Management command enviar_recordatorios_turnos: el cron que corre la noche
+    anterior y avisa sólo los turnos de mañana que todavía no fueron avisados."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Cron")
+        self.cliente = Cliente.objects.create(
+            veterinaria=self.vet, nombre="Pedro", apellido="Lopez", dni="555", telefono="381 222-3333",
+        )
+        self.mascota = Mascota.objects.create(cliente=self.cliente, nombre="Luna", especie="FELINO")
+        self.turno_mañana = Turno.objects.create(
+            veterinaria=self.vet, mascota=self.mascota,
+            fecha_hora=timezone.now() + timedelta(days=1), estado='CONFIRMADO',
+        )
+        self.turno_pasado_mañana = Turno.objects.create(
+            veterinaria=self.vet, mascota=self.mascota,
+            fecha_hora=timezone.now() + timedelta(days=2), estado='CONFIRMADO',
+        )
+
+    @patch('apps.turnos.management.commands.enviar_recordatorios_turnos.enviar_recordatorio_turno')
+    def test_solo_avisa_turnos_de_mañana_y_marca_el_flag(self, mock_enviar):
+        out = StringIO()
+        call_command('enviar_recordatorios_turnos', stdout=out)
+
+        mock_enviar.assert_called_once_with(self.turno_mañana)
+        self.turno_mañana.refresh_from_db()
+        self.turno_pasado_mañana.refresh_from_db()
+        self.assertTrue(self.turno_mañana.recordatorio_whatsapp_enviado)
+        self.assertFalse(self.turno_pasado_mañana.recordatorio_whatsapp_enviado)
+        self.assertIn('Recordatorios enviados: 1', out.getvalue())
+
+    @patch('apps.turnos.management.commands.enviar_recordatorios_turnos.enviar_recordatorio_turno')
+    def test_no_reenvia_si_ya_se_mando(self, mock_enviar):
+        self.turno_mañana.recordatorio_whatsapp_enviado = True
+        self.turno_mañana.save()
+
+        call_command('enviar_recordatorios_turnos', stdout=StringIO())
+
+        mock_enviar.assert_not_called()
+
+    @override_settings(WHATSAPP_RECORDATORIOS_ENABLED=False)
+    def test_no_hace_nada_si_esta_deshabilitado(self):
+        out = StringIO()
+        call_command('enviar_recordatorios_turnos', stdout=out)
+
+        self.assertIn('no están habilitados', out.getvalue())
+        self.turno_mañana.refresh_from_db()
+        self.assertFalse(self.turno_mañana.recordatorio_whatsapp_enviado)
+
+    @patch('apps.turnos.management.commands.enviar_recordatorios_turnos.enviar_recordatorio_turno')
+    def test_turno_cancelado_no_recibe_recordatorio(self, mock_enviar):
+        self.turno_mañana.estado = 'CANCELADO'
+        self.turno_mañana.save()
+
+        call_command('enviar_recordatorios_turnos', stdout=StringIO())
+
+        mock_enviar.assert_not_called()

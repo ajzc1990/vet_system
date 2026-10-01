@@ -158,6 +158,13 @@ MP_PUBLIC_KEY = os.getenv('MP_PUBLIC_KEY')
 IA_RESUMENES_ENABLED = os.getenv('IA_RESUMENES_ENABLED', 'False').lower() in ('true', '1', 't')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 
+# Recordatorios de turnos por WhatsApp (Twilio). Deshabilitado por defecto: sin
+# credenciales cargadas o con el flag en False, el cron no manda nada.
+WHATSAPP_RECORDATORIOS_ENABLED = os.getenv('WHATSAPP_RECORDATORIOS_ENABLED', 'False').lower() in ('true', '1', 't')
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM')  # sandbox: 'whatsapp:+14155238886'
+
 # Rutas de Autenticación
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/dashboard/'  # O la vista principal que prefieras
