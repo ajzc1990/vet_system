@@ -4,7 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Boton, EstadoCarga, Fila, Insignia, Seccion, Tarjeta, Texto, type IconName } from '@/components/ui';
+import { Boton, EstadoCarga, Fila, Fuente, Insignia, Seccion, Tarjeta, Texto, type IconName } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { api, compartirPdf } from '@/lib/api';
 import { edad, fechaCorta } from '@/lib/fechas';
@@ -96,7 +96,7 @@ export default function FichaPaciente() {
 
       <Tarjeta>
         <Texto variante="etiqueta">Tutor</Texto>
-        <Texto style={{ fontWeight: '600' }}>{m.cliente_nombre}</Texto>
+        <Texto style={{ fontFamily: Fuente.semiBold }}>{m.cliente_nombre}</Texto>
         {telefono ? (
           <View style={styles.acciones}>
             <Boton titulo="Llamar" icono="call" variante="secundario" style={{ flex: 1 }}
@@ -143,7 +143,7 @@ export default function FichaPaciente() {
             </Fila>
             {usuario?.ia_habilitada && usuario.puede_atender && (
               <Pressable hitSlop={8} onPress={generarResumen} disabled={ocupado === 'ia'}>
-                <Text style={{ color: t.primaryDark, fontWeight: '600' }}>
+                <Text style={{ color: t.primaryDark, fontFamily: Fuente.semiBold }}>
                   {ocupado === 'ia' ? 'Generando…' : h.resumen_ia ? 'Actualizar' : 'Generar'}
                 </Text>
               </Pressable>
@@ -192,7 +192,7 @@ export default function FichaPaciente() {
         {h.vacunas.map((v) => (
           <Tarjeta key={v.id}>
             <View style={styles.cabecera}>
-              <Texto style={{ fontWeight: '600', flexShrink: 1 }}>{v.nombre_vacuna}</Texto>
+              <Texto style={{ fontFamily: Fuente.semiBold, flexShrink: 1 }}>{v.nombre_vacuna}</Texto>
               <View style={styles.accionesSeccion}>
                 <Texto variante="secundario">{fechaCorta(v.fecha_aplicacion)}</Texto>
                 {usuario?.puede_atender && <BotonEditar ruta="vacuna" mascotaId={id} registroId={v.id} />}
@@ -220,7 +220,7 @@ export default function FichaPaciente() {
         {h.recetas.map((r) => (
           <Tarjeta key={r.id}>
             <View style={styles.cabecera}>
-              <Texto style={{ fontWeight: '600', flexShrink: 1 }}>{r.diagnostico || 'Receta'}</Texto>
+              <Texto style={{ fontFamily: Fuente.semiBold, flexShrink: 1 }}>{r.diagnostico || 'Receta'}</Texto>
               <BotonCompartir
                 ocupado={ocupado === `receta-${r.id}`}
                 onPress={() => conEspera(`receta-${r.id}`,
@@ -264,7 +264,7 @@ export default function FichaPaciente() {
           {h.desparasitaciones.map((d) => (
             <Tarjeta key={d.id}>
               <View style={styles.cabecera}>
-                <Texto style={{ fontWeight: '600', flexShrink: 1 }}>{d.producto}</Texto>
+                <Texto style={{ fontFamily: Fuente.semiBold, flexShrink: 1 }}>{d.producto}</Texto>
                 <View style={styles.accionesSeccion}>
                   <Texto variante="secundario">{fechaCorta(d.fecha_aplicacion)}</Texto>
                   {usuario?.puede_atender && <BotonEditar ruta="desparasitacion" mascotaId={id} registroId={d.id} />}
@@ -307,7 +307,7 @@ function BotonCompartir({ onPress, ocupado, etiqueta = 'PDF' }: { onPress: () =>
     <Pressable hitSlop={8} onPress={onPress} disabled={ocupado} style={styles.compartir}
       accessibilityLabel={`Compartir ${etiqueta}`}>
       <Ionicons name={ocupado ? 'hourglass-outline' : 'share-social-outline'} size={18} color={t.primary} />
-      <Text style={{ color: t.primary, fontWeight: '600' }}>{etiqueta}</Text>
+      <Text style={{ color: t.primary, fontFamily: Fuente.semiBold }}>{etiqueta}</Text>
     </Pressable>
   );
 }
@@ -317,7 +317,7 @@ function Dato({ icono, valor, etiqueta }: { icono: IconName; valor: string; etiq
   return (
     <View style={styles.dato}>
       <Ionicons name={icono} size={18} color={t.primary} />
-      <Texto style={{ fontWeight: '600' }}>{valor}</Texto>
+      <Texto style={{ fontFamily: Fuente.semiBold }}>{valor}</Texto>
       <Texto variante="secundario">{etiqueta}</Texto>
     </View>
   );
@@ -343,7 +343,7 @@ function TarjetaConsulta({ consulta: c, mascotaId, puedeEditar }: {
         <Texto variante="secundario">{fechaCorta(c.fecha_hora)}</Texto>
         <Ionicons name={abierta ? 'chevron-up' : 'chevron-down'} size={18} color={t.textSecondary} />
       </View>
-      <Texto style={{ fontWeight: '600' }}>{c.motivo_consulta}</Texto>
+      <Texto style={{ fontFamily: Fuente.semiBold }}>{c.motivo_consulta}</Texto>
       <Texto variante="secundario" numberOfLines={abierta ? undefined : 2}>
         Dx: {c.diagnostico}
       </Texto>
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  accionTexto: { fontSize: 13, fontWeight: '600' },
+  accionTexto: { fontSize: 13, fontFamily: Fuente.semiBold },
   compartir: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   estudio: { width: 110, gap: 2 },
   miniatura: { width: 110, height: 110, borderRadius: Radius.sm },

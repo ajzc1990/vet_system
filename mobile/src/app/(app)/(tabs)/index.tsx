@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Boton, BotonFlotante, EstadoCarga, Fila, Insignia, Tarjeta, Texto } from '@/components/ui';
+import { Boton, BotonFlotante, EstadoCarga, Fila, Fuente, Insignia, Tarjeta, Texto } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { aISO, esHoy, hora, sumarDias, tituloDia } from '@/lib/fechas';
@@ -96,7 +96,7 @@ export default function Agenda() {
                   </Pressable>
                 </View>
               </View>
-              <Texto style={{ fontWeight: '600' }}>{item.mascota_nombre}</Texto>
+              <Texto style={{ fontFamily: Fuente.semiBold }}>{item.mascota_nombre}</Texto>
               <Fila icono="person-outline">{item.cliente_nombre}</Fila>
               {item.motivo ? <Fila icono="document-text-outline">{item.motivo}</Fila> : null}
               {item.veterinario_nombre ? <Fila icono="medkit-outline">{item.veterinario_nombre}</Fila> : null}

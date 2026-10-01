@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Texto } from '@/components/ui';
+import { Fuente, Texto } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { fechaCorta, hora } from '@/lib/fechas';
 import { useTheme } from '@/lib/use-theme';
@@ -48,7 +48,7 @@ export function SelectorFechaHora({ etiqueta, valor, onCambiar, modo = 'fecha', 
         <Texto variante="etiqueta">{etiqueta}</Texto>
         {opcional && valor && (
           <Pressable hitSlop={8} onPress={() => onCambiar(null)}>
-            <Text style={{ color: t.danger, fontWeight: '600' }}>Quitar</Text>
+            <Text style={{ color: t.danger, fontFamily: Fuente.semiBold }}>Quitar</Text>
           </Pressable>
         )}
       </View>

@@ -19,18 +19,27 @@ import { useTheme } from '@/lib/use-theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
+/** Misma familia tipográfica que la web (Plus Jakarta Sans, ver mobile/src/app/_layout.tsx). */
+export const Fuente = {
+  regular: 'PlusJakartaSans_400Regular',
+  medium: 'PlusJakartaSans_500Medium',
+  semiBold: 'PlusJakartaSans_600SemiBold',
+  bold: 'PlusJakartaSans_700Bold',
+  extraBold: 'PlusJakartaSans_800ExtraBold',
+} as const;
+
 type Variante = 'titulo' | 'subtitulo' | 'cuerpo' | 'secundario' | 'etiqueta';
 
 export function Texto({ variante = 'cuerpo', style, ...props }: TextProps & { variante?: Variante }) {
   const t = useTheme();
   const base = {
-    titulo: { fontSize: 24, fontWeight: '700' as const, color: t.text },
-    subtitulo: { fontSize: 17, fontWeight: '600' as const, color: t.text },
-    cuerpo: { fontSize: 15, color: t.text, lineHeight: 21 },
-    secundario: { fontSize: 13, color: t.textSecondary, lineHeight: 18 },
+    titulo: { fontSize: 24, fontFamily: Fuente.extraBold, color: t.text },
+    subtitulo: { fontSize: 17, fontFamily: Fuente.bold, color: t.text },
+    cuerpo: { fontSize: 15, fontFamily: Fuente.regular, color: t.text, lineHeight: 21 },
+    secundario: { fontSize: 13, fontFamily: Fuente.medium, color: t.textSecondary, lineHeight: 18 },
     etiqueta: {
       fontSize: 12,
-      fontWeight: '600' as const,
+      fontFamily: Fuente.semiBold,
       color: t.textSecondary,
       textTransform: 'uppercase' as const,
       letterSpacing: 0.5,
@@ -45,7 +54,11 @@ export function Tarjeta({
   onPress,
 }: PropsWithChildren<{ style?: StyleProp<ViewStyle>; onPress?: () => void }>) {
   const t = useTheme();
-  const estilo = [styles.tarjeta, { backgroundColor: t.card, borderColor: t.border }, style];
+  const estilo = [
+    styles.tarjeta,
+    { backgroundColor: t.card, borderColor: t.border, shadowColor: t.text },
+    style,
+  ];
   if (!onPress) return <View style={estilo}>{children}</View>;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [estilo, pressed && { opacity: 0.7 }]}>
@@ -86,6 +99,7 @@ export function Boton({
       disabled={inactivo}
       style={({ pressed }) => [
         styles.boton,
+        variante === 'primario' && { ...styles.botonPrimarioSombra, shadowColor: t.primary },
         { backgroundColor: colores.fondo, opacity: inactivo ? 0.6 : pressed ? 0.8 : 1 },
         style,
       ]}>
@@ -159,6 +173,8 @@ export function Insignia({
     </View>
   );
 }
+
+
 
 /** Carga / error / vacío: los tres estados que toda lista de la API puede tener. */
 export function EstadoCarga({
@@ -234,10 +250,14 @@ export function Fila({ icono, children }: PropsWithChildren<{ icono: IconName }>
 
 const styles = StyleSheet.create({
   tarjeta: {
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     padding: Spacing.lg,
     gap: Spacing.sm,
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   boton: {
     minHeight: 48,
@@ -248,13 +268,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.sm,
   },
-  botonTexto: { fontSize: 16, fontWeight: '600' },
+  botonPrimarioSombra: {
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  botonTexto: { fontSize: 16, fontFamily: Fuente.bold },
   campo: {
     borderWidth: 1,
     borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     fontSize: 16,
+    fontFamily: Fuente.regular,
   },
   insignia: {
     alignSelf: 'flex-start',
@@ -262,7 +289,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
   },
-  insigniaTexto: { fontSize: 12, fontWeight: '600' },
+  insigniaTexto: { fontSize: 12, fontFamily: Fuente.semiBold },
   centro: {
     flex: 1,
     alignItems: 'center',
@@ -290,9 +317,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     borderRadius: 999,
     elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
   },
 });
@@ -319,7 +345,7 @@ export function Chips<T extends string | number>({
             accessibilityState={{ selected: activo }}
             onPress={() => onCambiar(o.valor)}
             style={[styles.chip, { backgroundColor: activo ? t.primary : t.primaryLight }]}>
-            <Text style={{ color: activo ? t.onPrimary : t.primaryDark, fontWeight: '600' }}>{o.etiqueta}</Text>
+            <Text style={{ color: activo ? t.onPrimary : t.primaryDark, fontFamily: Fuente.semiBold }}>{o.etiqueta}</Text>
           </Pressable>
         );
       })}
@@ -334,9 +360,12 @@ export function BotonFlotante({ icono, etiqueta, onPress }: { icono: IconName; e
       accessibilityRole="button"
       accessibilityLabel={etiqueta}
       onPress={onPress}
-      style={({ pressed }) => [styles.fab, { backgroundColor: t.primary, opacity: pressed ? 0.85 : 1 }]}>
+      style={({ pressed }) => [
+        styles.fab,
+        { backgroundColor: t.primary, shadowColor: t.primary, opacity: pressed ? 0.85 : 1 },
+      ]}>
       <Ionicons name={icono} size={22} color={t.onPrimary} />
-      <Text style={{ color: t.onPrimary, fontWeight: '700', fontSize: 15 }}>{etiqueta}</Text>
+      <Text style={{ color: t.onPrimary, fontFamily: Fuente.bold, fontSize: 15 }}>{etiqueta}</Text>
     </Pressable>
   );
 }

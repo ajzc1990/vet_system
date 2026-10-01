@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { Tarjeta, Texto } from '@/components/ui';
+import { Fuente, Tarjeta, Texto } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 import type { Mascota, Paginado } from '@/lib/types';
@@ -56,11 +56,11 @@ export function BuscadorMascota({
         <Tarjeta style={styles.elegida}>
           <Ionicons name="paw" size={20} color={t.primary} />
           <View style={{ flex: 1 }}>
-            <Texto style={{ fontWeight: '600' }}>{valor.nombre}</Texto>
+            <Texto style={{ fontFamily: Fuente.semiBold }}>{valor.nombre}</Texto>
             <Texto variante="secundario">{valor.cliente_nombre}</Texto>
           </View>
           <Pressable hitSlop={10} onPress={() => onCambiar(null)} accessibilityLabel="Cambiar paciente">
-            <Texto style={{ color: t.primary, fontWeight: '600' }}>Cambiar</Texto>
+            <Texto style={{ color: t.primary, fontFamily: Fuente.semiBold }}>Cambiar</Texto>
           </Pressable>
         </Tarjeta>
       </View>
@@ -88,7 +88,7 @@ export function BuscadorMascota({
           key={m.id}
           onPress={() => onCambiar({ id: m.id, nombre: m.nombre, cliente_nombre: m.cliente_nombre })}
           style={({ pressed }) => [styles.resultado, { borderColor: t.border, opacity: pressed ? 0.6 : 1 }]}>
-          <Texto style={{ fontWeight: '600' }}>{m.nombre}</Texto>
+          <Texto style={{ fontFamily: Fuente.semiBold }}>{m.nombre}</Texto>
           <Texto variante="secundario">
             {m.especie_display} · {m.cliente_nombre}
           </Texto>
