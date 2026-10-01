@@ -1,5 +1,7 @@
 from django.conf import settings
 
+from apps.clientes.models import formatear_telefono_whatsapp
+
 
 class RecordatoriosDeshabilitados(Exception):
     """Los recordatorios de turnos por WhatsApp no están habilitados en este entorno."""
@@ -27,9 +29,13 @@ def enviar_recordatorio_turno(turno):
         raise RecordatorioWhatsAppError("El cliente no tiene teléfono cargado.")
 
     cliente = turno.mascota.cliente
-    telefono = "".join(ch for ch in cliente.telefono if ch.isdigit())
+    telefono = formatear_telefono_whatsapp(cliente.telefono)
     if not telefono:
         raise RecordatorioWhatsAppError("El cliente no tiene teléfono cargado.")
+    # La API de WhatsApp Business (a diferencia de los links wa.me) espera el número
+    # argentino SIN el 9 de celular; si no se lo sacamos, Twilio no reconoce al destinatario.
+    if telefono.startswith("549"):
+        telefono = "54" + telefono[3:]
 
     clinica = turno.veterinaria.nombre if turno.veterinaria else "la clínica"
     mensaje = (

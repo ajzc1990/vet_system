@@ -409,8 +409,15 @@ def auditoria_view(request):
     if accion_filtro:
         registros = registros.filter(accion=accion_filtro)
 
+    # En la veterinaria demo pública no mostramos IPs ni usuarios reales: cualquiera
+    # que entra a probar el sistema cae en este mismo tenant compartido y vería datos
+    # de otros visitantes (y de pruebas internas) que no le corresponden.
+    from .management.commands.seed_demo import DEMO_VET_NOMBRE
+    ocultar_datos_sensibles = bool(vet and vet.nombre == DEMO_VET_NOMBRE)
+
     return render(request, 'usuarios/auditoria.html', {
         'registros': registros[:200],
         'acciones': RegistroAuditoria.ACCIONES,
         'accion_filtro': accion_filtro,
+        'ocultar_datos_sensibles': ocultar_datos_sensibles,
     })

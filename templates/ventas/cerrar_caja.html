@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block title %}Cierre y Arqueo de Caja - VeterSystem{% endblock %}
 
@@ -81,22 +82,31 @@
                     <!-- Formulario de Arqueo -->
                     <form method="POST" novalidate>
                         {% csrf_token %}
-                        
-                        <div class="mb-4">
+
+                        <div class="mb-3">
                             <label for="monto_final_real" class="form-label fw-bold text-dark small mb-1">
                                 Conteo Real / Arqueo en Efectivo ($) <span class="text-danger">*</span>
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0 text-secondary fw-bold fs-5">$</span>
-                                <input type="number" step="0.01" min="0" id="monto_final_real" name="monto_final_real" class="form-control form-control-lg fw-extrabold text-primary border-start-0 py-2" value="{{ total_efectivo|floatformat:2 }}" required>
+                                <input type="number" step="0.01" min="0" id="monto_final_real" name="monto_final_real" class="form-control form-control-lg fw-extrabold text-primary border-start-0 py-2" value="{{ monto_final_real_ingresado|default:total_efectivo|unlocalize }}" required>
                             </div>
                             <div class="form-text text-muted extra-small mt-1">
                                 <i class="bi bi-info-circle me-1"></i>Ingresá la suma de dinero física contada en la caja. El sistema calculará automáticamente si existe sobrante o faltante.
                             </div>
                         </div>
 
+                        <div id="avisoDiferencia" class="alert alert-light border small fw-semibold mb-3 d-none"></div>
+
+                        <div id="grupoJustificacion" class="mb-4 d-none">
+                            <label for="observaciones" class="form-label fw-bold text-dark small mb-1">
+                                Justificación de la diferencia <span class="text-danger">*</span>
+                            </label>
+                            <textarea id="observaciones" name="observaciones" rows="2" class="form-control" placeholder="Ej: vuelto mal dado, un cobro no registrado, billete falso detectado...">{{ observaciones_ingresadas|default:'' }}</textarea>
+                        </div>
+
                         <div class="d-grid gap-2 pt-2 border-top">
-                            <button type="submit" class="btn btn-danger btn-lg fw-bold rounded-3 shadow py-2.5 fs-6" onclick="return confirm('¿Estás seguro de cerrar la caja actual? Una vez cerrada no se podrán registrar más ventas en este turno.');">
+                            <button type="submit" id="btnConfirmarCierre" class="btn btn-danger btn-lg fw-bold rounded-3 shadow py-2.5 fs-6" onclick="return confirm('¿Estás seguro de cerrar la caja actual? Una vez cerrada no se podrán registrar más ventas en este turno.');">
                                 <i class="bi bi-lock-fill me-1"></i> Confirmar Arqueo y Cerrar Caja
                             </button>
                             <a href="{% url 'ventas:lista_ventas' %}" class="btn btn-outline-secondary fw-semibold rounded-3 py-2">
@@ -104,6 +114,51 @@
                             </a>
                         </div>
                     </form>
+
+                    <script>
+                        (function() {
+                            var totalEsperado = {{ total_efectivo|unlocalize }};
+                            var tolerancia = {{ tolerancia|unlocalize }};
+                            var inputMonto = document.getElementById('monto_final_real');
+                            var inputObs = document.getElementById('observaciones');
+                            var grupoJustificacion = document.getElementById('grupoJustificacion');
+                            var avisoDiferencia = document.getElementById('avisoDiferencia');
+
+                            function actualizar() {
+                                var montoReal = parseFloat(inputMonto.value);
+                                if (isNaN(montoReal)) {
+                                    avisoDiferencia.classList.add('d-none');
+                                    grupoJustificacion.classList.add('d-none');
+                                    inputObs.required = false;
+                                    return;
+                                }
+                                var diferencia = montoReal - totalEsperado;
+                                var esGrande = Math.abs(diferencia) > tolerancia;
+
+                                avisoDiferencia.classList.remove('d-none');
+                                if (Math.abs(diferencia) < 0.01) {
+                                    avisoDiferencia.className = 'alert alert-success border small fw-semibold mb-3';
+                                    avisoDiferencia.textContent = 'El arqueo coincide exactamente con lo esperado.';
+                                } else {
+                                    var signo = diferencia > 0 ? 'Sobrante' : 'Faltante';
+                                    avisoDiferencia.className = 'alert ' + (esGrande ? 'alert-danger' : 'alert-warning') + ' border small fw-semibold mb-3';
+                                    avisoDiferencia.textContent = signo + ' de $' + Math.abs(diferencia).toFixed(2) +
+                                        (esGrande ? ' — diferencia inusualmente grande, contá de nuevo y justificá abajo para poder cerrar.' : '.');
+                                }
+
+                                if (esGrande) {
+                                    grupoJustificacion.classList.remove('d-none');
+                                    inputObs.required = true;
+                                } else {
+                                    grupoJustificacion.classList.add('d-none');
+                                    inputObs.required = false;
+                                }
+                            }
+
+                            inputMonto.addEventListener('input', actualizar);
+                            actualizar();
+                        })();
+                    </script>
 
                 </div>
             </div>

@@ -165,6 +165,50 @@ class AuditoriaTests(TestCase):
         self.assertRedirects(response, reverse('dashboard:index'))
 
 
+class AuditoriaDemoOcultaDatosSensiblesTests(TestCase):
+    """Regresión: cualquiera que entraba a la demo pública veía en Auditoría las IPs
+    reales de otros visitantes y el usuario real usado en pruebas internas. En el
+    tenant demo compartido, usuario e IP tienen que quedar ocultos."""
+
+    def setUp(self):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE, DEMO_ADMIN_USERNAME
+
+        self.vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        self.demo_admin = User.objects.create_user(username=DEMO_ADMIN_USERNAME, password="testpass123")
+        PerfilUsuario.objects.create(user=self.demo_admin, veterinaria=self.vet_demo, rol="ADMIN", is_approved=True)
+
+        self.dueño_real = User.objects.create_user(username="agustinzc", password="testpass123")
+        RegistroAuditoria.objects.create(
+            veterinaria=self.vet_demo, usuario=self.dueño_real, accion='CREAR',
+            descripcion="Prueba interna", ip_address="190.123.45.67",
+        )
+
+    def test_la_demo_no_muestra_usuario_ni_ip_reales(self):
+        self.client.force_login(self.demo_admin)
+        response = self.client.get(reverse('usuarios:auditoria'))
+
+        self.assertEqual(response.status_code, 200)
+        contenido = response.content.decode()
+        self.assertNotIn("agustinzc", contenido)
+        self.assertNotIn("190.123.45.67", contenido)
+
+    def test_una_veterinaria_real_si_muestra_usuario_e_ip(self):
+        vet_real = Veterinaria.objects.create(nombre="Clinica Real")
+        admin_real = User.objects.create_user(username="admin_real", password="testpass123")
+        PerfilUsuario.objects.create(user=admin_real, veterinaria=vet_real, rol="ADMIN", is_approved=True)
+        RegistroAuditoria.objects.create(
+            veterinaria=vet_real, usuario=admin_real, accion='CREAR',
+            descripcion="Evento real", ip_address="200.1.2.3",
+        )
+
+        self.client.force_login(admin_real)
+        response = self.client.get(reverse('usuarios:auditoria'))
+
+        contenido = response.content.decode()
+        self.assertIn("admin_real", contenido)
+        self.assertIn("200.1.2.3", contenido)
+
+
 class SuscripcionTests(TestCase):
     def test_nueva_veterinaria_recibe_periodo_de_prueba_si_hay_un_plan_activo(self):
         Plan.objects.create(nombre="Básico", precio_mensual=5000, orden=0)

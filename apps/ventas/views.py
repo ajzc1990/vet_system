@@ -2,6 +2,7 @@
 import csv
 import json
 import os
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -359,33 +360,66 @@ def cerrar_caja(request, caja_id):
         messages.warning(request, "Esta caja ya fue cerrada anteriormente.")
         return redirect('ventas:lista_ventas')
 
+    ventas_efectivo = caja.ventas.filter(medio_pago='EFECTIVO').aggregate(total=Sum('total'))['total'] or 0
+    total_efectivo = caja.total_efectivo
+    # Tolerancia: 3% del efectivo esperado (así no queda desactualizada por inflación),
+    # con un piso de $2000 para no exigir justificación por centavos de vuelto.
+    tolerancia = max(Decimal('2000'), total_efectivo * Decimal('0.03'))
+
     if request.method == 'POST':
-        monto_final_real = request.POST.get('monto_final_real') or 0.00
+        try:
+            monto_final_real = Decimal(request.POST.get('monto_final_real') or '0')
+        except InvalidOperation:
+            messages.error(request, "El monto ingresado no es un número válido.")
+            return redirect('ventas:cerrar_caja', caja_id=caja.id)
+
+        observaciones = (request.POST.get('observaciones') or '').strip()
+        diferencia = monto_final_real - total_efectivo
+
+        if abs(diferencia) > tolerancia and not observaciones:
+            messages.error(
+                request,
+                f"La diferencia de arqueo es de ${diferencia:.2f}, mucho más de lo esperado. "
+                "Volvé a contar el efectivo y, si se confirma, escribí abajo una justificación "
+                "(qué pasó: vuelto mal dado, un cobro no registrado, etc.) para poder cerrar la caja."
+            )
+            return render(request, 'ventas/cerrar_caja.html', {
+                'caja': caja,
+                'total_efectivo': total_efectivo,
+                'ventas_efectivo': ventas_efectivo,
+                'total_digital': caja.total_digital_tarjetas,
+                'total_general': caja.total_general_ventas,
+                'total_gastos': caja.total_gastos,
+                'gastos': caja.gastos.select_related('usuario').all(),
+                'tolerancia': tolerancia,
+                'monto_final_real_ingresado': monto_final_real,
+                'observaciones_ingresadas': observaciones,
+            })
+
         caja.monto_final_real = monto_final_real
+        caja.observaciones = observaciones
         caja.usuario_cierre = request.user
         caja.fecha_cierre = timezone.now()
         caja.estado = 'CERRADA'
         caja.save()
 
-        diferencia = (caja.monto_final_real or 0) - caja.total_efectivo
-        registrar_auditoria(
-            request, 'EDITAR', modelo='CajaDiaria', objeto_id=caja.id,
-            descripcion=f"Cierre de caja #{caja.id}. Diferencia de arqueo: ${diferencia:.2f}"
-        )
+        descripcion = f"Cierre de caja #{caja.id}. Diferencia de arqueo: ${diferencia:.2f}"
+        if observaciones:
+            descripcion += f". Justificación: {observaciones}"
+        registrar_auditoria(request, 'EDITAR', modelo='CajaDiaria', objeto_id=caja.id, descripcion=descripcion)
 
         messages.success(request, f"Caja #{caja.id} cerrada correctamente.")
         return redirect('ventas:lista_ventas')
 
-    ventas_efectivo = caja.ventas.filter(medio_pago='EFECTIVO').aggregate(total=Sum('total'))['total'] or 0
-
     return render(request, 'ventas/cerrar_caja.html', {
         'caja': caja,
-        'total_efectivo': caja.total_efectivo,
+        'total_efectivo': total_efectivo,
         'ventas_efectivo': ventas_efectivo,
         'total_digital': caja.total_digital_tarjetas,
         'total_general': caja.total_general_ventas,
         'total_gastos': caja.total_gastos,
         'gastos': caja.gastos.select_related('usuario').all(),
+        'tolerancia': tolerancia,
     })
 
 

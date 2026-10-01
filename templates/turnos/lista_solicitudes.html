@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load clientes_extras %}
 
 {% block title %}Solicitudes de Turno Online - VeterSystem{% endblock %}
 
@@ -41,7 +42,7 @@
                 <i class="bi bi-calendar-event me-1"></i>{{ s.fecha_deseada|date:"d/m/Y" }} &bull; {{ s.get_franja_preferida_display }}
             </div>
             <div class="d-flex gap-2 pt-2 border-top">
-                <a href="https://wa.me/{{ s.telefono }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 flex-fill" title="Contactar por WhatsApp">
+                <a href="https://wa.me/{{ s.telefono|wa_numero }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 flex-fill" title="Contactar por WhatsApp">
                     <i class="bi bi-whatsapp"></i>
                 </a>
                 {% if s.estado == 'PENDIENTE' %}
@@ -95,7 +96,7 @@
                         </td>
                         <td class="text-end pe-4 py-3">
                             <div class="d-flex justify-content-end gap-1 flex-wrap">
-                                <a href="https://wa.me/{{ s.telefono }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 px-2" title="Contactar por WhatsApp">
+                                <a href="https://wa.me/{{ s.telefono|wa_numero }}" target="_blank" class="btn btn-sm btn-success fw-bold rounded-2 px-2" title="Contactar por WhatsApp">
                                     <i class="bi bi-whatsapp"></i>
                                 </a>
                                 {% if s.estado == 'PENDIENTE' %}

@@ -1,5 +1,6 @@
 # apps/inventario/models.py
 from datetime import timedelta
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
@@ -60,7 +61,10 @@ class Producto(models.Model):
     stock_minimo = models.IntegerField(default=5, validators=[MinValueValidator(0)], verbose_name="Stock Mínimo Alerta")
     
     precio_costo = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Precio de Costo")
-    precio_venta = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name="Precio de Venta")
+    precio_venta = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.00, verbose_name="Precio de Venta",
+        validators=[MinValueValidator(Decimal('0.01'), message="El precio de venta tiene que ser mayor a $0.")]
+    )
     
     fecha_vencimiento = models.DateField(blank=True, null=True, verbose_name="Fecha de Vencimiento")
     creado_el = models.DateTimeField(auto_now_add=True)

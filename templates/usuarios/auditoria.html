@@ -38,9 +38,9 @@
                 </span>
                 <span class="extra-small text-muted">{{ r.fecha|date:"d/m/Y H:i" }}</span>
             </div>
-            <div class="small text-dark fw-semibold">{{ r.usuario.username|default:"-" }} <span class="text-muted fw-normal">&bull; {{ r.veterinaria.nombre|default:"-" }}</span></div>
+            <div class="small text-dark fw-semibold">{% if ocultar_datos_sensibles %}Usuario demo{% else %}{{ r.usuario.username|default:"-" }}{% endif %} <span class="text-muted fw-normal">&bull; {{ r.veterinaria.nombre|default:"-" }}</span></div>
             <div class="small text-secondary">{{ r.descripcion }}</div>
-            {% if r.ip_address %}<div class="extra-small text-muted mt-1">IP: {{ r.ip_address }}</div>{% endif %}
+            {% if r.ip_address and not ocultar_datos_sensibles %}<div class="extra-small text-muted mt-1">IP: {{ r.ip_address }}</div>{% endif %}
         </div>
     </div>
     {% endfor %}
@@ -70,10 +70,10 @@
                                 {{ r.get_accion_display }}
                             </span>
                         </td>
-                        <td class="py-3 fw-semibold text-dark small">{{ r.usuario.username|default:"-" }}</td>
+                        <td class="py-3 fw-semibold text-dark small">{% if ocultar_datos_sensibles %}Usuario demo{% else %}{{ r.usuario.username|default:"-" }}{% endif %}</td>
                         <td class="py-3 text-secondary small">{{ r.veterinaria.nombre|default:"-" }}</td>
                         <td class="py-3 text-secondary small">{{ r.descripcion }}</td>
-                        <td class="py-3 text-muted extra-small">{{ r.ip_address|default:"-" }}</td>
+                        <td class="py-3 text-muted extra-small">{% if ocultar_datos_sensibles %}&bull;&bull;&bull;{% else %}{{ r.ip_address|default:"-" }}{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

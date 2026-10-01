@@ -80,3 +80,34 @@ class ExportarProductosCsvTests(TestCase):
         contenido = response.content.decode('utf-8-sig')
         self.assertIn('Amoxicilina', contenido)
         self.assertNotIn('Antiparasitario', contenido)
+
+
+class PrecioVentaObligatorioTests(TestCase):
+    """Regresión: se podían cargar productos con precio de venta $0 (ej. por dejar el
+    campo en blanco o no completarlo), lo que rompe la venta real de ese producto."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Precios")
+        self.user = User.objects.create_user(username="admin_precios", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        self.client.force_login(self.user)
+
+    def test_no_se_puede_crear_un_producto_con_precio_de_venta_cero(self):
+        response = self.client.post(reverse('inventario:nuevo_producto'), {
+            'nombre': 'Bastón suspensión', 'tipo': 'MEDICAMENTO',
+            'stock_actual': '10', 'stock_minimo': '2',
+            'precio_costo': '100', 'precio_venta': '0',
+        })
+
+        self.assertEqual(response.status_code, 200)  # re-renderiza el form con el error
+        self.assertFalse(Producto.objects.filter(nombre='Bastón suspensión').exists())
+
+    def test_se_puede_crear_un_producto_con_precio_de_venta_positivo(self):
+        response = self.client.post(reverse('inventario:nuevo_producto'), {
+            'nombre': 'Amoxicilina 500mg', 'tipo': 'MEDICAMENTO',
+            'stock_actual': '10', 'stock_minimo': '2',
+            'precio_costo': '100', 'precio_venta': '250',
+        })
+
+        self.assertRedirects(response, reverse('inventario:lista_productos'))
+        self.assertTrue(Producto.objects.filter(nombre='Amoxicilina 500mg').exists())

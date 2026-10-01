@@ -3,7 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from apps.usuarios.models import Veterinaria
-from apps.clientes.models import Mascota
+from apps.clientes.models import Mascota, formatear_telefono_whatsapp
 
 
 class Veterinario(models.Model):
@@ -107,7 +107,7 @@ class Turno(models.Model):
 
         cliente = self.mascota.cliente
         clinica = self.veterinaria.nombre if self.veterinaria else "la clínica"
-        telefono = "".join(ch for ch in cliente.telefono if ch.isdigit())
+        telefono = formatear_telefono_whatsapp(cliente.telefono)
         if not telefono:
             return None
 

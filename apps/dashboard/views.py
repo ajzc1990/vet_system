@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import F
 
 from apps.turnos.models import Turno
-from apps.clientes.models import Mascota, Cliente
+from apps.clientes.models import Mascota, Cliente, formatear_telefono_whatsapp
 from apps.inventario.models import Producto
 from apps.historia_clinica.models import ConsultaMedica, Internacion, RegistroVacuna, RegistroDesparasitacion
 from apps.usuarios.models import MensajeContacto
@@ -83,8 +83,7 @@ def dashboard_principal(request):
 
 
 def _mensaje_whatsapp(cliente, texto):
-    telefono = (cliente.telefono or '').strip().replace(' ', '').replace('-', '')
-    return {'telefono': telefono, 'texto': texto}
+    return {'telefono': formatear_telefono_whatsapp(cliente.telefono), 'texto': texto}
 
 
 @login_required

@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.turnos.models import Veterinario
 from apps.usuarios.models import PerfilUsuario, Veterinaria
 from apps.historia_clinica.models import ConsultaMedica, RegistroVacuna, RegistroDesparasitacion
-from .models import Cliente, Mascota
+from .models import Cliente, Mascota, formatear_telefono_whatsapp
 
 
 class ClientesTenantIsolationTests(TestCase):
@@ -280,3 +280,25 @@ class RecepcionNoPuedeEscribirHistoriaClinicaTests(TestCase):
         """La restricción es solo de escritura: recepción sigue pudiendo consultar."""
         response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota.id]))
         self.assertEqual(response.status_code, 200)
+
+
+class FormatearTelefonoWhatsappTests(TestCase):
+    """Los links wa.me armados desde cualquier teléfono argentino cargado por el usuario
+    (con o sin 9, con o sin 0, con o sin espacios/guiones) tienen que terminar en el mismo
+    formato completo que espera WhatsApp: 54 + 9 + área + número, todo junto."""
+
+    def test_numero_local_sin_codigo_de_pais(self):
+        self.assertEqual(formatear_telefono_whatsapp("381 659-0564"), "5493816590564")
+
+    def test_numero_con_codigo_de_pais_y_9(self):
+        self.assertEqual(formatear_telefono_whatsapp("+54 9 381 659-0564"), "5493816590564")
+
+    def test_numero_con_codigo_de_pais_sin_9(self):
+        self.assertEqual(formatear_telefono_whatsapp("54 381 659-0564"), "5493816590564")
+
+    def test_numero_con_cero_de_larga_distancia(self):
+        self.assertEqual(formatear_telefono_whatsapp("0381 659-0564"), "5493816590564")
+
+    def test_telefono_vacio_devuelve_cadena_vacia(self):
+        self.assertEqual(formatear_telefono_whatsapp(""), "")
+        self.assertEqual(formatear_telefono_whatsapp(None), "")

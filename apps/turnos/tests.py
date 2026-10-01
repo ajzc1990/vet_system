@@ -226,7 +226,7 @@ class LinkRecordatorioWhatsappTests(TestCase):
         link = turno.link_recordatorio_whatsapp
         mensaje = unquote(link.split("?text=")[1])
 
-        self.assertTrue(link.startswith("https://wa.me/3811112222?text="))
+        self.assertTrue(link.startswith("https://wa.me/5493811112222?text="))
         self.assertIn("Rocky", mensaje)
         self.assertIn(self.fecha_hora.strftime("%d/%m/%Y"), mensaje)
         self.assertIn(self.fecha_hora.strftime("%H:%M"), mensaje)
@@ -280,7 +280,7 @@ class EnviarRecordatorioWhatsappTests(TestCase):
         mock_instance.messages.create.assert_called_once()
         kwargs = mock_instance.messages.create.call_args.kwargs
         self.assertEqual(kwargs['from_'], 'whatsapp:+14155238886')
-        self.assertEqual(kwargs['to'], 'whatsapp:+3811112222')
+        self.assertEqual(kwargs['to'], 'whatsapp:+543811112222')
         self.assertIn('Rocky', kwargs['body'])
 
     @patch('twilio.rest.Client')

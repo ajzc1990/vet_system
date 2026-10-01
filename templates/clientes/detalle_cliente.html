@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load clientes_extras %}
 
 {% block title %}Ficha de {{ cliente.nombre }} {{ cliente.apellido }} - VeterSystem{% endblock %}
 
@@ -35,7 +36,7 @@
                             <span>
                                 <i class="bi bi-telephone text-success me-1"></i><strong>Teléfono:</strong> 
                                 {% if cliente.telefono %}
-                                    <a href="https://wa.me/{{ cliente.telefono }}" target="_blank" class="text-success text-decoration-none fw-bold" title="WhatsApp">
+                                    <a href="https://wa.me/{{ cliente.telefono|wa_numero }}" target="_blank" class="text-success text-decoration-none fw-bold" title="WhatsApp">
                                         {{ cliente.telefono }} <i class="bi bi-whatsapp ms-0.5"></i>
                                     </a>
                                 {% else %}

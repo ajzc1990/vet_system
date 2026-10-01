@@ -140,6 +140,60 @@ class GastoCajaTests(TestCase):
         self.assertEqual(gastos[0].concepto, "Gasto A")
 
 
+class CerrarCajaArqueoTests(TestCase):
+    """Regresión: el cierre de caja aceptaba cualquier diferencia de arqueo sin ningún
+    aviso (una caja que esperaba $94.000 se cerró con $1.000.000 sin que nada lo marcara).
+    Ahora una diferencia grande exige una justificación escrita antes de poder cerrar."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Arqueo")
+        self.user = User.objects.create_user(username="admin_arqueo", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        # monto_inicial=1000, sin ventas: total_efectivo esperado = 1000, tolerancia = max(2000, 1000*0.03) = 2000
+        self.caja = CajaDiaria.objects.create(veterinaria=self.vet, monto_inicial=1000, estado='ABIERTA')
+        self.client.force_login(self.user)
+
+    def test_diferencia_dentro_de_tolerancia_cierra_sin_justificacion(self):
+        response = self.client.post(reverse('ventas:cerrar_caja', args=[self.caja.id]), {
+            'monto_final_real': '1500',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        self.caja.refresh_from_db()
+        self.assertEqual(self.caja.estado, 'CERRADA')
+
+    def test_diferencia_grande_sin_justificacion_no_cierra_la_caja(self):
+        response = self.client.post(reverse('ventas:cerrar_caja', args=[self.caja.id]), {
+            'monto_final_real': '1000000',
+        })
+
+        self.assertEqual(response.status_code, 200)  # re-renderiza el formulario, no redirige
+        self.caja.refresh_from_db()
+        self.assertEqual(self.caja.estado, 'ABIERTA')
+        self.assertIsNone(self.caja.monto_final_real)
+
+    def test_diferencia_grande_con_justificacion_si_cierra_y_la_guarda(self):
+        response = self.client.post(reverse('ventas:cerrar_caja', args=[self.caja.id]), {
+            'monto_final_real': '1000000',
+            'observaciones': 'Error de tipeo al contar, se recontó y se confirmó el sobrante real.',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        self.caja.refresh_from_db()
+        self.assertEqual(self.caja.estado, 'CERRADA')
+        self.assertEqual(str(self.caja.monto_final_real), '1000000.00')
+        self.assertIn('Error de tipeo', self.caja.observaciones)
+
+    def test_diferencia_exacta_cierra_sin_problema(self):
+        response = self.client.post(reverse('ventas:cerrar_caja', args=[self.caja.id]), {
+            'monto_final_real': '1000',
+        })
+
+        self.assertRedirects(response, reverse('ventas:lista_ventas'))
+        self.caja.refresh_from_db()
+        self.assertEqual(self.caja.estado, 'CERRADA')
+
+
 class CobroQRTests(TestCase):
     """Cobro por QR/Mercado Pago: la Venta real (y el descuento de stock) solo se
     crea cuando el pago queda aprobado, nunca antes, y usando la cuenta de MP propia

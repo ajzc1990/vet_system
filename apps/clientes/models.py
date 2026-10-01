@@ -9,6 +9,26 @@ ESPECIES = [
     ('OTRO', 'Otro'),
 ]
 
+
+def formatear_telefono_whatsapp(telefono):
+    """Normaliza un teléfono argentino al formato que esperan los links wa.me:
+    código de país (54) + prefijo de celular (9) + área y número, todo junto
+    y sin el 0 de larga distancia (ej: '381 659-0564' -> '5493816590564')."""
+    digitos = "".join(ch for ch in (telefono or "") if ch.isdigit())
+    if not digitos:
+        return ""
+    if digitos.startswith("0"):
+        digitos = digitos[1:]
+    if digitos.startswith("54"):
+        resto = digitos[2:]
+        if not resto.startswith("9"):
+            resto = "9" + resto
+        digitos = "54" + resto
+    else:
+        digitos = "549" + digitos
+    return digitos
+
+
 class Cliente(models.Model):
     veterinaria = models.ForeignKey(
         Veterinaria, 
@@ -42,6 +62,10 @@ class Cliente(models.Model):
 
     def __str__(self):
         return f"{self.apellido}, {self.nombre}"
+
+    @property
+    def telefono_whatsapp(self):
+        return formatear_telefono_whatsapp(self.telefono)
 
 
 class Mascota(models.Model):

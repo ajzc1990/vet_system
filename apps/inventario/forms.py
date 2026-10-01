@@ -20,7 +20,7 @@ class ProductoForm(forms.ModelForm):
             'stock_actual': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'stock_minimo': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'precio_costo': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
-            'precio_venta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'precio_venta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01'}),
             'fecha_vencimiento': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'form-control', 'type': 'date'}),
         }
 
