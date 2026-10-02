@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VeterSystem - Sistema de Gestión para Clínicas Veterinarias</title>
 
-    <meta name="description" content="Sistema de gestión para veterinarias en la nube: historia clínica digital, agenda de turnos, control de inventario y resúmenes con IA. Probá la demo gratis.">
+    <meta name="description" content="Sistema de gestión para veterinarias en la nube y en el celular: historia clínica, agenda de turnos, inventario, internación, cobros con Mercado Pago y app móvil incluida. Probá la demo gratis.">
     <meta property="og:title" content="VeterSystem - Sistema de Gestión para Clínicas Veterinarias">
-    <meta property="og:description" content="Sistema de gestión para veterinarias en la nube: historia clínica digital, agenda de turnos, control de inventario y resúmenes con IA. Probá la demo gratis.">
+    <meta property="og:description" content="Sistema de gestión para veterinarias en la nube y en el celular: historia clínica, agenda de turnos, inventario, internación, cobros con Mercado Pago y app móvil incluida. Probá la demo gratis.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://vetersystem.com/">
     <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.png' %}">
@@ -190,6 +190,7 @@
                     <li class="nav-item"><a class="nav-link px-3" href="#nosotros">Nosotros</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#mision-vision">Misión & Visión</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#caracteristicas">Módulos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#app">App</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#fundadoras">Fundadoras</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#precios">Precios</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#contacto">Contacto</a></li>
@@ -233,6 +234,11 @@
                     <p class="lead text-white-50 mb-4 fs-5">
                         Centralizá historias clínicas, agenda de turnos, fichas de pacientes e inventario con descuentos automáticos. Todo seguro y accesible desde la nube.
                     </p>
+                    <div class="d-flex flex-wrap gap-3 gap-md-4 justify-content-center justify-content-lg-start mb-4 small fw-semibold text-white-50">
+                        <span class="d-inline-flex align-items-center gap-2"><i class="bi bi-laptop text-warning"></i> Desde la compu o el celular</span>
+                        <span class="d-inline-flex align-items-center gap-2"><i class="bi bi-qr-code text-warning"></i> Cobros con Mercado Pago</span>
+                        <span class="d-inline-flex align-items-center gap-2"><i class="bi bi-whatsapp text-warning"></i> Recordatorios por WhatsApp</span>
+                    </div>
                     <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap">
                         <a href="#fundadoras" class="btn btn-warning btn-lg px-4 py-3 fw-bold text-dark rounded-3 shadow-lg">
                             <i class="bi bi-rocket-takeoff-fill me-2"></i> Quiero ser Clínica Fundadora
@@ -245,8 +251,8 @@
                     <!-- Métricas Rápidas -->
                     <div class="row pt-5 mt-3 border-top border-white text-center text-lg-start">
                         <div class="col-4">
-                            <div class="fs-6 fw-extrabold text-white">Todo en uno</div>
-                            <div class="small text-white-50">Agenda, Historia Clínica e Inventario</div>
+                            <div class="fs-3 fw-extrabold text-white">+12</div>
+                            <div class="small text-white-50">Módulos Integrados</div>
                         </div>
                         <div class="col-4">
                             <div class="fs-3 fw-extrabold text-warning">100%</div>
@@ -260,6 +266,9 @@
                 </div>
 
                 <div class="col-lg-6">
+                    <!-- TODO: si se consigue una captura real, reemplazar esta tarjeta (o agregarla al lado)
+                         por un mockup con /static/img/hero-dashboard.png (dashboard en notebook) y
+                         /static/img/hero-app.png (app en celular). Por ahora no hay capturas en el proyecto. -->
                     <div class="glass-card p-4 p-md-5 text-dark">
                         <div class="d-flex align-items-center gap-3 mb-4">
                             <div class="bg-primary text-white p-3 rounded-4 shadow-sm">
@@ -445,12 +454,74 @@
                 </div>
 
                 <div class="col-md-6 col-lg-4">
+                    <a href="#app" class="text-decoration-none">
+                        <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                            <div class="feature-icon-wrapper bg-dark-subtle text-dark-emphasis">
+                                <i class="bi bi-phone-fill"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-2">App Móvil</h5>
+                            <p class="text-muted small mb-0">Accedé desde el celular, incluida en todos los planes.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                        <div class="feature-icon-wrapper bg-warning-subtle text-warning">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Recordatorios Inteligentes</h5>
+                        <p class="text-muted small mb-0">Todos los días ves los turnos de mañana y las vacunas y desparasitaciones vencidas o por vencer, listos para avisar por WhatsApp.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
                     <div class="card hover-card h-100 p-4 rounded-4 bg-light">
                         <div class="feature-icon-wrapper bg-success-subtle text-success">
                             <i class="bi bi-box-seam-fill"></i>
                         </div>
                         <h5 class="fw-bold text-dark mb-2">Control de Inventario</h5>
                         <p class="text-muted small mb-0">Descuento automático de fármacos en consulta y alertas preventivas de stock mínimo y vencimiento.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                        <div class="feature-icon-wrapper bg-secondary-subtle text-secondary-emphasis">
+                            <i class="bi bi-cart-check-fill"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Compras Sugeridas</h5>
+                        <p class="text-muted small mb-0">El sistema detecta los productos bajo stock mínimo y te sugiere cuánto comprar y a qué proveedor.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                        <div class="feature-icon-wrapper bg-danger-subtle text-danger">
+                            <i class="bi bi-hospital-fill"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Internación</h5>
+                        <p class="text-muted small mb-0">Seguimiento de pacientes internados, con su evolución y tratamiento, en una vista clara para todo el equipo.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                        <div class="feature-icon-wrapper bg-primary-subtle text-primary">
+                            <i class="bi bi-qr-code"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Cobros con Mercado Pago</h5>
+                        <p class="text-muted small mb-0">Cobrá consultas y servicios con link o QR de Mercado Pago, y registrá cada pago automáticamente en la caja.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                        <div class="feature-icon-wrapper bg-success-subtle text-success">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Ventas y Caja</h5>
+                        <p class="text-muted small mb-0">Registrá ventas de productos y servicios y controlá la caja del día.</p>
                     </div>
                 </div>
 
@@ -473,6 +544,71 @@
                         <h5 class="fw-bold text-dark mb-2">Facturación Electrónica ARCA</h5>
                         <p class="text-muted small mb-0">Emití facturas electrónicas directamente desde el sistema, integradas con tus ventas y caja.</p>
                     </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light">
+                        <div class="feature-icon-wrapper bg-secondary-subtle text-secondary-emphasis">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Auditoría y Seguridad</h5>
+                        <p class="text-muted small mb-0">Roles para veterinarios y recepcionistas, y registro de quién hizo cada cambio en el sistema.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- App Móvil -->
+    <section id="app" class="py-5 bg-light scroll-margin">
+        <div class="container py-5">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-5 text-center">
+                    <!-- TODO: reemplazar por una captura real de la app, ej. /static/img/app-mockup-celular.png -->
+                    <div class="mx-auto d-flex align-items-center justify-content-center rounded-4 shadow-lg" style="width: 220px; height: 440px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #6366f1 100%);">
+                        <i class="bi bi-phone text-white" style="font-size: 4rem;"></i>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <span class="text-primary fw-bold text-uppercase tracking-wider small">App Móvil Incluida</span>
+                    <h2 class="fw-extrabold display-6 text-dark mt-2 mb-4">Tu veterinaria en el bolsillo</h2>
+                    <p class="text-muted fs-5 mb-4 leading-relaxed">
+                        Consultá la agenda, las fichas de tus pacientes y el historial clínico desde el celular, estés en la clínica, en un domicilio o de guardia.
+                    </p>
+                    <ul class="list-unstyled d-flex flex-column gap-3 mb-4">
+                        <li class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                            <span><strong>Agenda del día</strong> siempre a mano.</span>
+                        </li>
+                        <li class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                            <span><strong>Historia clínica y fichas</strong> de cada paciente.</span>
+                        </li>
+                        <li class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                            <span><strong>Internaciones:</strong> evoluciones y altas desde el celular.</span>
+                        </li>
+                        <li class="d-flex align-items-center gap-2">
+                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                            <span><strong>Notificaciones</strong> de turnos y novedades del día.</span>
+                        </li>
+                    </ul>
+                    <p class="fw-bold text-primary mb-4">
+                        <i class="bi bi-gift-fill me-1"></i> Incluida en todos los planes, sin costo adicional.
+                    </p>
+
+                    <!-- TODO: cuando la app esté publicada, completar los links y descomentar los botones.
+                         Google Play: [LINK_GOOGLE_PLAY] · App Store: [LINK_APP_STORE] -->
+                    {% comment %}
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="[LINK_GOOGLE_PLAY]" target="_blank" rel="noopener noreferrer">
+                            <img src="{% static 'img/badge-google-play.png' %}" alt="Disponible en Google Play" height="54">
+                        </a>
+                        <a href="[LINK_APP_STORE]" target="_blank" rel="noopener noreferrer">
+                            <img src="{% static 'img/badge-app-store.png' %}" alt="Descargar en App Store" height="54">
+                        </a>
+                    </div>
+                    {% endcomment %}
                 </div>
             </div>
         </div>
@@ -565,6 +701,8 @@
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los módulos incluidos</li>
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_usuarios }} usuarios del staff</li>
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_mascotas }} pacientes activos</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>App móvil incluida</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Recordatorios por WhatsApp</li>
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte por WhatsApp/Email</li>
                         </ul>
                         <a href="#contacto" class="btn btn-outline-primary fw-bold py-2 rounded-3 mt-auto">Empezar Ahora</a>
@@ -589,6 +727,8 @@
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los módulos incluidos</li>
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_usuarios }} usuarios del staff</li>
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Hasta {{ plan_destacado.max_mascotas }} pacientes activos</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>App móvil incluida</li>
+                            <li><i class="bi bi-check-circle-fill text-success me-2"></i>Recordatorios por WhatsApp</li>
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Soporte prioritario</li>
                         </ul>
                         <a href="#contacto" class="btn btn-primary fw-bold py-2 rounded-3 mt-auto shadow-sm">Empezar Ahora</a>
