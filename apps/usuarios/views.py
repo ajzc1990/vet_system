@@ -25,6 +25,16 @@ from .pagos import mp_configurado, crear_preferencia_pago, obtener_pago
 # VISTAS PÚBLICAS Y LANDING PAGE
 # ==============================================================================
 
+# Programa de lanzamiento "Clínicas Fundadoras" (landing.html, sección #fundadoras).
+# Actualizar a mano a medida que se van sumando clínicas reales.
+LUGARES_DISPONIBLES = 10
+
+
+def _formato_pesos(valor):
+    """Formatea un monto en pesos con punto de miles (ej. 20000 -> '20.000')."""
+    return f"{int(valor):,}".replace(',', '.')
+
+
 def landing_page(request):
     """Página de bienvenida pública con Misión, Visión, Objetivos y Formulario de Contacto que guarda en BD."""
     if request.user.is_authenticated:
@@ -56,12 +66,20 @@ def landing_page(request):
 
     plan_destacado = Plan.objects.filter(activo=True).order_by('orden', 'precio_mensual').first()
     ahorro_anual = None
+    precio_mensual_fmt = precio_anual_fmt = ahorro_anual_fmt = None
     if plan_destacado:
         ahorro_anual = (plan_destacado.precio_mensual * 12) - plan_destacado.precio_anual
+        precio_mensual_fmt = _formato_pesos(plan_destacado.precio_mensual)
+        precio_anual_fmt = _formato_pesos(plan_destacado.precio_anual)
+        ahorro_anual_fmt = _formato_pesos(ahorro_anual)
 
     return render(request, 'landing.html', {
         'plan_destacado': plan_destacado,
         'ahorro_anual': ahorro_anual,
+        'precio_mensual_fmt': precio_mensual_fmt,
+        'precio_anual_fmt': precio_anual_fmt,
+        'ahorro_anual_fmt': ahorro_anual_fmt,
+        'lugares_disponibles': LUGARES_DISPONIBLES,
     })
 
 

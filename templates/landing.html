@@ -1,10 +1,18 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VeterSystem - Sistema de Gestión para Clínicas Veterinarias</title>
-    
+
+    <meta name="description" content="Sistema de gestión para veterinarias en la nube: historia clínica digital, agenda de turnos, control de inventario y resúmenes con IA. Probá la demo gratis.">
+    <meta property="og:title" content="VeterSystem - Sistema de Gestión para Clínicas Veterinarias">
+    <meta property="og:description" content="Sistema de gestión para veterinarias en la nube: historia clínica digital, agenda de turnos, control de inventario y resúmenes con IA. Probá la demo gratis.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vetersystem.com/">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.png' %}">
+
     <!-- Google Fonts: Plus Jakarta Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -127,6 +135,38 @@
             border-color: var(--vs-primary);
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
         }
+
+        /* Botón flotante de WhatsApp: fijo abajo a la derecha en toda la landing. */
+        .whatsapp-float {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 1040;
+            width: 56px;
+            height: 56px;
+            background-color: #25D366;
+            color: #ffffff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+            transition: transform 0.2s ease;
+        }
+        .whatsapp-float:hover {
+            color: #ffffff;
+            transform: scale(1.08);
+        }
+        @media (max-width: 576px) {
+            .whatsapp-float {
+                right: 16px;
+                bottom: 16px;
+                width: 52px;
+                height: 52px;
+                font-size: 1.6rem;
+            }
+        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -150,6 +190,7 @@
                     <li class="nav-item"><a class="nav-link px-3" href="#nosotros">Nosotros</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#mision-vision">Misión & Visión</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#caracteristicas">Módulos</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#fundadoras">Fundadoras</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#precios">Precios</a></li>
                     <li class="nav-item"><a class="nav-link px-3" href="#contacto">Contacto</a></li>
                 </ul>
@@ -157,8 +198,8 @@
                     <a href="{% url 'login' %}" class="btn btn-outline-light px-3 py-2 fw-bold rounded-3">
                         <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar Sesión
                     </a>
-                    <a href="#contacto" class="btn btn-warning text-dark px-4 py-2 fw-extrabold rounded-3 shadow-sm">
-                        <i class="bi bi-rocket-takeoff-fill me-1"></i> Quiero Sumarme
+                    <a href="#fundadoras" class="btn btn-warning text-dark px-4 py-2 fw-extrabold rounded-3 shadow-sm">
+                        <i class="bi bi-rocket-takeoff-fill me-1"></i> Ser Fundadora
                     </a>
                 </div>
             </div>
@@ -184,7 +225,7 @@
                 <div class="col-lg-6">
                     <span class="badge bg-white bg-opacity-10 text-white border border-white px-3 py-2 rounded-pill fw-bold mb-4 d-inline-flex align-items-center gap-2">
                         <span class="spinner-grow spinner-grow-sm text-warning" role="status"></span>
-                        SaaS Veterinario Multi-Tenant Integrado
+                        Sistema de gestión veterinaria en la nube
                     </span>
                     <h1 class="display-4 fw-extrabold text-white mb-3 lh-sm">
                         La evolución digital para tu <span class="text-warning">Clínica Veterinaria</span>
@@ -193,8 +234,8 @@
                         Centralizá historias clínicas, agenda de turnos, fichas de pacientes e inventario con descuentos automáticos. Todo seguro y accesible desde la nube.
                     </p>
                     <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap">
-                        <a href="#contacto" class="btn btn-warning btn-lg px-4 py-3 fw-bold text-dark rounded-3 shadow-lg">
-                            <i class="bi bi-rocket-takeoff-fill me-2"></i> Probar Gratis
+                        <a href="#fundadoras" class="btn btn-warning btn-lg px-4 py-3 fw-bold text-dark rounded-3 shadow-lg">
+                            <i class="bi bi-rocket-takeoff-fill me-2"></i> Quiero ser Clínica Fundadora
                         </a>
                         <a href="{% url 'entrar_a_demo' %}" class="btn btn-outline-light btn-lg px-4 py-3 fw-semibold rounded-3">
                             <i class="bi bi-play-circle-fill me-2"></i> Ver Demo en Vivo
@@ -204,12 +245,12 @@
                     <!-- Métricas Rápidas -->
                     <div class="row pt-5 mt-3 border-top border-white text-center text-lg-start">
                         <div class="col-4">
-                            <div class="fs-3 fw-extrabold text-white">+7</div>
-                            <div class="small text-white-50">Módulos Integrados</div>
+                            <div class="fs-6 fw-extrabold text-white">Todo en uno</div>
+                            <div class="small text-white-50">Agenda, Historia Clínica e Inventario</div>
                         </div>
                         <div class="col-4">
                             <div class="fs-3 fw-extrabold text-warning">100%</div>
-                            <div class="small text-white-50">Multi-Tenant</div>
+                            <div class="small text-white-50">Datos Privados</div>
                         </div>
                         <div class="col-4">
                             <div class="fs-3 fw-extrabold text-white">24/7</div>
@@ -225,8 +266,8 @@
                                 <i class="bi bi-shield-lock-fill fs-2"></i>
                             </div>
                             <div>
-                                <h5 class="fw-bold mb-0 text-dark">Aislamiento Total por Veterinaria</h5>
-                                <small class="text-muted fw-semibold">Garantía de privacidad y seguridad multi-tenant</small>
+                                <h5 class="fw-bold mb-0 text-dark">Tus datos son solo tuyos</h5>
+                                <small class="text-muted fw-semibold">Cada clínica tiene su espacio privado y protegido</small>
                             </div>
                         </div>
                         <hr class="opacity-10 my-4">
@@ -265,7 +306,7 @@
                         En VeterSystem desarrollamos soluciones tecnológicas de vanguardia orientadas a simplificar la operativa diaria de veterinarias, consultorios y centros de salud animal.
                     </p>
                     <p class="text-muted mb-4">
-                        Nuestra arquitectura <strong>Multi-Tenant</strong> garantiza independencia absoluta entre clínicas, protegiendo la información de cada establecimiento mientras ofrecemos una plataforma rápida, intuitiva y accesible desde cualquier dispositivo.
+                        Cada veterinaria tiene su propio espacio, completamente separado y protegido, en una plataforma rápida, intuitiva y accesible desde cualquier dispositivo.
                     </p>
                     <div class="d-flex gap-4">
                         <div class="d-flex align-items-center gap-3">
@@ -294,8 +335,8 @@
                             <div class="col-6">
                                 <div class="p-4 bg-white rounded-3 shadow-sm text-center">
                                     <i class="bi bi-building-check fs-1 text-primary d-block mb-2"></i>
-                                    <h5 class="fw-extrabold text-dark mb-1">Multi-Tenant</h5>
-                                    <small class="text-muted">Espacios de trabajo 100% aislados</small>
+                                    <h5 class="fw-extrabold text-dark mb-1">Privacidad Total</h5>
+                                    <small class="text-muted">Los datos de tu clínica, separados y protegidos</small>
                                 </div>
                             </div>
                             <div class="col-6">
@@ -316,7 +357,7 @@
                                 <div class="p-4 bg-white rounded-3 shadow-sm text-center">
                                     <i class="bi bi-cash-stack fs-1 text-success d-block mb-2"></i>
                                     <h5 class="fw-extrabold text-dark mb-1">Caja y Ventas</h5>
-                                    <small class="text-muted">Control diario de facturación</small>
+                                    <small class="text-muted">Control diario de ventas y caja</small>
                                 </div>
                             </div>
                         </div>
@@ -354,7 +395,7 @@
                         </div>
                         <h4 class="fw-bold text-dark mb-3">Nuestra Visión</h4>
                         <p class="text-muted mb-0 leading-relaxed">
-                            Ser la solución de software multi-tenant referente en la región, impulsando la transformación digital de clínicas y centros veterinarios con los más altos estándares de calidad.
+                            Ser el sistema de gestión veterinaria referente en la región, impulsando la transformación digital de clínicas y centros veterinarios con los más altos estándares de calidad.
                         </p>
                     </div>
                 </div>
@@ -382,8 +423,8 @@
                 <h2 class="fw-extrabold display-6 text-dark mt-1">Módulos Diseñados para tu Clínica</h2>
             </div>
             
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-3">
+            <div class="row g-4 justify-content-center">
+                <div class="col-md-6 col-lg-4">
                     <div class="card hover-card h-100 p-4 rounded-4 bg-light">
                         <div class="feature-icon-wrapper bg-primary-subtle text-primary">
                             <i class="bi bi-calendar-check-fill"></i>
@@ -393,7 +434,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card hover-card h-100 p-4 rounded-4 bg-light">
                         <div class="feature-icon-wrapper bg-info-subtle text-info">
                             <i class="bi bi-journal-medical"></i>
@@ -403,7 +444,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card hover-card h-100 p-4 rounded-4 bg-light">
                         <div class="feature-icon-wrapper bg-success-subtle text-success">
                             <i class="bi bi-box-seam-fill"></i>
@@ -413,13 +454,87 @@
                     </div>
                 </div>
 
-                <div class="col-md-6 col-lg-3">
+                <div class="col-md-6 col-lg-4">
                     <div class="card hover-card h-100 p-4 rounded-4 bg-light">
                         <div class="feature-icon-wrapper bg-primary-subtle text-primary">
                             <i class="bi bi-stars"></i>
                         </div>
                         <h5 class="fw-bold text-dark mb-2">Resúmenes Clínicos con IA</h5>
                         <p class="text-muted small mb-0">Un resumen breve del historial del paciente generado con inteligencia artificial, listo antes de cada consulta.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card hover-card h-100 p-4 rounded-4 bg-light position-relative">
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-2 rounded-pill position-absolute top-0 end-0 mt-3 me-3">Próximamente</span>
+                        <div class="feature-icon-wrapper bg-danger-subtle text-danger">
+                            <i class="bi bi-receipt-cutoff"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Facturación Electrónica ARCA</h5>
+                        <p class="text-muted small mb-0">Emití facturas electrónicas directamente desde el sistema, integradas con tus ventas y caja.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Clínicas Fundadoras -->
+    <section id="fundadoras" class="py-5 bg-white scroll-margin">
+        <div class="container py-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="p-4 p-md-5 rounded-4 shadow-lg" style="background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%); border: 2px solid var(--vs-primary);">
+                        <div class="text-center mb-4">
+                            <span class="badge bg-primary-subtle text-primary-emphasis fw-bold text-uppercase tracking-wider small px-3 py-2 rounded-pill mb-3 d-inline-block">Programa de Lanzamiento</span>
+                            <h2 class="fw-extrabold display-6 text-dark mb-3">Buscamos 10 Clínicas Fundadoras</h2>
+                            <p class="text-muted fs-5 mb-0 mx-auto" style="max-width: 640px;">
+                                Estamos lanzando VeterSystem y queremos construirlo junto a veterinarias reales. Las clínicas fundadoras acceden a beneficios exclusivos a cambio de usar el sistema y contarnos su experiencia.
+                            </p>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-3 p-3 bg-white rounded-3 shadow-sm h-100">
+                                    <i class="bi bi-gift-fill text-primary fs-4"></i>
+                                    <span class="fw-semibold text-dark">3 meses gratis para empezar</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-3 p-3 bg-white rounded-3 shadow-sm h-100">
+                                    <i class="bi bi-lock-fill text-primary fs-4"></i>
+                                    <span class="fw-semibold text-dark">Precio congelado de por vida</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-3 p-3 bg-white rounded-3 shadow-sm h-100">
+                                    <i class="bi bi-receipt fs-4 text-primary"></i>
+                                    <span class="fw-semibold text-dark">Acceso anticipado a la Facturación Electrónica ARCA</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center gap-3 p-3 bg-white rounded-3 shadow-sm h-100">
+                                    <i class="bi bi-headset fs-4 text-primary"></i>
+                                    <span class="fw-semibold text-dark">Soporte directo con el creador del sistema</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center gap-3 p-3 bg-white rounded-3 shadow-sm h-100">
+                                    <i class="bi bi-lightbulb-fill fs-4 text-primary"></i>
+                                    <span class="fw-semibold text-dark">Tus sugerencias se convierten en funciones</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <div class="mb-3">
+                                <span class="badge bg-danger-subtle text-danger-emphasis fw-bold px-3 py-2 rounded-pill">
+                                    <i class="bi bi-hourglass-split me-1"></i> Quedan {{ lugares_disponibles }} de 10 lugares disponibles
+                                </span>
+                            </div>
+                            <a href="#contacto" class="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-3 shadow">
+                                <i class="bi bi-rocket-takeoff-fill me-2"></i> Quiero ser Clínica Fundadora
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -443,8 +558,8 @@
                             <span class="badge bg-secondary-subtle text-secondary-emphasis fw-bold px-3 py-2 rounded-pill">Mensual</span>
                         </div>
                         <div class="text-center mb-4">
-                            <span class="display-5 fw-extrabold text-dark">${{ plan_destacado.precio_mensual|floatformat:0 }}</span>
-                            <span class="text-muted fw-semibold">/mes</span>
+                            <span class="display-5 fw-extrabold text-dark">${{ precio_mensual_fmt }}</span>
+                            <span class="text-muted fw-semibold">ARS/mes</span>
                         </div>
                         <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los módulos incluidos</li>
@@ -460,15 +575,15 @@
                     <div class="card h-100 border-0 shadow-lg rounded-4 p-4 bg-white position-relative" style="border-top: 4px solid #6366f1 !important;">
                         {% if ahorro_anual > 0 %}
                         <span class="badge bg-warning text-dark fw-bold px-3 py-2 rounded-pill position-absolute top-0 start-50 translate-middle shadow-sm">
-                            Ahorrás ${{ ahorro_anual|floatformat:0 }} al año
+                            Ahorrás ${{ ahorro_anual_fmt }} al año
                         </span>
                         {% endif %}
                         <div class="text-center mb-3 mt-2">
                             <span class="badge bg-primary-subtle text-primary-emphasis fw-bold px-3 py-2 rounded-pill">Anual</span>
                         </div>
                         <div class="text-center mb-4">
-                            <span class="display-5 fw-extrabold text-dark">${{ plan_destacado.precio_anual|floatformat:0 }}</span>
-                            <span class="text-muted fw-semibold">/año</span>
+                            <span class="display-5 fw-extrabold text-dark">${{ precio_anual_fmt }}</span>
+                            <span class="text-muted fw-semibold">ARS/año</span>
                         </div>
                         <ul class="list-unstyled d-flex flex-column gap-2 mb-4">
                             <li><i class="bi bi-check-circle-fill text-success me-2"></i>Todos los módulos incluidos</li>
@@ -480,6 +595,11 @@
                     </div>
                 </div>
             </div>
+
+            <p class="text-center text-muted small mt-4 mb-0">
+                <i class="bi bi-star-fill text-warning me-1"></i>
+                Clínicas fundadoras: 3 meses gratis y precio congelado de por vida.
+            </p>
         </div>
     </section>
     {% endif %}
@@ -540,7 +660,7 @@
                     <div class="fw-bold fs-4 d-flex align-items-center justify-content-center justify-content-md-start gap-2 mb-2">
                         <i class="bi bi-heart-pulse-fill text-primary"></i> VeterSystem
                     </div>
-                    <p class="text-white-50 mb-0">Sistema de Gestión Clínica Veterinaria Multi-Tenant en la Nube.</p>
+                    <p class="text-white-50 mb-0">Sistema de Gestión Clínica Veterinaria en la Nube.</p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
                     <p class="mb-1 text-white-50">&copy; {% now "Y" %} VeterSystem. Todos los derechos reservados.</p>
@@ -553,6 +673,12 @@
             </div>
         </div>
     </footer>
+
+    <!-- Botón Flotante de WhatsApp -->
+    <a href="https://wa.me/5493816443956?text=Hola!%20Quiero%20saber%20m%C3%A1s%20sobre%20VeterSystem%20para%20mi%20veterinaria"
+       target="_blank" rel="noopener noreferrer" class="whatsapp-float" aria-label="Escribinos por WhatsApp">
+        <i class="bi bi-whatsapp"></i>
+    </a>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

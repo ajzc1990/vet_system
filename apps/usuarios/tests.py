@@ -467,8 +467,11 @@ class LandingPricingTests(TestCase):
 
         response = self.client.get(reverse('landing'))
 
-        self.assertContains(response, '20000')
-        self.assertContains(response, '200000')
+        # Con punto de miles y moneda aclarada (ARS), para que no quede ambiguo.
+        self.assertContains(response, '20.000')
+        self.assertContains(response, '200.000')
+        self.assertContains(response, 'ARS/mes')
+        self.assertContains(response, 'ARS/año')
 
     def test_sin_plan_activo_no_rompe_ni_muestra_la_seccion(self):
         response = self.client.get(reverse('landing'))
@@ -495,9 +498,11 @@ class LandingLlamadoAContactoTests(TestCase):
 
         response = self.client.get(reverse('landing'))
 
-        # 5 = el link "Contacto" del nav + los 4 botones de llamado a la acción
-        # (Quiero Sumarme, Probar Gratis, y los dos "Empezar Ahora" de precios).
-        self.assertContains(response, 'href="#contacto"', count=5)
+        # 4 = el link "Contacto" del nav + el CTA de la sección Fundadoras + los dos
+        # "Empezar Ahora" de precios. "Ser Fundadora" (nav, x2: link del menú y botón)
+        # y "Quiero ser Clínica Fundadora" (hero) ahora apuntan a #fundadoras.
+        self.assertContains(response, 'href="#contacto"', count=4)
+        self.assertContains(response, 'href="#fundadoras"', count=3)
 
 
 class CambiarContrasenaTests(TestCase):
