@@ -164,6 +164,9 @@ WHATSAPP_RECORDATORIOS_ENABLED = os.getenv('WHATSAPP_RECORDATORIOS_ENABLED', 'Fa
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_WHATSAPP_FROM = os.getenv('TWILIO_WHATSAPP_FROM')  # sandbox: 'whatsapp:+14155238886'
+# Content Template de WhatsApp para el recordatorio de turno (obligatoria: Twilio ya no
+# acepta texto libre). Se crea una sola vez en el Content Template Builder de Twilio.
+TWILIO_CONTENT_SID_RECORDATORIO = os.getenv('TWILIO_CONTENT_SID_RECORDATORIO')
 
 # Rutas de Autenticación
 LOGIN_URL = 'login'

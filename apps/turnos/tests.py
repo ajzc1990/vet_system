@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from io import StringIO
 from unittest.mock import MagicMock, patch
@@ -277,6 +278,7 @@ class LinkRecordatorioWhatsappTests(TestCase):
     TWILIO_ACCOUNT_SID='ACxxxx',
     TWILIO_AUTH_TOKEN='token',
     TWILIO_WHATSAPP_FROM='whatsapp:+14155238886',
+    TWILIO_CONTENT_SID_RECORDATORIO='HXxxxx',
 )
 class EnviarRecordatorioWhatsappTests(TestCase):
     """Servicio apps/turnos/whatsapp.py: arma y manda el recordatorio vía Twilio,
@@ -313,8 +315,11 @@ class EnviarRecordatorioWhatsappTests(TestCase):
         mock_instance.messages.create.assert_called_once()
         kwargs = mock_instance.messages.create.call_args.kwargs
         self.assertEqual(kwargs['from_'], 'whatsapp:+14155238886')
-        self.assertEqual(kwargs['to'], 'whatsapp:+543811112222')
-        self.assertIn('Rocky', kwargs['body'])
+        self.assertEqual(kwargs['to'], 'whatsapp:+5493811112222')
+        self.assertEqual(kwargs['content_sid'], 'HXxxxx')
+        variables = json.loads(kwargs['content_variables'])
+        self.assertEqual(variables['1'], 'Laura')
+        self.assertEqual(variables['3'], 'Rocky')
 
     @patch('twilio.rest.Client')
     def test_error_de_twilio_se_traduce_a_excepcion_propia(self, mock_client_cls):
@@ -333,6 +338,7 @@ class EnviarRecordatorioWhatsappTests(TestCase):
     TWILIO_ACCOUNT_SID='ACxxxx',
     TWILIO_AUTH_TOKEN='token',
     TWILIO_WHATSAPP_FROM='whatsapp:+14155238886',
+    TWILIO_CONTENT_SID_RECORDATORIO='HXxxxx',
 )
 class EnviarRecordatoriosTurnosCommandTests(TestCase):
     """Management command enviar_recordatorios_turnos: el cron que corre la noche
