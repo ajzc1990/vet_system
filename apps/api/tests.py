@@ -153,6 +153,20 @@ class ApiAppMovilTests(TestCase):
         self.assertEqual(response.data['rol'], 'RECEPCION')
         self.assertFalse(response.data['puede_atender'])
         self.assertEqual(response.data['veterinaria'], 'Clinica A')
+        self.assertFalse(response.data['es_demo'])
+
+    def test_yo_marca_es_demo_en_la_veterinaria_demo(self):
+        """Regresión: la app móvil usa este flag para ocultar los botones de WhatsApp
+        en la demo pública, igual que ya se hace en la web."""
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        demo_user = User.objects.create_user(username="demo_api", password="testpass123")
+        PerfilUsuario.objects.create(user=demo_user, veterinaria=vet_demo, rol="ADMIN", is_approved=True)
+
+        response = self._cliente(demo_user).get(reverse('api:yo'))
+
+        self.assertTrue(response.data['es_demo'])
 
     def test_veterinario_registra_consulta_y_completa_el_turno(self):
         response = self._cliente(self.medico).post(

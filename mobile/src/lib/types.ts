@@ -15,6 +15,7 @@ export type Usuario = {
   veterinaria: string | null;
   puede_atender: boolean;
   ia_habilitada: boolean;
+  es_demo: boolean;
 };
 
 export type Veterinario = { id: number; nombre: string; apellido: string; matricula: string };

@@ -101,8 +101,10 @@ export default function FichaPaciente() {
           <View style={styles.acciones}>
             <Boton titulo="Llamar" icono="call" variante="secundario" style={{ flex: 1 }}
               onPress={() => Linking.openURL(`tel:${telefono}`)} />
-            <Boton titulo="WhatsApp" icono="logo-whatsapp" variante="secundario" style={{ flex: 1 }}
-              onPress={() => Linking.openURL(`https://wa.me/${telefono}`)} />
+            {!usuario?.es_demo && (
+              <Boton titulo="WhatsApp" icono="logo-whatsapp" variante="secundario" style={{ flex: 1 }}
+                onPress={() => Linking.openURL(`https://wa.me/${telefono}`)} />
+            )}
           </View>
         ) : (
           <Texto variante="secundario">Sin teléfono cargado.</Texto>

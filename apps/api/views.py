@@ -19,6 +19,7 @@ from apps.inventario.models import Producto
 from apps.turnos.models import SolicitudTurnoWeb, Turno, Veterinario
 from apps.usuarios.audit import registrar_auditoria
 from apps.usuarios.decorators import es_veterinario_o_admin
+from apps.usuarios.utils import es_veterinaria_demo
 from apps.ventas.models import Venta
 
 from .models import DispositivoPush
@@ -479,6 +480,7 @@ def yo(request):
         'veterinaria': veterinaria.nombre if veterinaria else None,
         'puede_atender': es_veterinario_o_admin(user),
         'ia_habilitada': bool(settings.IA_RESUMENES_ENABLED and settings.ANTHROPIC_API_KEY),
+        'es_demo': es_veterinaria_demo(veterinaria),
     })
 
 

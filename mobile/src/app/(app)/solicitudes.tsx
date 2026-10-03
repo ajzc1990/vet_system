@@ -5,6 +5,7 @@ import { Boton, Chips, EstadoCarga, Fila, Insignia, Tarjeta, Texto } from '@/com
 import { Spacing } from '@/constants/theme';
 import { api } from '@/lib/api';
 import { fechaCorta } from '@/lib/fechas';
+import { useSesion } from '@/lib/session';
 import type { Paginado, SolicitudTurno } from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 import { useTheme } from '@/lib/use-theme';
@@ -17,6 +18,7 @@ const FILTROS = [
 /** Pedidos de turno que los clientes hacen desde el Portal; llega un push por cada uno nuevo. */
 export default function Solicitudes() {
   const t = useTheme();
+  const { usuario } = useSesion();
   const [filtro, setFiltro] = useState<'pendientes' | 'todas'>('pendientes');
   const { datos, error, cargando, refrescando, refrescar, setDatos } = useApi<Paginado<SolicitudTurno>>(
     filtro === 'pendientes' ? 'solicitudes/?pendientes=1' : 'solicitudes/',
@@ -74,7 +76,9 @@ export default function Solicitudes() {
           <Texto variante="secundario">Pedido el {fechaCorta(s.creado_el)}</Texto>
 
           <View style={styles.acciones}>
-            <Boton titulo="WhatsApp" icono="logo-whatsapp" variante="secundario" style={styles.accion} onPress={() => whatsapp(s)} />
+            {!usuario?.es_demo && (
+              <Boton titulo="WhatsApp" icono="logo-whatsapp" variante="secundario" style={styles.accion} onPress={() => whatsapp(s)} />
+            )}
             <Boton titulo="Llamar" icono="call" variante="secundario" style={styles.accion}
               onPress={() => Linking.openURL(`tel:${s.telefono.replace(/\D/g, '')}`)} />
           </View>

@@ -76,7 +76,7 @@ export default function DetalleInternacion() {
       <View style={styles.acciones}>
         <Boton titulo="Informe PDF" icono="share-outline" variante="secundario" style={{ flex: 1 }}
           cargando={compartiendo} onPress={informe} />
-        {telefono ? (
+        {telefono && !usuario?.es_demo ? (
           <Boton titulo="Avisar al tutor" icono="logo-whatsapp" variante="secundario" style={{ flex: 1 }}
             onPress={() => Linking.openURL(`https://wa.me/${telefono}`)} />
         ) : null}
