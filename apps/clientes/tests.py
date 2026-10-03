@@ -302,3 +302,55 @@ class FormatearTelefonoWhatsappTests(TestCase):
     def test_telefono_vacio_devuelve_cadena_vacia(self):
         self.assertEqual(formatear_telefono_whatsapp(""), "")
         self.assertEqual(formatear_telefono_whatsapp(None), "")
+
+
+class DemoNoMuestraLinksDeWhatsappTests(TestCase):
+    """Regresión: la demo pública dejaba mandar un WhatsApp real a los teléfonos
+    cargados en los datos de ejemplo (lista de clientes, ficha del cliente e
+    historia clínica). En cualquier otra veterinaria el link sigue andando normal."""
+
+    def setUp(self):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+
+        self.vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        self.demo_admin = User.objects.create_user(username="demo_admin_wa", password="testpass123")
+        PerfilUsuario.objects.create(user=self.demo_admin, veterinaria=self.vet_demo, rol="ADMIN", is_approved=True)
+        self.cliente_demo = Cliente.objects.create(
+            veterinaria=self.vet_demo, nombre="Laura", apellido="Diaz", dni="334", telefono="3811112222",
+        )
+        self.mascota_demo = Mascota.objects.create(cliente=self.cliente_demo, nombre="Rocky", especie="CANINO")
+
+        self.vet_real = Veterinaria.objects.create(nombre="Clinica Real WA")
+        self.admin_real = User.objects.create_user(username="admin_real_wa", password="testpass123")
+        PerfilUsuario.objects.create(user=self.admin_real, veterinaria=self.vet_real, rol="ADMIN", is_approved=True)
+        self.cliente_real = Cliente.objects.create(
+            veterinaria=self.vet_real, nombre="Pedro", apellido="Lopez", dni="335", telefono="3811112222",
+        )
+        self.mascota_real = Mascota.objects.create(cliente=self.cliente_real, nombre="Firulais", especie="CANINO")
+
+    def test_lista_de_clientes(self):
+        self.client.force_login(self.demo_admin)
+        response = self.client.get(reverse('clientes:lista_clientes'))
+        self.assertNotContains(response, 'wa.me')
+
+        self.client.force_login(self.admin_real)
+        response = self.client.get(reverse('clientes:lista_clientes'))
+        self.assertContains(response, 'wa.me/5493811112222')
+
+    def test_detalle_de_cliente(self):
+        self.client.force_login(self.demo_admin)
+        response = self.client.get(reverse('clientes:detalle_cliente', args=[self.cliente_demo.id]))
+        self.assertNotContains(response, 'wa.me')
+
+        self.client.force_login(self.admin_real)
+        response = self.client.get(reverse('clientes:detalle_cliente', args=[self.cliente_real.id]))
+        self.assertContains(response, 'wa.me/5493811112222')
+
+    def test_historia_clinica(self):
+        self.client.force_login(self.demo_admin)
+        response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota_demo.id]))
+        self.assertNotContains(response, 'wa.me')
+
+        self.client.force_login(self.admin_real)
+        response = self.client.get(reverse('clientes:detalle_historia_clinica', args=[self.mascota_real.id]))
+        self.assertContains(response, 'wa.me/5493811112222')

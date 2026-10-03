@@ -35,10 +35,12 @@
                             <span><i class="bi bi-card-heading text-primary me-1"></i><strong>DNI:</strong> {{ cliente.dni|default:"--" }}</span>
                             <span>
                                 <i class="bi bi-telephone text-success me-1"></i><strong>Teléfono:</strong> 
-                                {% if cliente.telefono %}
+                                {% if cliente.telefono and not es_demo_publica %}
                                     <a href="https://wa.me/{{ cliente.telefono|wa_numero }}" target="_blank" class="text-success text-decoration-none fw-bold" title="WhatsApp">
                                         {{ cliente.telefono }} <i class="bi bi-whatsapp ms-0.5"></i>
                                     </a>
+                                {% elif cliente.telefono %}
+                                    {{ cliente.telefono }}
                                 {% else %}
                                     --
                                 {% endif %}

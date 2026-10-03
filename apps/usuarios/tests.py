@@ -29,6 +29,26 @@ class GetVeterinariaActivaTests(TestCase):
         self.assertEqual(get_veterinaria_activa(request), vet)
 
 
+class EsVeterinariaDemoTests(TestCase):
+    def test_la_veterinaria_demo_da_true(self):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+        from apps.usuarios.utils import es_veterinaria_demo
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        self.assertTrue(es_veterinaria_demo(vet_demo))
+
+    def test_una_veterinaria_real_da_false(self):
+        from apps.usuarios.utils import es_veterinaria_demo
+
+        vet_real = Veterinaria.objects.create(nombre="Clinica Real")
+        self.assertFalse(es_veterinaria_demo(vet_real))
+
+    def test_none_da_false(self):
+        from apps.usuarios.utils import es_veterinaria_demo
+
+        self.assertFalse(es_veterinaria_demo(None))
+
+
 class DashboardAliasRedirectTests(TestCase):
     """usuarios:dashboard era una segunda implementación del panel operativo, duplicada
     de dashboard:index (apps.dashboard), con su propio template y sus propias consultas.

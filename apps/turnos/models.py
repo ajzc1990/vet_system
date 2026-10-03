@@ -99,8 +99,13 @@ class Turno(models.Model):
     def link_recordatorio_whatsapp(self):
         """Link de WhatsApp (wa.me) con un mensaje de recordatorio del turno ya redactado
         -incluye mascota, fecha y hora-, listo para que el staff se lo mande al tutor con
-        un clic. None si no hay mascota/cliente o el cliente no tiene teléfono cargado."""
+        un clic. None si no hay mascota/cliente o el cliente no tiene teléfono cargado, o
+        si es la veterinaria demo (no tiene sentido mandarle WhatsApp real a nadie ahí)."""
         if not self.mascota_id or not self.mascota.cliente or not self.mascota.cliente.telefono:
+            return None
+
+        from apps.usuarios.utils import es_veterinaria_demo
+        if es_veterinaria_demo(self.veterinaria):
             return None
 
         from urllib.parse import quote

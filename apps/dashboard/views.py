@@ -9,7 +9,7 @@ from apps.clientes.models import Mascota, Cliente, formatear_telefono_whatsapp
 from apps.inventario.models import Producto
 from apps.historia_clinica.models import ConsultaMedica, Internacion, RegistroVacuna, RegistroDesparasitacion
 from apps.usuarios.models import MensajeContacto
-from apps.usuarios.utils import get_veterinaria_activa
+from apps.usuarios.utils import get_veterinaria_activa, es_veterinaria_demo
 
 
 @login_required
@@ -83,6 +83,8 @@ def dashboard_principal(request):
 
 
 def _mensaje_whatsapp(cliente, texto):
+    if es_veterinaria_demo(cliente.veterinaria):
+        return {'telefono': '', 'texto': texto}
     return {'telefono': formatear_telefono_whatsapp(cliente.telefono), 'texto': texto}
 
 

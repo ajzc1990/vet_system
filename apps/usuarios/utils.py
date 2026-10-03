@@ -7,3 +7,11 @@ def get_veterinaria_activa(request):
     datos de otro tenant a cualquier usuario sin perfil asignado.
     """
     return getattr(request, 'veterinaria', None)
+
+
+def es_veterinaria_demo(veterinaria):
+    """True si `veterinaria` es el tenant compartido de la demo pública (ver seed_demo).
+    Se usa para apagar acciones que no tiene sentido -o es riesgoso- dejar disponibles
+    a cualquier visitante que entra a probar el sistema (ej. mandar WhatsApp real)."""
+    from .management.commands.seed_demo import DEMO_VET_NOMBRE
+    return bool(veterinaria and veterinaria.nombre == DEMO_VET_NOMBRE)

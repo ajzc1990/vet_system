@@ -135,3 +135,34 @@ class CentroRecordatoriosTests(TestCase):
         self.assertEqual(len(mail.outbox), 2)
         destinatarios = {m.to[0] for m in mail.outbox}
         self.assertEqual(destinatarios, {"clinica.a@example.com", "clinica.b@example.com"})
+
+
+class CentroRecordatoriosDemoSinWhatsappTests(TestCase):
+    """Regresión: la demo pública dejaba mandar un WhatsApp real a los teléfonos
+    (ficticios o no) cargados en los datos de ejemplo. Ahora el link queda vacío."""
+
+    def setUp(self):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE, DEMO_ADMIN_USERNAME
+
+        self.vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        self.demo_admin = User.objects.create_user(username=DEMO_ADMIN_USERNAME, password="testpass123")
+        PerfilUsuario.objects.create(user=self.demo_admin, veterinaria=self.vet_demo, rol="ADMIN", is_approved=True)
+
+        cliente = Cliente.objects.create(
+            veterinaria=self.vet_demo, nombre="Juan", apellido="Perez", dni="111", telefono="3811112222",
+        )
+        mascota = Mascota.objects.create(cliente=cliente, nombre="Firulais", especie="CANINO")
+        RegistroVacuna.objects.create(
+            veterinaria=self.vet_demo, mascota=mascota, nombre_vacuna="Antirrábica",
+            fecha_proxima_dosis=timezone.now().date() - timedelta(days=2),
+        )
+
+    def test_el_centro_de_recordatorios_no_arma_link_de_whatsapp_en_la_demo(self):
+        self.client.force_login(self.demo_admin)
+        response = self.client.get(reverse('dashboard:centro_recordatorios'))
+
+        self.assertEqual(response.status_code, 200)
+        vacunas = response.context['vacunas_vencidas_data']
+        self.assertEqual(len(vacunas), 1)
+        self.assertEqual(vacunas[0]['whatsapp']['telefono'], '')
+        self.assertNotContains(response, 'wa.me/5493811112222')

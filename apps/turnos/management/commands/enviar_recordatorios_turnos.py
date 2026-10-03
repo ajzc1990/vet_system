@@ -9,6 +9,7 @@ from apps.turnos.whatsapp import (
     enviar_recordatorio_turno,
     whatsapp_configurado,
 )
+from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
 
 
 class Command(BaseCommand):
@@ -29,7 +30,7 @@ class Command(BaseCommand):
             fecha_hora__date=mañana,
             estado__in=['PENDIENTE', 'CONFIRMADO'],
             recordatorio_whatsapp_enviado=False,
-        )
+        ).exclude(veterinaria__nombre=DEMO_VET_NOMBRE)
 
         enviados = 0
         fallidos = 0

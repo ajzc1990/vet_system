@@ -123,6 +123,25 @@ class SolicitudTurnoWebTests(TestCase):
         self.assertIn(self.solicitud_a, solicitudes)
         self.assertNotIn(self.solicitud_b, solicitudes)
 
+    def test_la_demo_no_muestra_el_link_de_whatsapp_de_las_solicitudes(self):
+        """Regresión: la demo pública dejaba mandar un WhatsApp real a los teléfonos
+        cargados en los datos de ejemplo."""
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        demo_admin = User.objects.create_user(username="demo_admin_sol", password="testpass123")
+        PerfilUsuario.objects.create(user=demo_admin, veterinaria=vet_demo, rol="ADMIN", is_approved=True)
+        SolicitudTurnoWeb.objects.create(
+            veterinaria=vet_demo, nombre_tutor="Laura Diaz", telefono="3811112222", nombre_mascota="Rocky",
+            motivo="Consulta", fecha_deseada=timezone.now().date() + timedelta(days=2),
+        )
+
+        self.client.force_login(demo_admin)
+        response = self.client.get(reverse('turnos:lista_solicitudes_turno'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'wa.me')
+
     def test_no_puede_actualizar_una_solicitud_de_otra_veterinaria(self):
         self.client.force_login(self.user_a)
         response = self.client.get(reverse('turnos:actualizar_estado_solicitud', args=[self.solicitud_b.id, 'DESCARTADO']))
@@ -235,6 +254,20 @@ class LinkRecordatorioWhatsappTests(TestCase):
         self.cliente.telefono = ""
         self.cliente.save()
         turno = Turno.objects.create(veterinaria=self.vet, mascota=self.mascota, fecha_hora=self.fecha_hora)
+
+        self.assertIsNone(turno.link_recordatorio_whatsapp)
+
+    def test_en_la_veterinaria_demo_no_genera_link(self):
+        """Regresión: la demo pública dejaba mandar un WhatsApp real a los teléfonos
+        cargados en los datos de ejemplo."""
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        cliente_demo = Cliente.objects.create(
+            veterinaria=vet_demo, nombre="Laura", apellido="Diaz", dni="334", telefono="381 111-2222",
+        )
+        mascota_demo = Mascota.objects.create(cliente=cliente_demo, nombre="Rocky", especie="CANINO")
+        turno = Turno.objects.create(veterinaria=vet_demo, mascota=mascota_demo, fecha_hora=self.fecha_hora)
 
         self.assertIsNone(turno.link_recordatorio_whatsapp)
 
@@ -358,3 +391,21 @@ class EnviarRecordatoriosTurnosCommandTests(TestCase):
         call_command('enviar_recordatorios_turnos', stdout=StringIO())
 
         mock_enviar.assert_not_called()
+
+    @patch('apps.turnos.management.commands.enviar_recordatorios_turnos.enviar_recordatorio_turno')
+    def test_la_veterinaria_demo_no_recibe_recordatorios(self, mock_enviar):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        cliente_demo = Cliente.objects.create(
+            veterinaria=vet_demo, nombre="Laura", apellido="Diaz", dni="556", telefono="381 111-2222",
+        )
+        mascota_demo = Mascota.objects.create(cliente=cliente_demo, nombre="Rocky", especie="CANINO")
+        Turno.objects.create(
+            veterinaria=vet_demo, mascota=mascota_demo,
+            fecha_hora=timezone.now() + timedelta(days=1), estado='CONFIRMADO',
+        )
+
+        call_command('enviar_recordatorios_turnos', stdout=StringIO())
+
+        mock_enviar.assert_called_once_with(self.turno_mañana)  # solo el de la clínica real
