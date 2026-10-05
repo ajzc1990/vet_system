@@ -24,6 +24,8 @@ const EN_LA_WEB: EnlaceWeb[] = [
   { icono: 'stats-chart-outline', titulo: 'Panel general', ruta: '/dashboard/' },
   { icono: 'business-outline', titulo: 'Configurar clínica', ruta: '/usuarios/mi-veterinaria/', soloAdmin: true },
   { icono: 'card-outline', titulo: 'Mi suscripción', ruta: '/usuarios/mi-suscripcion/', soloAdmin: true },
+  { icono: 'people-outline', titulo: 'Gestionar equipo', ruta: '/usuarios/equipo/', soloAdmin: true },
+  { icono: 'shield-checkmark-outline', titulo: 'Auditoría', ruta: '/usuarios/auditoria/', soloAdmin: true },
 ];
 
 export default function Mas() {
