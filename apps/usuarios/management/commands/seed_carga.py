@@ -7,15 +7,13 @@ from django.db import transaction
 from django.utils import timezone
 from faker import Faker
 
-from apps.usuarios.models import Veterinaria, PerfilUsuario, Plan, Suscripcion
+from apps.usuarios.models import Veterinaria, PerfilUsuario
 from apps.clientes.models import Cliente, Mascota
 from apps.turnos.models import Veterinario, Turno
-from apps.historia_clinica.models import ConsultaMedica, RegistroVacuna, RegistroDesparasitacion
+from apps.historia_clinica.models import ConsultaMedica
 from apps.inventario.models import Categoria, Producto
-from apps.ventas.models import CajaDiaria, Venta, DetalleVenta
 
-PREFIJO_NOMBRE = "Carga Test"
-PASSWORD = "CargaTest2026!"
+PREFIJO_CARGA = "CARGA TEST "
 
 RAZAS = {
     'CANINO': ['Labrador', 'Ovejero Alemán', 'Caniche', 'Bulldog Francés', 'Mestizo', 'Boxer'],
@@ -27,176 +25,144 @@ MOTIVOS = [
     'Control general de salud', 'Vacunación anual', 'Vómitos y decaimiento',
     'Cojera en pata trasera', 'Chequeo pre-quirúrgico', 'Consulta dermatológica',
 ]
+PRODUCTOS = [
+    ("Meloxicam 0.5%", "MEDICAMENTO", 4, 5, 1200, 2500),
+    ("Amoxicilina 500mg", "MEDICAMENTO", 30, 10, 800, 1800),
+    ("Vacuna Quíntuple", "VACUNA", 3, 8, 2000, 4500),
+    ("Vacuna Antirrábica", "VACUNA", 25, 10, 1500, 3200),
+    ("Alimento Balanceado Adulto 15kg", "ALIMENTO", 8, 5, 18000, 32000),
+    ("Alimento Balanceado Cachorro 3kg", "ALIMENTO", 12, 5, 7000, 13500),
+    ("Jeringas Descartables x100", "DESCARTABLE", 40, 15, 5000, 9000),
+    ("Guantes de Látex x100", "DESCARTABLE", 20, 10, 4000, 7500),
+]
+PASSWORD = "CargaTest2026!"
 
 
 class Command(BaseCommand):
     help = (
-        "Prueba de carga de datos: crea N veterinarias sintéticas (tenants independientes), "
-        "cada una con clientes, mascotas, turnos, vacunas y ventas realistas, para medir "
-        "hasta dónde el sistema sigue respondiendo bien con muchos tenants activos a la vez. "
-        "No toca la veterinaria real ni la demo pública (usa nombres 'Carga Test N' aparte). "
-        "Usar --reset para borrar todo lo generado por este comando."
+        "Carga N veterinarias sintéticas con datos realistas (para medir hasta dónde "
+        "aguanta la infraestructura). Usar --borrar para eliminar todo lo que creó, sin "
+        "tocar la veterinaria demo ni ninguna otra."
     )
 
     def add_arguments(self, parser):
-        parser.add_argument('--n', type=int, default=15, help="Cantidad de veterinarias sintéticas a crear (default: 15).")
-        parser.add_argument('--clientes', type=int, default=25, help="Clientes por veterinaria (default: 25).")
-        parser.add_argument('--reset', action='store_true', help="Borra todas las veterinarias 'Carga Test *' generadas antes.")
+        parser.add_argument('--cantidad', type=int, default=100)
+        parser.add_argument('--clientes-por-vet', type=int, default=40)
+        parser.add_argument('--borrar', action='store_true')
 
     def handle(self, *args, **options):
-        if options['reset']:
+        if options['borrar']:
             self._borrar_todo()
             return
 
-        n = options['n']
-        clientes_por_vet = options['clientes']
+        cantidad = options['cantidad']
+        n_clientes = options['clientes_por_vet']
         fake = Faker('es_AR')
+        Faker.seed(0)
 
-        self.stdout.write(f"Generando {n} veterinarias sintéticas con ~{clientes_por_vet} clientes cada una...")
+        dni_counter = 90000000
+        usernames = []
 
-        plan, _ = Plan.objects.get_or_create(
-            nombre="Profesional",
-            defaults={
-                'precio_mensual': 20000, 'precio_anual': 200000,
-                'max_usuarios': 10, 'max_mascotas': 1000,
-                'permite_internacion': True, 'permite_multiples_veterinarios': True,
-                'orden': 1,
-            },
-        )
-
-        existentes = Veterinaria.objects.filter(nombre__startswith=PREFIJO_NOMBRE).count()
-
-        for i in range(existentes + 1, existentes + n + 1):
+        for i in range(cantidad):
             with transaction.atomic():
-                self._crear_tenant(fake, plan, i, clientes_por_vet)
-            self.stdout.write(f"  [{i - existentes}/{n}] {PREFIJO_NOMBRE} {i:03d} lista.")
-
-        self.stdout.write(self.style.SUCCESS(
-            f"\nListo: {n} veterinarias nuevas ({PREFIJO_NOMBRE} {existentes + 1:03d}..{existentes + n:03d}).\n"
-            f"Login de cada una: carga{{NNN}}_admin / {PASSWORD}\n"
-            f"Para borrar todo esto después: python manage.py seed_carga --reset"
-        ))
-
-    def _crear_tenant(self, fake, plan, i, clientes_por_vet):
-        nombre = f"{PREFIJO_NOMBRE} {i:03d}"
-        vet = Veterinaria.objects.create(
-            nombre=nombre, telefono=f"381{fake.random_int(min=4000000, max=6999999)}",
-            email_contacto=f"carga{i:03d}@vetersystemtest.com.ar", activo=True,
-        )
-        Suscripcion.objects.update_or_create(
-            veterinaria=vet,
-            defaults={
-                'plan': plan, 'estado': 'ACTIVA',
-                'fecha_inicio': timezone.now().date() - timedelta(days=30),
-                'fecha_vencimiento': timezone.now().date() + timedelta(days=300),
-            },
-        )
-
-        admin_user = User.objects.create_user(
-            username=f"carga{i:03d}_admin", password=PASSWORD,
-            first_name=fake.first_name(), last_name=fake.last_name(),
-        )
-        PerfilUsuario.objects.create(user=admin_user, veterinaria=vet, rol="ADMIN", is_approved=True)
-
-        veterinarios = [
-            Veterinario.objects.create(
-                veterinaria=vet, nombre=fake.first_name(), apellido=fake.last_name(),
-                matricula=f"MP-{fake.unique.random_int(min=1000, max=99999)}", activo=True,
-            )
-            for _ in range(2)
-        ]
-
-        categorias = {nombre_cat: Categoria.objects.create(veterinaria=vet, nombre=nombre_cat)
-                      for nombre_cat in ['Medicamentos', 'Vacunas', 'Alimento']}
-        productos = [
-            Producto.objects.create(
-                veterinaria=vet, nombre=n, categoria=categorias[cat], tipo=tipo,
-                stock_actual=random.randint(2, 40), stock_minimo=5,
-                precio_costo=costo, precio_venta=costo * 2,
-            )
-            for n, tipo, cat, costo in [
-                ("Amoxicilina 500mg", "MEDICAMENTO", 'Medicamentos', 900),
-                ("Meloxicam 0.5%", "MEDICAMENTO", 'Medicamentos', 1200),
-                ("Vacuna Quíntuple", "VACUNA", 'Vacunas', 2000),
-                ("Vacuna Antirrábica", "VACUNA", 'Vacunas', 1500),
-                ("Alimento Balanceado 15kg", "ALIMENTO", 'Alimento', 18000),
-            ]
-        ]
-
-        ahora = timezone.now()
-        hoy = ahora.date()
-        clientes_mascotas = []
-        for _ in range(clientes_por_vet):
-            cliente = Cliente.objects.create(
-                veterinaria=vet, nombre=fake.first_name(), apellido=fake.last_name(),
-                dni=str(fake.unique.random_int(min=1000000, max=99999999)),
-                telefono=f"381{fake.random_int(min=4000000, max=6999999)}", email=fake.email(), activo=True,
-            )
-            mascotas = []
-            for _ in range(random.randint(1, 2)):
-                especie = random.choice(['CANINO', 'CANINO', 'FELINO', 'FELINO', 'AVE', 'OTRO'])
-                mascotas.append(Mascota.objects.create(
-                    cliente=cliente, nombre=fake.first_name(), especie=especie,
-                    raza=random.choice(RAZAS[especie]), sexo=random.choice(['M', 'H']),
-                    peso_kg=round(random.uniform(1.5, 40.0), 2), castrado=random.choice([True, False]),
-                ))
-            clientes_mascotas.append((cliente, mascotas))
-
-        for cliente, mascotas in clientes_mascotas:
-            for mascota in mascotas:
-                fecha_pasada = ahora - timedelta(days=random.randint(1, 180), hours=random.randint(0, 8))
-                veterinario = random.choice(veterinarios)
-                turno = Turno.objects.create(
-                    veterinaria=vet, mascota=mascota, veterinario=veterinario,
-                    fecha_hora=fecha_pasada, motivo=random.choice(MOTIVOS), estado='COMPLETADO',
+                vet = Veterinaria.objects.create(
+                    nombre=f"{PREFIJO_CARGA}{i:05d}",
+                    cuit_rif=f"30-{70000000 + i}-9",
+                    telefono="3815550000",
+                    direccion=fake.address().replace('\n', ', '),
+                    email_contacto=f"carga{i:05d}@test.local",
+                    activo=True,
                 )
-                ConsultaMedica.objects.create(
-                    veterinaria=vet, mascota=mascota, veterinario=veterinario, turno=turno,
-                    fecha_hora=fecha_pasada, peso_actual_kg=mascota.peso_kg,
-                    motivo_consulta=turno.motivo, diagnostico=fake.sentence(nb_words=5),
-                    tratamiento="Reposo y medicación vía oral.",
-                )
-                if random.random() < 0.5:
-                    Turno.objects.create(
-                        veterinaria=vet, mascota=mascota, veterinario=random.choice(veterinarios),
-                        fecha_hora=ahora + timedelta(days=random.randint(0, 14)),
-                        motivo=random.choice(MOTIVOS), estado=random.choice(['PENDIENTE', 'CONFIRMADO']),
+
+                username = f"carga_{i:05d}_admin"
+                admin_user = User.objects.create_user(username=username, password=PASSWORD)
+                PerfilUsuario.objects.create(user=admin_user, veterinaria=vet, rol="ADMIN", is_approved=True)
+                usernames.append(username)
+
+                veterinarios = Veterinario.objects.bulk_create([
+                    Veterinario(veterinaria=vet, usuario=admin_user, nombre="Sofía", apellido="Herrera",
+                                 matricula=f"MP-{i:05d}A", telefono="3815551111", activo=True),
+                    Veterinario(veterinaria=vet, nombre="Martín", apellido="Ibáñez",
+                                 matricula=f"MP-{i:05d}B", telefono="3815552222", activo=True),
+                ])
+
+                clientes = Cliente.objects.bulk_create([
+                    Cliente(
+                        veterinaria=vet, nombre=fake.first_name(), apellido=fake.last_name(),
+                        dni=str(dni_counter + j), telefono=f"381{random.randint(4000000, 6999999)}",
+                        email=fake.email(), direccion=fake.address().replace('\n', ', '), activo=True,
                     )
-                RegistroVacuna.objects.create(
-                    veterinaria=vet, mascota=mascota, veterinario=veterinario,
-                    nombre_vacuna="Antirrábica", fecha_aplicacion=hoy - timedelta(days=340),
-                    fecha_proxima_dosis=hoy + timedelta(days=random.randint(-10, 20)),
-                )
-                RegistroDesparasitacion.objects.create(
-                    veterinaria=vet, mascota=mascota, veterinario=veterinario,
-                    tipo=random.choice(['INTERNA', 'EXTERNA', 'AMBAS']), producto="Simparica",
-                    fecha_aplicacion=hoy - timedelta(days=90),
-                    fecha_proxima_dosis=hoy + timedelta(days=random.randint(-5, 10)),
-                )
+                    for j in range(n_clientes)
+                ])
+                dni_counter += n_clientes
 
-        caja = CajaDiaria.objects.create(veterinaria=vet, usuario_apertura=admin_user, monto_inicial=10000, estado='ABIERTA')
-        medios = ['EFECTIVO', 'MERCADO_PAGO', 'DEBITO', 'CREDITO']
-        for cliente, _ in random.sample(clientes_mascotas, k=min(10, len(clientes_mascotas))):
-            producto = random.choice(productos)
-            cantidad = random.randint(1, 2)
-            venta = Venta.objects.create(
-                veterinaria=vet, caja=caja, cliente=cliente, vendedor=admin_user,
-                medio_pago=random.choice(medios), total=producto.precio_venta * cantidad,
-            )
-            DetalleVenta.objects.create(
-                venta=venta, producto=producto, cantidad=cantidad,
-                precio_unitario=producto.precio_venta, subtotal=producto.precio_venta * cantidad,
-            )
+                mascotas = []
+                for cliente in clientes:
+                    for _ in range(random.randint(1, 2)):
+                        especie = random.choice(['CANINO', 'CANINO', 'FELINO', 'FELINO', 'AVE', 'OTRO'])
+                        mascotas.append(Mascota(
+                            cliente=cliente, nombre=fake.first_name(), especie=especie,
+                            raza=random.choice(RAZAS[especie]),
+                            fecha_nacimiento=fake.date_of_birth(minimum_age=0, maximum_age=14),
+                            sexo=random.choice(['M', 'H']), peso_kg=round(random.uniform(1.5, 40.0), 2),
+                            castrado=random.choice([True, False]),
+                        ))
+                mascotas = Mascota.objects.bulk_create(mascotas)
+
+                categoria = Categoria.objects.create(veterinaria=vet, nombre="General")
+                Producto.objects.bulk_create([
+                    Producto(veterinaria=vet, nombre=nombre, categoria=categoria, tipo=tipo,
+                              stock_actual=stock, stock_minimo=minimo, precio_costo=costo, precio_venta=venta)
+                    for nombre, tipo, stock, minimo, costo, venta in PRODUCTOS
+                ])
+
+                ahora = timezone.now()
+                turnos_pasados = []
+                turnos_futuros = []
+                for mascota in mascotas:
+                    turnos_pasados.append(Turno(
+                        veterinaria=vet, mascota=mascota, veterinario=random.choice(veterinarios),
+                        fecha_hora=ahora - timedelta(days=random.randint(5, 60), hours=random.randint(0, 8)),
+                        motivo=random.choice(MOTIVOS), estado='COMPLETADO',
+                    ))
+                    if random.random() < 0.6:
+                        es_hoy = random.random() < 0.4
+                        delta = timedelta(hours=random.randint(1, 6)) if es_hoy else timedelta(days=random.randint(1, 10))
+                        turnos_futuros.append(Turno(
+                            veterinaria=vet, mascota=mascota, veterinario=random.choice(veterinarios),
+                            fecha_hora=ahora + delta, motivo=random.choice(MOTIVOS),
+                            estado=random.choice(['PENDIENTE', 'CONFIRMADO']),
+                        ))
+                turnos_pasados = Turno.objects.bulk_create(turnos_pasados)
+                Turno.objects.bulk_create(turnos_futuros)
+
+                ConsultaMedica.objects.bulk_create([
+                    ConsultaMedica(
+                        veterinaria=vet, mascota=t.mascota, veterinario=t.veterinario, turno=t,
+                        fecha_hora=t.fecha_hora, peso_actual_kg=t.mascota.peso_kg,
+                        temperatura_c=round(random.uniform(37.5, 39.2), 1),
+                        frecuencia_cardiaca=random.randint(70, 140), frecuencia_respiratoria=random.randint(15, 35),
+                        motivo_consulta=t.motivo, anamnesis=fake.sentence(),
+                        examen_clinico="Mucosas rosadas, hidratado, buen estado general.",
+                        diagnostico=fake.sentence(nb_words=5),
+                        tratamiento="Se indica reposo y medicación vía oral según receta entregada.",
+                    )
+                    for t in turnos_pasados
+                ])
+
+            if (i + 1) % 10 == 0 or (i + 1) == cantidad:
+                self.stdout.write(f"  ... {i + 1}/{cantidad} veterinarias cargadas")
+
+        self.stdout.write(self.style.SUCCESS(f"\n{cantidad} veterinarias de carga creadas."))
+        self.stdout.write(f"Usuario de prueba: {usernames[0]}  /  Contraseña: {PASSWORD}")
+        self.stdout.write(f"Patrón de usuarios: carga_00000_admin .. carga_{cantidad - 1:05d}_admin (misma contraseña)")
 
     def _borrar_todo(self):
-        vets = Veterinaria.objects.filter(nombre__startswith=PREFIJO_NOMBRE)
-        cantidad = vets.count()
-        if cantidad == 0:
+        vets = Veterinaria.objects.filter(nombre__startswith=PREFIJO_CARGA)
+        total = vets.count()
+        if total == 0:
             self.stdout.write("No hay veterinarias de carga para borrar.")
             return
-
-        DetalleVenta.objects.filter(venta__veterinaria__in=vets).delete()
-        usuarios_admin = User.objects.filter(username__startswith="carga", username__endswith="_admin")
-        usuarios_admin.delete()
+        User.objects.filter(username__startswith="carga_").delete()
         vets.delete()
-        self.stdout.write(self.style.SUCCESS(f"{cantidad} veterinarias de carga eliminadas."))
+        self.stdout.write(self.style.SUCCESS(f"{total} veterinarias de carga eliminadas."))
