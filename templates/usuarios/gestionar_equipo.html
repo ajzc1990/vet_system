@@ -190,6 +190,12 @@
                             <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.telefono.label }}</label>
                             {{ form_nuevo.telefono }}
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.matricula.label }}</label>
+                            {{ form_nuevo.matricula }}
+                            <div class="form-text extra-small">{{ form_nuevo.matricula.help_text }}</div>
+                            {% if form_nuevo.matricula.errors %}<div class="text-danger extra-small mt-1">{{ form_nuevo.matricula.errors|striptags }}</div>{% endif %}
+                        </div>
                         <div class="col-12">
                             <label class="form-label fw-bold text-dark small mb-1">{{ form_nuevo.password.label }}</label>
                             {{ form_nuevo.password }}

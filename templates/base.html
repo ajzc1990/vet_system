@@ -451,6 +451,7 @@
                         {% endif %}
                         {% if user.is_superuser or user.perfil.rol == 'ADMIN' %}
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:gestionar_equipo' %}"><i class="bi bi-people me-2"></i> Gestión de Equipo</a></li>
+                            <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'turnos:lista_veterinarios' %}"><i class="bi bi-person-badge me-2"></i> Veterinarios</a></li>
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:mi_suscripcion' %}"><i class="bi bi-credit-card-2-front me-2"></i> Mi Suscripción</a></li>
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:auditoria' %}"><i class="bi bi-shield-lock me-2"></i> Auditoría</a></li>
                         {% endif %}

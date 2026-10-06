@@ -22,4 +22,9 @@ urlpatterns = [
     path('reservar/<int:veterinaria_id>/', views.solicitar_turno_publico, name='solicitar_turno_publico'),
     path('solicitudes/', views.lista_solicitudes_turno, name='lista_solicitudes_turno'),
     path('solicitudes/<int:solicitud_id>/estado/<str:nuevo_estado>/', views.actualizar_estado_solicitud, name='actualizar_estado_solicitud'),
+
+    # Veterinarios (ficha profesional: matrícula, usada al asignar turnos)
+    path('veterinarios/', views.lista_veterinarios, name='lista_veterinarios'),
+    path('veterinarios/nuevo/', views.nuevo_veterinario, name='nuevo_veterinario'),
+    path('veterinarios/<int:veterinario_id>/editar/', views.editar_veterinario, name='editar_veterinario'),
 ]

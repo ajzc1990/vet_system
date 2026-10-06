@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from apps.clientes.models import Cliente, Mascota
 from apps.usuarios.models import PerfilUsuario, Veterinaria
-from .models import Turno, SolicitudTurnoWeb
+from .models import Turno, SolicitudTurnoWeb, Veterinario
 from .whatsapp import (
     RecordatoriosDeshabilitados,
     RecordatorioWhatsAppError,
@@ -415,3 +415,60 @@ class EnviarRecordatoriosTurnosCommandTests(TestCase):
         call_command('enviar_recordatorios_turnos', stdout=StringIO())
 
         mock_enviar.assert_called_once_with(self.turno_mañana)  # solo el de la clínica real
+
+
+class VeterinariosCrudTests(TestCase):
+    """Antes no existía ninguna pantalla para cargar la ficha de Veterinario (matrícula)
+    desde la web: solo se podía por el admin de Django. Esto cubre el alta/edición propias
+    de cada tenant y que no se filtren fichas de otra veterinaria."""
+
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A")
+        self.vet_b = Veterinaria.objects.create(nombre="Clinica B")
+
+        self.admin_a = User.objects.create_user(username="admin_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.admin_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+
+        self.veterinario_a = Veterinario.objects.create(
+            veterinaria=self.vet_a, nombre="Sofía", apellido="Herrera", matricula="MP-1",
+        )
+        self.veterinario_b = Veterinario.objects.create(
+            veterinaria=self.vet_b, nombre="Martín", apellido="Ibáñez", matricula="MP-2",
+        )
+
+        self.client.force_login(self.admin_a)
+
+    def test_lista_solo_muestra_veterinarios_de_la_propia_veterinaria(self):
+        response = self.client.get(reverse('turnos:lista_veterinarios'))
+
+        veterinarios = list(response.context['veterinarios'])
+        self.assertIn(self.veterinario_a, veterinarios)
+        self.assertNotIn(self.veterinario_b, veterinarios)
+
+    def test_crear_veterinario(self):
+        response = self.client.post(reverse('turnos:nuevo_veterinario'), {
+            'nombre': 'Juan', 'apellido': 'Pérez', 'matricula': 'MP-100',
+            'telefono': '3815551111', 'email': 'juan@clinica.com', 'activo': 'on',
+        })
+
+        self.assertRedirects(response, reverse('turnos:lista_veterinarios'))
+        veterinario = Veterinario.objects.get(matricula='MP-100')
+        self.assertEqual(veterinario.veterinaria, self.vet_a)
+
+    def test_no_permite_matricula_duplicada_en_la_misma_veterinaria(self):
+        response = self.client.post(reverse('turnos:nuevo_veterinario'), {
+            'nombre': 'Otro', 'apellido': 'Vet', 'matricula': 'MP-1', 'activo': 'on',
+        })
+
+        self.assertEqual(response.status_code, 200)  # re-renderiza el form con el error
+        self.assertEqual(Veterinario.objects.filter(veterinaria=self.vet_a, matricula='MP-1').count(), 1)
+
+    def test_no_puede_editar_un_veterinario_de_otra_veterinaria(self):
+        response = self.client.post(
+            reverse('turnos:editar_veterinario', args=[self.veterinario_b.id]),
+            {'nombre': 'Hackeado', 'apellido': 'X', 'matricula': 'MP-2', 'activo': 'on'},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.veterinario_b.refresh_from_db()
+        self.assertEqual(self.veterinario_b.nombre, 'Martín')

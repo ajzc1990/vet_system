@@ -445,6 +445,26 @@ def auditoria_view(request):
 # GESTIÓN DE EQUIPO
 # ==============================================================================
 
+def _crear_veterinario_para_perfil(user, vet, matricula=''):
+    """Crea la ficha de Veterinario (turnos.Veterinario) para un usuario con rol VET que
+    todavía no tiene una, para que aparezca en el desplegable al asignar turnos/consultas.
+    Si no se indica matrícula, usa un valor provisorio que se puede corregir después desde
+    la pantalla de Veterinarios."""
+    from apps.turnos.models import Veterinario
+    if Veterinario.objects.filter(usuario=user).exists():
+        return
+    Veterinario.objects.create(
+        veterinaria=vet,
+        usuario=user,
+        nombre=user.first_name or user.username,
+        apellido=user.last_name or '',
+        matricula=matricula or f"PENDIENTE-{user.id}",
+        telefono=getattr(getattr(user, 'perfil', None), 'telefono', '') or '',
+        email=user.email,
+        activo=True,
+    )
+
+
 @login_required
 @requerir_rol_admin
 def gestionar_equipo(request):
@@ -460,7 +480,7 @@ def gestionar_equipo(request):
         accion = request.POST.get('accion')
 
         if accion == 'crear':
-            form = CrearUsuarioEquipoForm(request.POST)
+            form = CrearUsuarioEquipoForm(request.POST, veterinaria=vet)
             if form.is_valid():
                 nuevo_usuario = form.save(commit=False)
                 nuevo_usuario.set_password(form.cleaned_data['password'])
@@ -473,6 +493,8 @@ def gestionar_equipo(request):
                     telefono=form.cleaned_data.get('telefono', ''),
                     is_approved=True,
                 )
+                if form.cleaned_data['rol'] == 'VET':
+                    _crear_veterinario_para_perfil(nuevo_usuario, vet, form.cleaned_data.get('matricula', ''))
                 registrar_auditoria(
                     request, 'CREAR', modelo='PerfilUsuario', objeto_id=nuevo_usuario.id,
                     descripcion=f"'{nuevo_usuario.username}' agregado al equipo de {vet.nombre}.",
@@ -504,6 +526,8 @@ def gestionar_equipo(request):
             if nuevo_rol in dict(PerfilUsuario.ROLES):
                 perfil.rol = nuevo_rol
                 perfil.save()
+                if nuevo_rol == 'VET':
+                    _crear_veterinario_para_perfil(perfil.user, vet)
                 messages.success(request, f"Rol de '{perfil.user.username}' actualizado a {perfil.get_rol_display()}.")
         elif accion == 'rechazar':
             username = perfil.user.username

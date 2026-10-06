@@ -276,3 +276,66 @@ def actualizar_estado_solicitud(request, solicitud_id, nuevo_estado):
         messages.success(request, "Solicitud actualizada correctamente.")
 
     return redirect('turnos:lista_solicitudes_turno')
+
+
+@login_required
+def lista_veterinarios(request):
+    """Listado de veterinarios de la veterinaria activa."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        veterinarios = Veterinario.objects.all()
+    else:
+        veterinarios = Veterinario.objects.filter(veterinaria=vet) if vet else Veterinario.objects.none()
+
+    return render(request, 'turnos/lista_veterinarios.html', {
+        'veterinarios': veterinarios,
+    })
+
+
+@login_required
+def nuevo_veterinario(request):
+    """Alta de un nuevo veterinario asociado a la veterinaria activa."""
+    vet = get_veterinaria_activa(request)
+    if not vet:
+        messages.error(request, "No se encontró una veterinaria activa asociada a la cuenta.")
+        return redirect('turnos:lista_veterinarios')
+
+    if request.method == 'POST':
+        form = VeterinarioForm(request.POST, veterinaria=vet)
+        if form.is_valid():
+            veterinario = form.save(commit=False)
+            veterinario.veterinaria = vet
+            veterinario.save()
+            messages.success(request, f"Veterinario '{veterinario}' agregado correctamente.")
+            return redirect('turnos:lista_veterinarios')
+        messages.error(request, "Por favor revisa los datos ingresados en el formulario.")
+    else:
+        form = VeterinarioForm(veterinaria=vet, initial={'activo': True})
+
+    return render(request, 'turnos/form_veterinario.html', {'form': form, 'titulo': 'Nuevo Veterinario'})
+
+
+@login_required
+def editar_veterinario(request, veterinario_id):
+    """Edita los datos de un veterinario existente, respetando el aislamiento multi-tenant."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        veterinario = get_object_or_404(Veterinario, pk=veterinario_id)
+    else:
+        veterinario = get_object_or_404(Veterinario, pk=veterinario_id, veterinaria=vet)
+
+    if request.method == 'POST':
+        form = VeterinarioForm(request.POST, instance=veterinario, veterinaria=vet)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Veterinario '{veterinario}' actualizado correctamente.")
+            return redirect('turnos:lista_veterinarios')
+        messages.error(request, "Error al actualizar el veterinario. Por favor revisa los datos.")
+    else:
+        form = VeterinarioForm(instance=veterinario, veterinaria=vet)
+
+    return render(request, 'turnos/form_veterinario.html', {
+        'form': form, 'titulo': 'Editar Veterinario', 'veterinario': veterinario,
+    })

@@ -114,6 +114,13 @@ class CrearUsuarioEquipoForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: +54 381 1234567'}),
         label="Teléfono de Contacto",
     )
+    matricula = forms.CharField(
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: MP-12345'}),
+        label="Matrícula (si es Veterinario)",
+        help_text="Para que aparezca en el desplegable al asignar turnos. Si no la tenés a mano, se puede cargar después.",
+    )
 
     class Meta:
         model = User
@@ -131,6 +138,10 @@ class CrearUsuarioEquipoForm(forms.ModelForm):
             'email': 'Correo Electrónico *',
         }
 
+    def __init__(self, *args, **kwargs):
+        self.veterinaria = kwargs.pop('veterinaria', None)
+        super().__init__(*args, **kwargs)
+
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if not email:
@@ -138,3 +149,11 @@ class CrearUsuarioEquipoForm(forms.ModelForm):
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("Este correo electrónico ya se encuentra registrado.")
         return email
+
+    def clean_matricula(self):
+        matricula = self.cleaned_data.get('matricula')
+        if matricula and self.veterinaria:
+            from apps.turnos.models import Veterinario
+            if Veterinario.objects.filter(veterinaria=self.veterinaria, matricula=matricula).exists():
+                raise forms.ValidationError("Ya hay un veterinario con esa matrícula en tu clínica.")
+        return matricula

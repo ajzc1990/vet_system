@@ -777,6 +777,51 @@ class GestionarEquipoTests(TestCase):
         self.assertTrue(perfil.is_approved)
         self.assertTrue(perfil.user.check_password('passwordseguro123'))
 
+    def test_crear_usuario_vet_crea_su_ficha_de_veterinario(self):
+        """Regresión: agregar a alguien como VET desde Gestión de Equipo no armaba la ficha
+        de Veterinario (turnos.Veterinario), así que nunca aparecía en el desplegable al
+        asignar turnos/consultas hasta que el superusuario la creara a mano en el admin."""
+        from apps.turnos.models import Veterinario
+
+        self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'crear',
+            'username': 'vet_nuevo', 'email': 'vet_nuevo@clinica.com',
+            'first_name': 'Carla', 'last_name': 'Gómez',
+            'rol': 'VET', 'password': 'passwordseguro123', 'matricula': 'MP-9999',
+        })
+
+        veterinario = Veterinario.objects.get(usuario__username='vet_nuevo')
+        self.assertEqual(veterinario.veterinaria, self.vet_a)
+        self.assertEqual(veterinario.nombre, 'Carla')
+        self.assertEqual(veterinario.apellido, 'Gómez')
+        self.assertEqual(veterinario.matricula, 'MP-9999')
+        self.assertTrue(veterinario.activo)
+
+    def test_crear_usuario_vet_sin_matricula_usa_placeholder(self):
+        from apps.turnos.models import Veterinario
+
+        self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'crear',
+            'username': 'vet_sin_matricula', 'email': 'sinmatricula@clinica.com',
+            'first_name': 'Pedro', 'last_name': 'Ruiz',
+            'rol': 'VET', 'password': 'passwordseguro123',
+        })
+
+        veterinario = Veterinario.objects.get(usuario__username='vet_sin_matricula')
+        self.assertTrue(veterinario.matricula.startswith('PENDIENTE-'))
+
+    def test_crear_usuario_recepcion_no_crea_ficha_de_veterinario(self):
+        from apps.turnos.models import Veterinario
+
+        self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'crear',
+            'username': 'recep_sin_ficha', 'email': 'recep@clinica.com',
+            'first_name': 'Ana', 'last_name': 'Paz',
+            'rol': 'RECEPCION', 'password': 'passwordseguro123',
+        })
+
+        self.assertFalse(Veterinario.objects.filter(usuario__username='recep_sin_ficha').exists())
+
     def test_aprobar_usuario_pendiente(self):
         perfil = PerfilUsuario.objects.get(user=self.pendiente_a)
         self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'aprobar', 'perfil_id': perfil.id})
@@ -806,6 +851,34 @@ class GestionarEquipoTests(TestCase):
 
         perfil.refresh_from_db()
         self.assertEqual(perfil.rol, 'ADMIN')
+
+    def test_cambiar_rol_a_vet_crea_la_ficha_de_veterinario(self):
+        """pendiente_a tiene rol VET pero nunca se le creó ficha de Veterinario (no pasó
+        por 'crear'); al promover/confirmar su rol como VET, debería generarse sola."""
+        from apps.turnos.models import Veterinario
+
+        perfil = PerfilUsuario.objects.get(user=self.pendiente_a)
+        self.assertFalse(Veterinario.objects.filter(usuario=self.pendiente_a).exists())
+
+        self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'cambiar_rol', 'perfil_id': perfil.id, 'rol': 'VET',
+        })
+
+        self.assertTrue(Veterinario.objects.filter(usuario=self.pendiente_a, veterinaria=self.vet_a).exists())
+
+    def test_cambiar_rol_a_vet_no_duplica_si_ya_tiene_ficha(self):
+        from apps.turnos.models import Veterinario
+
+        Veterinario.objects.create(
+            veterinaria=self.vet_a, usuario=self.vet_user_a,
+            nombre='Vet', apellido='Existente', matricula='MP-1',
+        )
+        perfil = PerfilUsuario.objects.get(user=self.vet_user_a)
+        self.client.post(reverse('usuarios:gestionar_equipo'), {
+            'accion': 'cambiar_rol', 'perfil_id': perfil.id, 'rol': 'VET',
+        })
+
+        self.assertEqual(Veterinario.objects.filter(usuario=self.vet_user_a).count(), 1)
 
     def test_no_puede_modificar_su_propio_acceso(self):
         perfil_propio = PerfilUsuario.objects.get(user=self.admin_a)
