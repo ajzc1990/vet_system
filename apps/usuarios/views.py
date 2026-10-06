@@ -505,7 +505,7 @@ def gestionar_equipo(request):
             miembros = PerfilUsuario.objects.filter(veterinaria=vet).select_related('user').order_by('is_approved', 'user__username')
             messages.error(request, "Revisá los datos del nuevo integrante.")
             return render(request, 'usuarios/gestionar_equipo.html', {
-                'miembros': miembros, 'form_nuevo': form, 'veterinaria': vet,
+                'miembros': miembros, 'form_nuevo': form, 'veterinaria': vet, 'roles': PerfilUsuario.ROLES,
             })
 
         perfil = get_object_or_404(PerfilUsuario, pk=request.POST.get('perfil_id'), veterinaria=vet)
@@ -545,4 +545,5 @@ def gestionar_equipo(request):
         'miembros': miembros,
         'form_nuevo': CrearUsuarioEquipoForm(),
         'veterinaria': vet,
+        'roles': PerfilUsuario.ROLES,
     })

@@ -757,6 +757,17 @@ class GestionarEquipoTests(TestCase):
         self.assertIn('vet_user_a', usernames)
         self.assertNotIn('miembro_b', usernames)
 
+    def test_el_desplegable_de_cambiar_rol_trae_las_opciones(self):
+        """Regresión: la vista nunca pasaba 'roles' al contexto, así que el <select> de
+        cambiar rol en cada fila se renderizaba sin ninguna <option> (vacío)."""
+        response = self.client.get(reverse('usuarios:gestionar_equipo'))
+
+        self.assertEqual(response.context['roles'], PerfilUsuario.ROLES)
+        contenido = response.content.decode()
+        self.assertIn('value="ADMIN"', contenido)
+        self.assertIn('value="VET"', contenido)
+        self.assertIn('value="RECEPCION"', contenido)
+
     def test_un_vet_no_puede_acceder_a_la_pantalla(self):
         self.client.force_login(self.vet_user_a)
         response = self.client.get(reverse('usuarios:gestionar_equipo'))
