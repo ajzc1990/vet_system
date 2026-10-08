@@ -93,7 +93,7 @@ class Command(BaseCommand):
             nombre="Profesional",
             defaults={
                 'precio_mensual': 25000,
-                'max_usuarios': 10,
+                'max_usuarios': 15,
                 'max_mascotas': 1000,
                 'permite_internacion': True,
                 'permite_multiples_veterinarios': True,
