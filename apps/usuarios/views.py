@@ -25,11 +25,6 @@ from .pagos import mp_configurado, crear_preferencia_pago, obtener_pago
 # VISTAS PÚBLICAS Y LANDING PAGE
 # ==============================================================================
 
-# Programa de lanzamiento "Clínicas Fundadoras" (landing.html, sección #fundadoras).
-# Actualizar a mano a medida que se van sumando clínicas reales.
-LUGARES_DISPONIBLES = 10
-
-
 def _formato_pesos(valor):
     """Formatea un monto en pesos con punto de miles (ej. 20000 -> '20.000')."""
     return f"{int(valor):,}".replace(',', '.')
@@ -79,7 +74,6 @@ def landing_page(request):
         'precio_mensual_fmt': precio_mensual_fmt,
         'precio_anual_fmt': precio_anual_fmt,
         'ahorro_anual_fmt': ahorro_anual_fmt,
-        'lugares_disponibles': LUGARES_DISPONIBLES,
     })
 
 
