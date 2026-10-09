@@ -66,8 +66,8 @@ def asegurar_pos_para(veterinaria):
                 "street_number": "S/N",
                 "city_name": "San Miguel de Tucumán",
                 "state_name": "Tucumán",
-                "latitude": 0,
-                "longitude": 0,
+                "latitude": -26.8083,
+                "longitude": -65.2176,
             },
         },
     )
