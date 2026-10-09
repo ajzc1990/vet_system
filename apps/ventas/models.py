@@ -67,7 +67,8 @@ class Venta(models.Model):
     MEDIOS_PAGO = [
         ('EFECTIVO', 'Efectivo'),
         ('TRANSFERENCIA', 'Transferencia Bancaria'),
-        ('QR_MP', 'QR / Mercado Pago'),
+        ('QR_MP', 'Link de pago (Mercado Pago)'),
+        ('QR_LOCAL', 'QR en el local (Mercado Pago)'),
         ('DEBITO', 'Tarjeta de Débito'),
         ('CREDITO', 'Tarjeta de Crédito'),
         ('MERCADO_PAGO', 'Mercado Pago / Transferencia'),  # legado: ventas registradas antes de separar QR_MP y TRANSFERENCIA
@@ -154,6 +155,16 @@ class CobroQR(models.Model):
 
     mp_preference_id = models.CharField(max_length=100, blank=True, null=True)
     mp_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    mp_order_id = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="ID de orden de Mercado Pago",
+        help_text="Solo para cobros con QR real en el local (API de Orders), distinto del link de pago.",
+    )
+    mp_qr_data = models.TextField(
+        blank=True, null=True,
+        verbose_name="Datos del QR",
+        help_text="String que se convierte en imagen de QR para que el cliente escanee.",
+    )
     estado = models.CharField(max_length=12, choices=ESTADOS, default='PENDIENTE')
     venta = models.OneToOneField(Venta, on_delete=models.SET_NULL, null=True, blank=True, related_name='cobro_qr')
 

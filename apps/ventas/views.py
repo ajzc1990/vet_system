@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 
 # ReportLab para Ticket en PDF
 from reportlab.lib.pagesizes import letter
@@ -20,7 +20,10 @@ from reportlab.lib import colors
 
 from .models import Venta, DetalleVenta, CajaDiaria, GastoCaja, CobroQR
 from .forms import VentaForm
-from .pagos import mp_configurado_para, crear_preferencia_cobro, obtener_pago_para
+from .pagos import (
+    mp_configurado_para, crear_preferencia_cobro, obtener_pago_para,
+    crear_orden_qr, obtener_orden, MercadoPagoApiError,
+)
 from apps.inventario.models import MovimientoStock, Producto
 from apps.usuarios.utils import get_veterinaria_activa
 from apps.usuarios.audit import registrar_auditoria
@@ -218,6 +221,60 @@ def registrar_venta(request):
             cobro.save(update_fields=['mp_preference_id'])
             return redirect(init_point)
 
+        # Cobro con QR real para escanear en el local (API de Orders). Misma lógica que
+        # QR_MP (un solo ítem, Venta recién se crea cuando se confirma el pago) pero acá
+        # el cliente escanea un QR en pantalla en vez de que lo redirijan a un link.
+        if medio_pago == 'QR_LOCAL':
+            if len(items) > 1 or cargo_monto:
+                messages.error(
+                    request,
+                    "El cobro con QR en el local solo admite un producto o servicio por cobro, y no "
+                    "admite cargos personalizados. Elegí otro medio de pago para carritos con varios "
+                    "ítems, o cobrá cada uno por separado."
+                )
+                return _rerender(form)
+
+            if not mp_configurado_para(vet_venta):
+                messages.warning(
+                    request,
+                    "Esta clínica todavía no configuró su cuenta de Mercado Pago. "
+                    "Configurala en \"Configurar Clínica\" o elegí otro medio de pago."
+                )
+                return _rerender(form)
+
+            producto, cantidad = items[0]
+            precio_unitario = producto.precio_venta or 0
+            subtotal = precio_unitario * cantidad
+            total = subtotal - (subtotal * descuento_porcentaje / 100)
+
+            cobro = CobroQR.objects.create(
+                veterinaria=vet_venta,
+                caja=caja_activa,
+                producto=producto,
+                cantidad=cantidad,
+                precio_unitario=precio_unitario,
+                descuento_porcentaje=descuento_porcentaje,
+                total=total,
+                cliente=form.cleaned_data.get('cliente'),
+                vendedor=request.user,
+                observaciones=form.cleaned_data.get('observaciones'),
+            )
+
+            try:
+                order_id, qr_data = crear_orden_qr(cobro)
+            except MercadoPagoApiError:
+                order_id, qr_data = None, None
+
+            if not qr_data:
+                cobro.delete()
+                messages.error(request, "No se pudo generar el QR de cobro. Intentá nuevamente.")
+                return _rerender(form)
+
+            cobro.mp_order_id = order_id
+            cobro.mp_qr_data = qr_data
+            cobro.save(update_fields=['mp_order_id', 'mp_qr_data'])
+            return redirect('ventas:ver_cobro_qr_local', cobro_id=cobro.id)
+
         # Crear Venta con uno o varios ítems
         venta = form.save(commit=False)
         if vet:
@@ -375,6 +432,81 @@ def webhook_cobro_qr(request, cobro_id):
 
     _confirmar_cobro_qr(cobro, payment_id=payment_id)
     return HttpResponse(status=200)
+
+
+def _confirmar_cobro_qr_local(cobro):
+    """Igual que _confirmar_cobro_qr pero para una Orden de la API de Orders (QR real
+    en el local): "processed" es el estado de pago aprobado y acreditado."""
+    if cobro.estado != 'PENDIENTE' or not cobro.mp_order_id:
+        return cobro
+
+    try:
+        orden = obtener_orden(cobro.veterinaria, cobro.mp_order_id)
+    except MercadoPagoApiError:
+        return cobro
+
+    estado_orden = orden.get('status')
+
+    if estado_orden == 'processed':
+        pagos = (orden.get('transactions') or {}).get('payments') or []
+        payment_id = pagos[0].get('id') if pagos else None
+        with transaction.atomic():
+            venta = Venta.objects.create(
+                veterinaria=cobro.veterinaria,
+                caja=cobro.caja,
+                cliente=cobro.cliente,
+                vendedor=cobro.vendedor,
+                medio_pago='QR_LOCAL',
+                descuento_porcentaje=cobro.descuento_porcentaje,
+                total=cobro.total,
+                observaciones=cobro.observaciones,
+            )
+            DetalleVenta.objects.create(
+                venta=venta,
+                producto=cobro.producto,
+                cantidad=cobro.cantidad,
+                precio_unitario=cobro.precio_unitario,
+                subtotal=cobro.total,
+            )
+            cobro.venta = venta
+            cobro.mp_payment_id = str(payment_id) if payment_id else cobro.mp_payment_id
+            cobro.estado = 'APROBADO'
+            cobro.save()
+    elif estado_orden == 'canceled':
+        cobro.estado = 'RECHAZADO'
+        cobro.save()
+
+    return cobro
+
+
+@login_required
+def ver_cobro_qr_local(request, cobro_id):
+    """Pantalla con el QR real para que el cliente lo escanee con el celular desde la
+    app de Mercado Pago. El JS de la plantilla consulta estado_cobro_qr_local cada
+    pocos segundos hasta que se confirme el pago."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        cobro = get_object_or_404(CobroQR, pk=cobro_id)
+    else:
+        cobro = get_object_or_404(CobroQR, pk=cobro_id, veterinaria=vet)
+
+    return render(request, 'ventas/cobro_qr_local.html', {'cobro': cobro})
+
+
+@login_required
+def estado_cobro_qr_local(request, cobro_id):
+    """Endpoint liviano que consulta la API de Mercado Pago y devuelve el estado actual
+    del cobro, para el polling de la pantalla de espera del QR."""
+    vet = get_veterinaria_activa(request)
+
+    if request.user.is_superuser and not vet:
+        cobro = get_object_or_404(CobroQR, pk=cobro_id)
+    else:
+        cobro = get_object_or_404(CobroQR, pk=cobro_id, veterinaria=vet)
+
+    cobro = _confirmar_cobro_qr_local(cobro)
+    return JsonResponse({'estado': cobro.estado, 'venta_id': cobro.venta_id})
 
 
 @login_required

@@ -127,7 +127,7 @@
 
                         <div id="avisoQRMultiItem" class="alert alert-warning border-0 rounded-3 shadow-sm d-none">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            El cobro por QR / Mercado Pago solo admite un producto o servicio por cobro. Sacá los ítems de más o elegí otro medio de pago.
+                            El cobro con Mercado Pago (link o QR en el local) solo admite un producto o servicio por cobro. Sacá los ítems de más o elegí otro medio de pago.
                         </div>
 
                         <!-- Resumen -->
@@ -256,7 +256,8 @@
 
             var filasConProducto = Array.from(tbody.querySelectorAll('.selector-producto')).filter(function(s) { return s.value; }).length;
             var hayCargo = inputCargoDescripcion.value.trim() && cargoMonto > 0;
-            avisoQR.classList.toggle('d-none', !(selectMedioPago.value === 'QR_MP' && (filasConProducto > 1 || hayCargo)));
+            var esMedioPagoQR = selectMedioPago.value === 'QR_MP' || selectMedioPago.value === 'QR_LOCAL';
+            avisoQR.classList.toggle('d-none', !(esMedioPagoQR && (filasConProducto > 1 || hayCargo)));
         }
 
         btnAgregar.addEventListener('click', agregarFila);

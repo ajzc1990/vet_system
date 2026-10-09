@@ -463,3 +463,84 @@ class CobroQRTests(TestCase):
         response = self.client.get(reverse('ventas:ver_cobro_qr', args=[cobro_b.id]))
 
         self.assertEqual(response.status_code, 404)
+
+
+class CobroQRLocalTests(TestCase):
+    """QR real para escanear en el local (API de Orders), distinto del link de pago:
+    misma idea de "la Venta se crea recién cuando se confirma el pago", pero usando
+    el estado 'processed' de una Orden en vez de un Payment aprobado."""
+
+    def setUp(self):
+        self.vet_a = Veterinaria.objects.create(nombre="Clinica A", mp_access_token="TOKEN-CLINICA-A")
+        self.user_a = User.objects.create_user(username="user_a", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user_a, veterinaria=self.vet_a, rol="ADMIN", is_approved=True)
+        self.producto = Producto.objects.create(veterinaria=self.vet_a, nombre="Amoxicilina", stock_actual=10, precio_venta=500)
+        self.caja = CajaDiaria.objects.create(veterinaria=self.vet_a, estado='ABIERTA', monto_inicial=0)
+        self.client.force_login(self.user_a)
+
+    @patch('apps.ventas.views.crear_orden_qr')
+    def test_elegir_qr_local_crea_un_cobro_pendiente_con_el_qr_data(self, mock_crear_orden):
+        mock_crear_orden.return_value = ('ORD-123', '00020101021243...')
+
+        response = self.client.post(reverse('ventas:registrar_venta'), {
+            'producto_id': [self.producto.id], 'cantidad': [2], 'medio_pago': 'QR_LOCAL',
+        })
+
+        cobro = CobroQR.objects.get(veterinaria=self.vet_a)
+        self.assertRedirects(response, reverse('ventas:ver_cobro_qr_local', args=[cobro.id]))
+        self.assertEqual(cobro.estado, 'PENDIENTE')
+        self.assertEqual(cobro.mp_order_id, 'ORD-123')
+        self.assertEqual(cobro.mp_qr_data, '00020101021243...')
+        self.assertFalse(Venta.objects.exists())
+
+    @patch('apps.ventas.views.obtener_orden')
+    def test_orden_procesada_crea_la_venta_y_descuenta_stock(self, mock_obtener_orden):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=3, precio_unitario=500, total=1500, mp_order_id='ORD-456',
+        )
+        mock_obtener_orden.return_value = {
+            'status': 'processed',
+            'transactions': {'payments': [{'id': 'PAY-999'}]},
+        }
+
+        response = self.client.get(reverse('ventas:estado_cobro_qr_local', args=[cobro.id]))
+
+        self.assertEqual(response.json()['estado'], 'APROBADO')
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.estado, 'APROBADO')
+        self.assertEqual(cobro.mp_payment_id, 'PAY-999')
+        self.assertEqual(cobro.venta.medio_pago, 'QR_LOCAL')
+
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock_actual, 7)
+
+    @patch('apps.ventas.views.obtener_orden')
+    def test_orden_cancelada_no_crea_venta(self, mock_obtener_orden):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=1, precio_unitario=500, total=500, mp_order_id='ORD-789',
+        )
+        mock_obtener_orden.return_value = {'status': 'canceled'}
+
+        self.client.get(reverse('ventas:estado_cobro_qr_local', args=[cobro.id]))
+
+        cobro.refresh_from_db()
+        self.assertEqual(cobro.estado, 'RECHAZADO')
+        self.assertFalse(Venta.objects.exists())
+
+    @patch('apps.ventas.views.obtener_orden')
+    def test_confirmar_dos_veces_no_duplica_la_venta(self, mock_obtener_orden):
+        cobro = CobroQR.objects.create(
+            veterinaria=self.vet_a, caja=self.caja, producto=self.producto,
+            cantidad=1, precio_unitario=500, total=500, mp_order_id='ORD-321',
+        )
+        mock_obtener_orden.return_value = {
+            'status': 'processed',
+            'transactions': {'payments': [{'id': 'PAY-321'}]},
+        }
+
+        self.client.get(reverse('ventas:estado_cobro_qr_local', args=[cobro.id]))
+        self.client.get(reverse('ventas:estado_cobro_qr_local', args=[cobro.id]))
+
+        self.assertEqual(Venta.objects.filter(cobro_qr=cobro).count(), 1)

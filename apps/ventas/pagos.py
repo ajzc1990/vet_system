@@ -1,4 +1,7 @@
 import mercadopago
+import requests
+
+MP_API_BASE = "https://api.mercadopago.com"
 
 
 def mp_configurado_para(veterinaria):
@@ -7,6 +10,97 @@ def mp_configurado_para(veterinaria):
 
 def get_sdk_para(veterinaria):
     return mercadopago.SDK(veterinaria.mp_access_token)
+
+
+def _headers_para(veterinaria):
+    return {
+        "Authorization": f"Bearer {veterinaria.mp_access_token}",
+        "Content-Type": "application/json",
+    }
+
+
+class MercadoPagoApiError(Exception):
+    """La API de Mercado Pago devolvió un error al crear la tienda/punto de venta/orden."""
+
+
+def _post(veterinaria, path, payload, idempotency_key=None):
+    headers = _headers_para(veterinaria)
+    if idempotency_key:
+        headers["X-Idempotency-Key"] = idempotency_key
+    resp = requests.post(f"{MP_API_BASE}{path}", headers=headers, json=payload, timeout=15)
+    if resp.status_code >= 400:
+        raise MercadoPagoApiError(f"{resp.status_code} en {path}: {resp.text[:300]}")
+    return resp.json()
+
+
+def _get(veterinaria, path):
+    resp = requests.get(f"{MP_API_BASE}{path}", headers=_headers_para(veterinaria), timeout=15)
+    if resp.status_code >= 400:
+        raise MercadoPagoApiError(f"{resp.status_code} en {path}: {resp.text[:300]}")
+    return resp.json()
+
+
+def asegurar_pos_para(veterinaria):
+    """Da de alta (una sola vez) la Tienda y el Punto de Venta de esta clínica en su
+    propia cuenta de Mercado Pago, necesarios para generar un QR real escaneable (API
+    de Orders). Si ya están creados, no hace nada y devuelve el external_id del POS."""
+    if veterinaria.mp_pos_external_id:
+        return veterinaria.mp_pos_external_id
+
+    me = _get(veterinaria, "/users/me")
+    user_id = me["id"]
+
+    external_store_id = f"VETSYS{veterinaria.id}"
+    tienda = _post(
+        veterinaria, f"/users/{user_id}/stores",
+        {"name": veterinaria.nombre[:60], "external_id": external_store_id},
+    )
+    store_id = tienda["id"]
+
+    external_pos_id = f"VETSYSPOS{veterinaria.id}"
+    _post(
+        veterinaria, "/pos",
+        {
+            "name": f"Caja {veterinaria.nombre}"[:40],
+            "fixed_amount": False,
+            "store_id": store_id,
+            "external_id": external_pos_id,
+        },
+    )
+
+    veterinaria.mp_user_id = str(user_id)
+    veterinaria.mp_store_id = str(store_id)
+    veterinaria.mp_pos_external_id = external_pos_id
+    veterinaria.save(update_fields=['mp_user_id', 'mp_store_id', 'mp_pos_external_id'])
+    return external_pos_id
+
+
+def crear_orden_qr(cobro):
+    """Crea una Orden de tipo QR (API de Orders) para un CobroQR puntual y devuelve el
+    string qr_data que hay que convertir en imagen de QR para que el cliente escanee."""
+    import uuid
+    external_pos_id = asegurar_pos_para(cobro.veterinaria)
+    total = f"{cobro.total:.2f}"
+    payload = {
+        "type": "qr",
+        "total_amount": total,
+        "description": f"{cobro.producto.nombre} x{cobro.cantidad}"[:250],
+        "external_reference": f"cobroqr-{cobro.id}",
+        "config": {"qr": {"external_pos_id": external_pos_id, "mode": "dynamic"}},
+        "transactions": {"payments": [{"amount": total}]},
+        "items": [{
+            "title": cobro.producto.nombre[:256],
+            "unit_price": total,
+            "quantity": 1,
+        }],
+    }
+    orden = _post(cobro.veterinaria, "/v1/orders", payload, idempotency_key=str(uuid.uuid4()))
+    qr_data = (orden.get("type_response") or {}).get("qr_data")
+    return orden.get("id"), qr_data
+
+
+def obtener_orden(veterinaria, order_id):
+    return _get(veterinaria, f"/v1/orders/{order_id}")
 
 
 def crear_preferencia_cobro(cobro, request):

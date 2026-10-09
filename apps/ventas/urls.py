@@ -10,9 +10,13 @@ urlpatterns = [
     path('exportar-csv/', views.exportar_ventas_csv, name='exportar_ventas_csv'),
     path('nueva/', views.registrar_venta, name='registrar_venta'),
 
-    # Cobro por QR / Mercado Pago
+    # Cobro por link de pago (Mercado Pago)
     path('cobro-qr/<int:cobro_id>/', views.ver_cobro_qr, name='ver_cobro_qr'),
     path('cobro-qr/<int:cobro_id>/webhook/', views.webhook_cobro_qr, name='webhook_cobro_qr'),
+
+    # Cobro con QR real en el local (API de Orders de Mercado Pago)
+    path('cobro-qr-local/<int:cobro_id>/', views.ver_cobro_qr_local, name='ver_cobro_qr_local'),
+    path('cobro-qr-local/<int:cobro_id>/estado/', views.estado_cobro_qr_local, name='estado_cobro_qr_local'),
 
     # Gestión de Caja Diaria
     path('caja/abrir/', views.abrir_caja, name='abrir_caja'),

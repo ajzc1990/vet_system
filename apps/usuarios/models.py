@@ -19,6 +19,12 @@ class Veterinaria(models.Model):
                    "para cobrar ventas por QR. Se obtiene en mercadopago.com.ar/developers/panel. El dinero cobrado "
                    "va directo a esta cuenta, VeterSystem no lo toca."
     )
+    # Se completan solos la primera vez que la clínica usa "Cobro QR en el local" (ver
+    # apps.ventas.pagos.asegurar_pos_para): hacen falta para generar un QR real que el
+    # cliente escanea con el celular, a diferencia del link de pago de Checkout Pro.
+    mp_user_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="ID de usuario en Mercado Pago")
+    mp_store_id = models.CharField(max_length=50, blank=True, null=True, verbose_name="ID de tienda en Mercado Pago")
+    mp_pos_external_id = models.CharField(max_length=40, blank=True, null=True, verbose_name="ID de punto de venta en Mercado Pago")
 
     class Meta:
         verbose_name = "Veterinaria"
