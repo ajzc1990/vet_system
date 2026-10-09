@@ -137,6 +137,11 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold text-dark small mb-1">Motivo de Consulta *</label>
                             {{ form.motivo_consulta }}
+                            <datalist id="listaMotivosConsulta">
+                                {% for m in motivos_consulta_historial %}
+                                    <option value="{{ m }}"></option>
+                                {% endfor %}
+                            </datalist>
                         </div>
 
                         <div class="col-md-2">
@@ -155,7 +160,12 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-bold text-dark small mb-1">Síntomas / Anamnesis</label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label fw-bold text-dark small mb-0">Síntomas / Anamnesis</label>
+                                <button type="button" id="btnCopiarMotivoASintomas" class="btn btn-link btn-sm text-decoration-none extra-small fw-semibold p-0" title="Copiar el Motivo de Consulta acá">
+                                    <i class="bi bi-arrow-down-short"></i> Copiar motivo
+                                </button>
+                            </div>
                             {{ form.anamnesis }}
                         </div>
 
@@ -171,6 +181,14 @@
 
                         <div class="col-md-4">
                             <label class="form-label fw-bold text-dark small mb-1">Tratamiento / Receta *</label>
+                            {% if tratamientos_historial %}
+                                <select id="selectTratamientoAnterior" class="form-select form-select-sm mb-1">
+                                    <option value="">Usar un tratamiento anterior...</option>
+                                    {% for t in tratamientos_historial %}
+                                        <option value="{{ t }}">{{ t|truncatechars:60 }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
                             {{ form.tratamiento }}
                         </div>
                     </div>
@@ -886,6 +904,20 @@
         }
         vincularAutocompletado("selectProductoVacuna", "inputNombreVacuna");
         vincularAutocompletado("selectProductoDesparasitante", "inputProductoDesparasitante");
+        vincularAutocompletado("selectTratamientoAnterior", "id_tratamiento");
+
+        // Copia el Motivo de Consulta a Síntomas/Anamnesis para no tipearlo dos veces.
+        const btnCopiarMotivo = document.getElementById("btnCopiarMotivoASintomas");
+        const inputMotivo = document.getElementById("id_motivo_consulta");
+        const inputAnamnesis = document.getElementById("id_anamnesis");
+        if (btnCopiarMotivo && inputMotivo && inputAnamnesis) {
+            btnCopiarMotivo.addEventListener("click", function() {
+                if (!inputMotivo.value) return;
+                inputAnamnesis.value = inputAnamnesis.value
+                    ? inputAnamnesis.value + "\n" + inputMotivo.value
+                    : inputMotivo.value;
+            });
+        }
     });
 </script>
 {% endblock %}

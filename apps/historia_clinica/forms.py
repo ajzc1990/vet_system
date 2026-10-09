@@ -75,7 +75,7 @@ class ConsultaMedicaForm(forms.ModelForm):
             'temperatura_c': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'Ej: 38.5'}),
             'frecuencia_cardiaca': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'LPM (Ej: 110)'}),
             'frecuencia_respiratoria': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'RPM (Ej: 24)'}),
-            'motivo_consulta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Decaimiento y vómitos desde hace 24hs'}),
+            'motivo_consulta': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Decaimiento y vómitos desde hace 24hs', 'list': 'listaMotivosConsulta', 'autocomplete': 'off'}),
             'anamnesis': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Síntomas referidos por el tutor...'}),
             'examen_clinico': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Hallazgos a la palpación, auscultación, mucosas...'}),
             'diagnostico': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Gastroenteritis aguda / Otitis externa', 'list': 'listaDiagnosticos', 'autocomplete': 'off'}),

@@ -245,12 +245,16 @@ def detalle_historia_clinica(request, mascota_id):
         nombres_vacunas_historial = RegistroVacuna.objects.filter(veterinaria=vet_mascota).exclude(nombre_vacuna='').order_by().values_list('nombre_vacuna', flat=True).distinct()
         nombres_desparasitantes_historial = RegistroDesparasitacion.objects.filter(veterinaria=vet_mascota).exclude(producto='').order_by().values_list('producto', flat=True).distinct()
         diagnosticos_historial = ConsultaMedica.objects.filter(veterinaria=vet_mascota).exclude(diagnostico='').order_by().values_list('diagnostico', flat=True).distinct()
+        motivos_consulta_historial = ConsultaMedica.objects.filter(veterinaria=vet_mascota).exclude(motivo_consulta='').order_by().values_list('motivo_consulta', flat=True).distinct()
+        tratamientos_historial = ConsultaMedica.objects.filter(veterinaria=vet_mascota).exclude(tratamiento='').order_by().values_list('tratamiento', flat=True).distinct()
     else:
         productos_vacunas = Producto.objects.none()
         productos_desparasitantes = Producto.objects.none()
         nombres_vacunas_historial = []
         nombres_desparasitantes_historial = []
         diagnosticos_historial = []
+        motivos_consulta_historial = []
+        tratamientos_historial = []
 
     if request.method == 'POST' and not es_veterinario_o_admin(request.user):
         messages.error(request, "Acceso denegado: Esta función requiere permisos de Médico Veterinario.")
@@ -318,6 +322,8 @@ def detalle_historia_clinica(request, mascota_id):
         'nombres_vacunas_historial': nombres_vacunas_historial,
         'nombres_desparasitantes_historial': nombres_desparasitantes_historial,
         'diagnosticos_historial': diagnosticos_historial,
+        'motivos_consulta_historial': motivos_consulta_historial,
+        'tratamientos_historial': tratamientos_historial,
     }
     return render(request, 'clientes/historia_clinica.html', context)
 
