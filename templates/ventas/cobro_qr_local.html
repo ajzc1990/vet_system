@@ -67,7 +67,7 @@
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const qrData = {{ cobro.mp_qr_data|default:""|escapejs }};
+        const qrData = "{{ cobro.mp_qr_data|default:""|escapejs }}";
         if (qrData) {
             QRCode.toCanvas(document.getElementById("qrCanvas"), qrData, { width: 260 }, function (error) {
                 if (error) console.error(error);
