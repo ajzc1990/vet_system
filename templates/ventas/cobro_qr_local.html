@@ -48,9 +48,7 @@
                         Desde la app de Mercado Pago (o la cámara del celular) &bull;
                         {{ cobro.producto.nombre }} x{{ cobro.cantidad }} &bull; ${{ cobro.total|floatformat:2 }}
                     </p>
-                    <div id="qrContenedor" class="d-flex justify-content-center mb-3">
-                        <canvas id="qrCanvas"></canvas>
-                    </div>
+                    <div id="qrContenedor" class="d-flex justify-content-center mb-3"></div>
                     <div class="d-flex align-items-center justify-content-center gap-2 text-muted small">
                         <div class="spinner-border spinner-border-sm text-warning" role="status"></div>
                         Esperando el pago...
@@ -64,14 +62,12 @@
 </div>
 
 {% if cobro.estado == 'PENDIENTE' %}
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/lib/browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const qrData = "{{ cobro.mp_qr_data|default:""|escapejs }}";
         if (qrData) {
-            QRCode.toCanvas(document.getElementById("qrCanvas"), qrData, { width: 260 }, function (error) {
-                if (error) console.error(error);
-            });
+            new QRCode(document.getElementById("qrContenedor"), { text: qrData, width: 260, height: 260 });
         }
 
         const urlEstado = "{% url 'ventas:estado_cobro_qr_local' cobro.id %}";
