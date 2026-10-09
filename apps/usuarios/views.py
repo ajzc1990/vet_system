@@ -510,6 +510,8 @@ def gestionar_equipo(request):
         if accion == 'aprobar':
             perfil.is_approved = True
             perfil.save()
+            if perfil.rol == 'VET':
+                _crear_veterinario_para_perfil(perfil.user, vet)
             messages.success(request, f"Acceso aprobado para '{perfil.user.username}'.")
         elif accion == 'revocar':
             perfil.is_approved = False

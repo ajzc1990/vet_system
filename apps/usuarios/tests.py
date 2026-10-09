@@ -840,6 +840,19 @@ class GestionarEquipoTests(TestCase):
         perfil.refresh_from_db()
         self.assertTrue(perfil.is_approved)
 
+    def test_aprobar_un_vet_pendiente_crea_su_ficha_de_veterinario(self):
+        """Regresión: alguien que se autorregistró con rol VET y después fue aprobado con
+        el botón "Aprobar" (no con "Agregar Usuario" ni "cambiar rol") tampoco tenía su
+        ficha de Veterinario, así que no aparecía al asignar turnos."""
+        from apps.turnos.models import Veterinario
+
+        perfil = PerfilUsuario.objects.get(user=self.pendiente_a)  # rol='VET', is_approved=False
+        self.assertFalse(Veterinario.objects.filter(usuario=self.pendiente_a).exists())
+
+        self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'aprobar', 'perfil_id': perfil.id})
+
+        self.assertTrue(Veterinario.objects.filter(usuario=self.pendiente_a, veterinaria=self.vet_a).exists())
+
     def test_revocar_acceso_de_usuario_aprobado(self):
         perfil = PerfilUsuario.objects.get(user=self.vet_user_a)
         self.client.post(reverse('usuarios:gestionar_equipo'), {'accion': 'revocar', 'perfil_id': perfil.id})
