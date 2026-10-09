@@ -108,6 +108,7 @@ def crear_orden_qr(cobro):
             "title": cobro.producto.nombre[:256],
             "unit_price": total,
             "quantity": 1,
+            "unit_measure": "unit",
         }],
     }
     orden = _post(cobro.veterinaria, "/v1/orders", payload, idempotency_key=str(uuid.uuid4()))
