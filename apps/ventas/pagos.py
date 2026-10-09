@@ -57,11 +57,15 @@ def asegurar_pos_para(veterinaria):
         {
             "name": veterinaria.nombre[:60],
             "external_id": external_store_id,
+            # state_name tiene que ser una provincia argentina válida para la API (no
+            # acepta "-" ni texto libre). Por ahora todas las clínicas son de Tucumán;
+            # si en algún momento hay una clínica de otra provincia, esto necesita un
+            # campo propio en Veterinaria en vez de este valor fijo.
             "location": {
                 "street_name": direccion[:100] or "-",
                 "street_number": "S/N",
-                "city_name": "-",
-                "state_name": "-",
+                "city_name": "San Miguel de Tucumán",
+                "state_name": "Tucumán",
                 "latitude": 0,
                 "longitude": 0,
             },
