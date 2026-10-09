@@ -51,9 +51,21 @@ def asegurar_pos_para(veterinaria):
     user_id = me["id"]
 
     external_store_id = f"VETSYS{veterinaria.id}"
+    direccion = (veterinaria.direccion or veterinaria.nombre).strip().replace("\n", ", ")
     tienda = _post(
         veterinaria, f"/users/{user_id}/stores",
-        {"name": veterinaria.nombre[:60], "external_id": external_store_id},
+        {
+            "name": veterinaria.nombre[:60],
+            "external_id": external_store_id,
+            "location": {
+                "street_name": direccion[:100] or "-",
+                "street_number": "S/N",
+                "city_name": "-",
+                "state_name": "-",
+                "latitude": 0,
+                "longitude": 0,
+            },
+        },
     )
     store_id = tienda["id"]
 
