@@ -13,8 +13,10 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
 
+from django.db import transaction
+
 from .models import PerfilUsuario, Veterinaria, MensajeContacto, RegistroAuditoria, Plan, Suscripcion
-from .forms import RegistroForm, ConfigVeterinariaForm, CrearUsuarioEquipoForm
+from .forms import RegistroForm, ConfigVeterinariaForm, CrearUsuarioEquipoForm, RegistroVeterinariaPublicoForm
 from .utils import get_veterinaria_activa
 from .audit import registrar_auditoria
 from .decorators import requerir_rol_admin
@@ -106,6 +108,48 @@ def entrar_a_demo(request):
         "periódicamente, así que no cargues información real."
     )
     return redirect('dashboard:index')
+
+
+def registro_veterinaria_publico(request):
+    """Autoregistro público: cualquiera puede crear su propia Veterinaria + usuario ADMIN
+    al instante, sin que un superusuario tenga que aprobarlo a mano. Arranca con el período
+    de prueba por defecto que ya asigna la señal de alta de Veterinaria (ver signals.py)."""
+    if request.user.is_authenticated:
+        return redirect('dashboard:index')
+
+    if request.method == 'POST':
+        form = RegistroVeterinariaPublicoForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                vet = Veterinaria.objects.create(
+                    nombre=form.cleaned_data['nombre_veterinaria'],
+                    telefono=form.cleaned_data.get('telefono_veterinaria', ''),
+                    email_contacto=form.cleaned_data['email'],
+                    activo=True,
+                )
+                nuevo_usuario = form.save(commit=False)
+                nuevo_usuario.set_password(form.cleaned_data['password'])
+                nuevo_usuario.save()
+                PerfilUsuario.objects.create(
+                    user=nuevo_usuario, veterinaria=vet, rol="ADMIN", is_approved=True,
+                )
+
+            login(request, nuevo_usuario, backend='django.contrib.auth.backends.ModelBackend')
+            registrar_auditoria(
+                request, 'CREAR', modelo='Veterinaria', objeto_id=vet.id,
+                descripcion=f"Autoregistro público: '{vet.nombre}' creada por '{nuevo_usuario.username}'.",
+                veterinaria=vet,
+            )
+            messages.success(
+                request,
+                f"¡Bienvenido a VeterSystem, {nuevo_usuario.first_name}! Tu período de prueba ya está activo."
+            )
+            return redirect('dashboard:index')
+        messages.error(request, "Revisá los datos ingresados.")
+    else:
+        form = RegistroVeterinariaPublicoForm()
+
+    return render(request, 'usuarios/registro_veterinaria_publico.html', {'form': form})
 
 
 # ==============================================================================

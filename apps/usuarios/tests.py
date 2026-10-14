@@ -428,6 +428,73 @@ class EntrarADemoTests(TestCase):
         self.assertContains(response, "demo pública")
 
 
+class RegistroVeterinariaPublicoTests(TestCase):
+    """Autoregistro público: crea Veterinaria + usuario ADMIN al instante, sin que un
+    superusuario tenga que aprobar nada (a diferencia de usuarios:registro)."""
+
+    def _datos_validos(self, **overrides):
+        datos = {
+            'nombre_veterinaria': 'Veterinaria San Martín',
+            'telefono_veterinaria': '3815551234',
+            'username': 'sanmartin_admin',
+            'first_name': 'Juana',
+            'last_name': 'Pérez',
+            'email': 'juana@sanmartin.com',
+            'password': 'passwordseguro123',
+        }
+        datos.update(overrides)
+        return datos
+
+    def test_crea_veterinaria_y_usuario_admin_ya_aprobado(self):
+        response = self.client.post(reverse('registro_veterinaria_publico'), self._datos_validos(), follow=True)
+
+        self.assertRedirects(response, reverse('dashboard:index'))
+        vet = Veterinaria.objects.get(nombre='Veterinaria San Martín')
+        perfil = PerfilUsuario.objects.get(veterinaria=vet)
+        self.assertEqual(perfil.user.username, 'sanmartin_admin')
+        self.assertEqual(perfil.rol, 'ADMIN')
+        self.assertTrue(perfil.is_approved)
+
+    def test_logueado_automaticamente_despues_del_alta(self):
+        response = self.client.post(reverse('registro_veterinaria_publico'), self._datos_validos(), follow=True)
+
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
+        self.assertEqual(response.wsgi_request.user.username, 'sanmartin_admin')
+
+    def test_genera_un_periodo_de_prueba(self):
+        plan = Plan.objects.create(nombre="Básico", precio_mensual=20000, activo=True)
+        self.client.post(reverse('registro_veterinaria_publico'), self._datos_validos())
+
+        vet = Veterinaria.objects.get(nombre='Veterinaria San Martín')
+        suscripcion = Suscripcion.objects.get(veterinaria=vet)
+        self.assertEqual(suscripcion.estado, 'PRUEBA')
+        self.assertEqual(suscripcion.plan, plan)
+
+    def test_no_permite_username_duplicado(self):
+        User.objects.create_user(username='sanmartin_admin', password='otracosa')
+
+        response = self.client.post(reverse('registro_veterinaria_publico'), self._datos_validos())
+
+        self.assertEqual(response.status_code, 200)  # re-renderiza el form con el error
+        self.assertFalse(Veterinaria.objects.filter(nombre='Veterinaria San Martín').exists())
+
+    def test_no_permite_email_duplicado(self):
+        User.objects.create_user(username='otro_user', password='otracosa', email='juana@sanmartin.com')
+
+        response = self.client.post(reverse('registro_veterinaria_publico'), self._datos_validos())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Veterinaria.objects.filter(nombre='Veterinaria San Martín').exists())
+
+    def test_ya_logueado_no_puede_volver_a_registrarse(self):
+        otro_user = User.objects.create_user(username='ya_logueado', password='testpass123')
+        self.client.force_login(otro_user)
+
+        response = self.client.get(reverse('registro_veterinaria_publico'))
+
+        self.assertRedirects(response, reverse('dashboard:index'))
+
+
 class CrearPreferenciaPagoTests(TestCase):
     """Confirma que el precio enviado a Mercado Pago corresponde al ciclo elegido,
     mockeando el SDK (no hay credenciales reales en este entorno)."""

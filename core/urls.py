@@ -18,6 +18,9 @@ urlpatterns = [
     # Demo pública de un clic (loguea directo como el admin de la veterinaria demo)
     path('demo/', usuario_views.entrar_a_demo, name='entrar_a_demo'),
 
+    # Autoregistro público: crea Veterinaria + usuario ADMIN al instante, sin aprobación
+    path('empezar/', usuario_views.registro_veterinaria_publico, name='registro_veterinaria_publico'),
+
     # Páginas legales
     path('terminos/', TemplateView.as_view(template_name='legal/terminos.html'), name='terminos'),
     path('privacidad/', TemplateView.as_view(template_name='legal/privacidad.html'), name='privacidad'),

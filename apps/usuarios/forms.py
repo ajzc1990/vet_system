@@ -157,3 +157,59 @@ class CrearUsuarioEquipoForm(forms.ModelForm):
             if Veterinario.objects.filter(veterinaria=self.veterinaria, matricula=matricula).exists():
                 raise forms.ValidationError("Ya hay un veterinario con esa matrícula en tu clínica.")
         return matricula
+
+
+class RegistroVeterinariaPublicoForm(forms.ModelForm):
+    """Autoregistro público: un prospecto crea su propia Veterinaria + usuario ADMIN
+    sin aprobación de nadie, para empezar su período de prueba al instante."""
+    nombre_veterinaria = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Veterinaria San Martín'}),
+        label="Nombre de tu clínica *",
+    )
+    telefono_veterinaria = forms.CharField(
+        max_length=20, required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 381 123-4567'}),
+        label="Teléfono de la clínica",
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': '••••••••'}),
+        label="Contraseña *",
+        min_length=8,
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tu usuario para entrar'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tu nombre'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Tu apellido'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'tu@email.com'}),
+        }
+        labels = {
+            'username': 'Usuario *',
+            'first_name': 'Nombre *',
+            'last_name': 'Apellido *',
+            'email': 'Correo Electrónico *',
+        }
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("Ese usuario ya está en uso, probá con otro.")
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not email:
+            raise forms.ValidationError("El correo electrónico es obligatorio.")
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError("Ya hay una cuenta registrada con ese correo electrónico.")
+        return email
+
+    def clean_nombre_veterinaria(self):
+        nombre = self.cleaned_data.get('nombre_veterinaria', '').strip()
+        if not nombre:
+            raise forms.ValidationError("Contanos el nombre de tu clínica.")
+        return nombre
