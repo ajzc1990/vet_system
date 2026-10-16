@@ -172,10 +172,22 @@
     .panel-input:focus { background: var(--vs-sidebar-bg-soft, #161d2e) !important; color: #fff; box-shadow: none; }
     .filtro-agenda { background: var(--vs-sidebar-bg-soft, #161d2e); border: 1px solid #232c40; color: #94A3B8; font-weight: 600; border-radius: 999px; }
     .filtro-agenda.activo, .filtro-agenda:hover { background: #6366f1; border-color: #6366f1; color: #fff; }
-    .tabla-oscura { background: transparent; }
-    .tabla-oscura thead { background: rgba(255,255,255,.02); }
-    .tabla-oscura tbody tr { border-color: #232c40 !important; }
-    .tabla-oscura tbody tr:hover { background: rgba(255,255,255,.03) !important; }
+    .tabla-oscura {
+        --bs-table-bg: transparent;
+        --bs-table-color: #E2E8F0;
+        --bs-table-border-color: #232c40;
+        --bs-table-hover-bg: rgba(255,255,255,.04);
+        --bs-table-hover-color: #ffffff;
+        --bs-table-striped-bg: transparent;
+        --bs-table-striped-color: #E2E8F0;
+        background-color: transparent !important;
+        color: #E2E8F0 !important;
+    }
+    .tabla-oscura thead th { background-color: rgba(255,255,255,.03) !important; color: #64748B !important; border-color: #232c40 !important; }
+    .tabla-oscura tbody td { background-color: transparent !important; color: #E2E8F0 !important; border-color: #232c40 !important; }
+    .tabla-oscura tbody tr:hover td { background-color: rgba(255,255,255,.04) !important; }
+    .tabla-oscura .btn-outline-light { color: #fff !important; border-color: rgba(255,255,255,.5) !important; }
+    .tabla-oscura .btn-outline-light:hover { background-color: rgba(255,255,255,.12) !important; }
 </style>
 
 <script>
