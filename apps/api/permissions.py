@@ -1,6 +1,7 @@
 from rest_framework.permissions import BasePermission
 
 from apps.usuarios.decorators import es_veterinario_o_admin
+from apps.usuarios.utils import usuario_habilitado_para_api
 
 
 class EsUsuarioAprobadoDeLaVeterinaria(BasePermission):
@@ -8,16 +9,10 @@ class EsUsuarioAprobadoDeLaVeterinaria(BasePermission):
     veterinaria asignada. Replica la misma condición que ya aplica CustomLoginView al
     autenticarse por sesión, para que un token de API no sea una puerta trasera para
     una cuenta que el login normal rechazaría (por ejemplo, si le revocaron la aprobación
-    después de haber emitido el token)."""
+    después de haber emitido el token). Misma función que usa el servidor MCP."""
 
     def has_permission(self, request, view):
-        user = request.user
-        if not user or not user.is_authenticated:
-            return False
-        if user.is_superuser:
-            return True
-        perfil = getattr(user, 'perfil', None)
-        return bool(perfil and perfil.is_approved and perfil.veterinaria_id)
+        return usuario_habilitado_para_api(request.user)
 
 
 class EsVeterinarioOAdmin(BasePermission):

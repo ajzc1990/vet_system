@@ -42,6 +42,29 @@ services:
       db:
         condition: service_healthy
 
+  mcp:
+    build: .
+    container_name: vetersystem_mcp
+    restart: always
+    command: >
+      sh -c "pip install -r requirements.txt --quiet &&
+            uvicorn mcp_server.server:app --host 0.0.0.0 --port 8001"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - USE_POSTGRES=True
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_HOST=db
+      - DB_PORT=5432
+      # Dominio(s) reales desde los que se va a acceder a /mcp/ (separados por coma).
+      # Sin esto, el SDK de MCP rechaza todo con 421 (protección anti DNS-rebinding).
+      - MCP_ALLOWED_HOSTS=${MCP_ALLOWED_HOSTS:-vetersystem.com,www.vetersystem.com}
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     container_name: vetersystem_nginx

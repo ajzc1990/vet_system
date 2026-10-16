@@ -20,6 +20,7 @@ from apps.turnos.models import SolicitudTurnoWeb, Turno, Veterinario
 from apps.usuarios.audit import registrar_auditoria
 from apps.usuarios.decorators import es_veterinario_o_admin
 from apps.usuarios.utils import es_veterinaria_demo
+from apps.usuarios.utils import veterinaria_del_usuario as _veterinaria_del_usuario
 from apps.ventas.models import Venta
 
 from .models import DispositivoPush
@@ -30,11 +31,6 @@ from .serializers import (
     MascotaDetalleSerializer, ProductoSerializer, RecetaSerializer, RegistroDesparasitacionSerializer,
     RegistroVacunaSerializer, TurnoSerializer, VentaSerializer, VeterinarioSerializer,
 )
-
-
-def _veterinaria_del_usuario(user):
-    perfil = getattr(user, 'perfil', None)
-    return perfil.veterinaria if perfil else None
 
 
 def _pdf_de_la_web(request, vista, **kwargs):

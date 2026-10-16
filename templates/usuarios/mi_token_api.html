@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi Token de API - VeterSystem{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4">
+                    <h3 class="card-title h5 mb-0 fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-key-fill fs-4"></i> Mi Token de API / MCP
+                    </h3>
+                </div>
+                <div class="card-body p-4 p-md-5">
+                    <p class="text-secondary">
+                        Este es tu token personal. Sirve para dos cosas: conectar Claude (u otro asistente
+                        compatible con MCP) a tu cuenta de VeterSystem, o usar la API REST directamente.
+                        Es tuyo, no de la clínica: si tenés varios empleados con cuenta, cada uno tiene el suyo.
+                    </p>
+
+                    <label class="form-label fw-bold text-dark small mb-1">Tu token</label>
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control font-monospace" value="{{ token.key }}" id="tokenInput" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('tokenInput').value)">
+                            <i class="bi bi-clipboard"></i> Copiar
+                        </button>
+                    </div>
+                    <div class="alert alert-warning border-0 rounded-3 small">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        No lo compartas: con este token cualquiera puede ver (no modificar) los datos de tu clínica.
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6 class="fw-bold text-dark">Cómo conectarlo en Claude</h6>
+                    <ol class="small text-secondary">
+                        <li>En Claude, andá a los ajustes de conectores/MCP personalizados.</li>
+                        <li>Agregá un conector nuevo con la URL: <code>https://vetersystem.com/mcp</code></li>
+                        <li>Cuando te pida autenticación, pegá este token.</li>
+                    </ol>
+
+                    <form method="post" onsubmit="return confirm('¿Regenerar el token? El anterior va a dejar de funcionar de inmediato (si lo tenías conectado en algún lado, hay que volver a pegar el nuevo).');">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="regenerar">
+                        <button type="submit" class="btn btn-outline-danger fw-semibold rounded-3">
+                            <i class="bi bi-arrow-repeat me-1"></i> Regenerar token
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

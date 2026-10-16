@@ -986,3 +986,33 @@ class GestionarEquipoTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.perfil_b.refresh_from_db()
         self.assertFalse(self.perfil_b.is_approved)
+
+
+class MiTokenApiTests(TestCase):
+    """La pantalla donde cada usuario ve/regenera el token que usa para la API
+    REST y para conectar el servidor MCP (mismo token para los dos)."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Token")
+        self.user = User.objects.create_user(username="usuario_token", password="testpass123")
+        PerfilUsuario.objects.create(user=self.user, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+        self.client.force_login(self.user)
+
+    def test_crea_el_token_la_primera_vez_que_entra(self):
+        from rest_framework.authtoken.models import Token
+
+        self.assertFalse(Token.objects.filter(user=self.user).exists())
+        response = self.client.get(reverse('usuarios:mi_token_api'))
+
+        self.assertEqual(response.status_code, 200)
+        token = Token.objects.get(user=self.user)
+        self.assertContains(response, token.key)
+
+    def test_regenerar_cambia_la_clave(self):
+        from rest_framework.authtoken.models import Token
+
+        token_viejo = Token.objects.create(user=self.user).key
+        self.client.post(reverse('usuarios:mi_token_api'), {'accion': 'regenerar'})
+
+        token_nuevo = Token.objects.get(user=self.user).key
+        self.assertNotEqual(token_viejo, token_nuevo)

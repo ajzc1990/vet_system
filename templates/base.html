@@ -458,6 +458,9 @@
                         {% if user.is_superuser %}
                             <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:panel_suscripciones' %}"><i class="bi bi-building-gear me-2"></i> Panel de Suscripciones</a></li>
                         {% endif %}
+                        {% if not user.cliente_portal %}
+                        <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'usuarios:mi_token_api' %}"><i class="bi bi-key-fill me-2"></i> Mi Token de API / MCP</a></li>
+                        {% endif %}
                         <li><a class="dropdown-item rounded-2 small text-secondary py-2" href="{% url 'password_change' %}"><i class="bi bi-key me-2"></i> Cambiar Contraseña</a></li>
                         <li><hr class="dropdown-divider my-1"></li>
                         <li>

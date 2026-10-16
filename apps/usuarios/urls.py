@@ -32,4 +32,7 @@ urlpatterns = [
 
     # Auditoría
     path('auditoria/', views.auditoria_view, name='auditoria'),
+
+    # Token de API / MCP (uno por usuario, mismo que ya usa la app móvil)
+    path('mi-token-api/', views.mi_token_api, name='mi_token_api'),
 ]

@@ -587,3 +587,21 @@ def gestionar_equipo(request):
         'veterinaria': vet,
         'roles': PerfilUsuario.ROLES,
     })
+
+
+@login_required
+def mi_token_api(request):
+    """Token para usar la API REST y el servidor MCP (mismo token para los dos:
+    es el mismo mecanismo de siempre, rest_framework.authtoken). Cada usuario
+    tiene el suyo -no es un token "de la veterinaria", es personal, igual que
+    ya funciona para la app móvil- y lo puede regenerar si lo filtró sin querer."""
+    from rest_framework.authtoken.models import Token
+
+    if request.method == 'POST' and request.POST.get('accion') == 'regenerar':
+        Token.objects.filter(user=request.user).delete()
+        Token.objects.create(user=request.user)
+        messages.success(request, "Token regenerado. El anterior dejó de funcionar.")
+        return redirect('usuarios:mi_token_api')
+
+    token, _ = Token.objects.get_or_create(user=request.user)
+    return render(request, 'usuarios/mi_token_api.html', {'token': token})
