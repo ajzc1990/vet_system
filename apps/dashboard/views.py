@@ -64,6 +64,16 @@ def dashboard_principal(request):
     # Próximos turnos del día para la tabla resumida
     proximos_turnos = turnos_hoy.filter(estado__in=['PENDIENTE', 'CONFIRMADO', 'EN_ESPERA', 'ATENDIENDO'])[:5]
 
+    # Agenda completa de hoy (incluye completados/cancelados, para los filtros del panel)
+    turnos_hoy_tabla = turnos_hoy.select_related('mascota', 'mascota__cliente', 'veterinario')[:20]
+    cant_atendidos_hoy = turnos_hoy.filter(estado='COMPLETADO').count()
+    cant_confirmados_hoy = turnos_hoy.filter(estado='CONFIRMADO').count()
+
+    # El paciente más próximo de hoy (para el cronómetro del panel)
+    proximo_turno = turnos_hoy.filter(
+        estado__in=['PENDIENTE', 'CONFIRMADO', 'EN_ESPERA']
+    ).select_related('mascota', 'mascota__cliente', 'veterinario').order_by('fecha_hora').first()
+
     # Vacunas/desparasitaciones con refuerzo ya vencido (no "próximos", atrasados de verdad),
     # para el aviso de "avisale a estos tutores" del panel.
     if request.user.is_superuser and not vet:
@@ -97,6 +107,10 @@ def dashboard_principal(request):
         'cant_proximo_vencer': cant_proximo_vencer,
         'cant_vencidos': cant_vencidos,
         'proximos_turnos': proximos_turnos,
+        'turnos_hoy_tabla': turnos_hoy_tabla,
+        'cant_atendidos_hoy': cant_atendidos_hoy,
+        'cant_confirmados_hoy': cant_confirmados_hoy,
+        'proximo_turno': proximo_turno,
         'cant_vencimientos_atrasados': cant_vencimientos_atrasados,
         'mensajes_contacto': mensajes_contacto,
         'mensajes_no_leidos_count': mensajes_no_leidos_count,

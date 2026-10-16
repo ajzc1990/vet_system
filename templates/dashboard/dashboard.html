@@ -1,208 +1,220 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard General - VeterSystem{% endblock %}
+{% block title %}Panel - VeterSystem{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-<div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
-    <div>
-        <p class="text-muted small mb-1 text-uppercase fw-semibold" style="letter-spacing:.03em;">{{ hoy|date:"l j \d\e F" }} &middot; {{ vet.nombre|default:"VeterSystem" }}</p>
-        <h2 class="h3 fw-extrabold text-dark mb-0">{{ saludo }}, {% if user.last_name %}Dr(a). {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h2>
-    </div>
+<div class="panel-oscuro rounded-4 p-3 p-md-4 mb-4">
 
-    <form method="get" action="{% url 'clientes:lista_clientes' %}" class="flex-grow-1" style="max-width: 360px;">
-        <div class="input-group">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Buscar paciente o tutor...">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
+        <div>
+            <p class="text-uppercase small fw-semibold mb-1" style="color:#64748B; letter-spacing:.03em;">{{ hoy|date:"l j \d\e F" }} &middot; {{ vet.nombre|default:"VeterSystem" }}</p>
+            <h2 class="h3 fw-extrabold text-white mb-0">{{ saludo }}, {% if user.last_name %}Dr(a). {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h2>
         </div>
-    </form>
-</div>
 
-<!-- Tarjetas de KPIs Principales -->
-<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-5 g-3 mb-4">
-    <!-- Turnos del día -->
-    <div class="col">
-        <div class="stat-tile">
-            <div class="stat-tile-icon bg-primary-subtle text-primary-emphasis">
-                <i class="bi bi-calendar-check"></i>
+        <form method="get" action="{% url 'clientes:lista_clientes' %}" class="flex-grow-1" style="max-width: 340px;">
+            <div class="input-group">
+                <span class="input-group-text panel-input border-0"><i class="bi bi-search" style="color:#64748B;"></i></span>
+                <input type="text" name="q" class="form-control panel-input border-0" placeholder="Buscar mascota o tutor...">
             </div>
-            <div class="stat-tile-value">{{ cant_turnos_hoy }}</div>
-            <div class="stat-tile-label">Turnos para Hoy</div>
-            <div class="stat-tile-meta text-primary">{{ cant_turnos_pendientes }} pendientes</div>
-        </div>
+        </form>
     </div>
 
-    <!-- Consultas Hoy -->
-    <div class="col">
-        <div class="stat-tile">
-            <div class="stat-tile-icon bg-success-subtle text-success-emphasis">
-                <i class="bi bi-clipboard2-pulse-fill"></i>
-            </div>
-            <div class="stat-tile-value">{{ cant_consultas_hoy }}</div>
-            <div class="stat-tile-label">Atenciones Hoy</div>
-            <div class="stat-tile-meta text-success">Consultas cerradas</div>
-        </div>
-    </div>
-
-    <!-- Pacientes Internados -->
-    <div class="col">
-        <a href="{% url 'historia_clinica:lista_internaciones' %}" class="text-decoration-none">
-            <div class="stat-tile">
-                <div class="stat-tile-icon {% if cant_internados > 0 %}bg-danger-subtle text-danger-emphasis{% else %}bg-secondary-subtle text-secondary-emphasis{% endif %}">
-                    <i class="bi bi-hospital-fill"></i>
+    <!-- Próximo paciente + Progreso del día -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="panel-card h-100 p-4">
+                {% if proximo_turno %}
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="text-uppercase small fw-bold" style="color:#818cf8; letter-spacing:.04em;">Próximo paciente</span>
+                    <span class="fw-extrabold fs-4 text-white" id="cronometroProximo" data-fecha="{{ proximo_turno.fecha_hora|date:'c' }}">--:--</span>
                 </div>
-                <div class="stat-tile-value">{{ cant_internados }}</div>
-                <div class="stat-tile-label">Pacientes Internados</div>
-                <div class="stat-tile-meta {% if cant_internados > 0 %}text-danger{% else %}text-secondary{% endif %}">Sala de Internación</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Alertas de Stock Mínimo -->
-    <div class="col">
-        <a href="{% url 'inventario:lista_productos' %}?filtro=bajo_stock" class="text-decoration-none">
-            <div class="stat-tile">
-                <div class="stat-tile-icon bg-danger-subtle text-danger-emphasis">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div class="stat-tile-value">{{ cant_bajo_stock }}</div>
-                <div class="stat-tile-label">Insumos Bajo Stock</div>
-                <div class="stat-tile-meta text-danger">Reposición requerida</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Alerta de Vencimientos -->
-    <div class="col">
-        <a href="{% url 'inventario:lista_productos' %}?filtro=proximo_vencer" class="text-decoration-none">
-            <div class="stat-tile">
-                <div class="stat-tile-icon bg-warning-subtle text-warning-emphasis">
-                    <i class="bi bi-hourglass-split"></i>
-                </div>
-                <div class="stat-tile-value">{{ cant_proximo_vencer }}</div>
-                <div class="stat-tile-label">Vencen &lt; 30 días</div>
-                <div class="stat-tile-meta text-warning-emphasis">{{ cant_vencidos }} ya vencidos</div>
-            </div>
-        </a>
-    </div>
-</div>
-
-<div class="row g-4 mb-4">
-<div class="col-lg-8">
-<!-- Próximos Turnos del Día -->
-<div class="card border-0 shadow-sm rounded-3 h-100">
-    <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Sala de Espera</h5>
-        <a href="{% url 'turnos:lista_turnos' %}" class="btn btn-sm btn-outline-primary fw-semibold">Ver Agenda Completa</a>
-    </div>
-    <div class="card-body p-0">
-        {% if not proximos_turnos %}
-            <div class="text-center py-4 text-muted">No hay turnos pendientes para lo que resta del día.</div>
-        {% else %}
-            <!-- Tarjetas (celular) -->
-            <div class="d-md-none d-flex flex-column gap-2 p-3">
-                {% for turno in proximos_turnos %}
-                <div class="border rounded-3 p-2 d-flex justify-content-between align-items-center gap-2">
-                    <div class="flex-grow-1 min-w-0">
-                        <span class="fw-bold text-primary small">{{ turno.fecha_hora|date:"H:i" }} hs</span> &bull;
-                        <strong class="small">{{ turno.mascota.nombre }}</strong>
-                        <div class="small text-muted d-flex align-items-center gap-1">
-                            {{ turno.mascota.cliente.nombre }} {{ turno.mascota.cliente.apellido }}
-                            {% if turno.link_recordatorio_whatsapp %}
-                                <a href="{{ turno.link_recordatorio_whatsapp }}" target="_blank" class="text-success text-decoration-none ms-1"><i class="bi bi-whatsapp"></i></a>
-                            {% endif %}
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="avatar-circle" style="width:46px;height:46px;font-size:1.1rem;">{{ proximo_turno.mascota.nombre|slice:":1"|upper }}</div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-white fs-5">{{ proximo_turno.mascota.nombre }}</div>
+                        <div class="small" style="color:#94A3B8;">
+                            Tutor: {{ proximo_turno.mascota.cliente.nombre }} {{ proximo_turno.mascota.cliente.apellido }}
+                            {% if proximo_turno.veterinario %} &middot; Dr(a). {{ proximo_turno.veterinario.apellido }}{% endif %}
                         </div>
                     </div>
-                    <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-sm btn-success fw-bold flex-shrink-0">
-                        <i class="bi bi-clipboard2-pulse-fill"></i>
-                    </a>
+                    {% if proximo_turno.estado == 'PENDIENTE' %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}
+                    {% if proximo_turno.estado == 'CONFIRMADO' %}<span class="badge bg-primary">Confirmado</span>{% endif %}
+                    {% if proximo_turno.estado == 'EN_ESPERA' %}<span class="badge bg-info text-dark">En espera</span>{% endif %}
                 </div>
-                {% endfor %}
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'turnos:atender_turno' proximo_turno.id %}" class="btn btn-primary fw-bold px-3">Atender ahora</a>
+                    {% if proximo_turno.estado == 'PENDIENTE' %}
+                    <a href="{% url 'turnos:cambiar_estado' proximo_turno.id 'CONFIRMADO' %}" class="btn btn-outline-light fw-semibold px-3">Confirmar asistencia</a>
+                    {% endif %}
+                    {% if proximo_turno.link_recordatorio_whatsapp %}
+                    <a href="{{ proximo_turno.link_recordatorio_whatsapp }}" target="_blank" class="btn btn-outline-light fw-semibold px-3"><i class="bi bi-whatsapp me-1"></i>WhatsApp</a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center py-4" style="color:#64748B;">
+                    <i class="bi bi-calendar2-check fs-3 d-block mb-2"></i>
+                    No quedan turnos pendientes para lo que resta del día.
+                </div>
+                {% endif %}
             </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="panel-card h-100 p-4">
+                <span class="text-uppercase small fw-bold" style="color:#818cf8; letter-spacing:.04em;">Progreso del día</span>
+                <div class="fw-extrabold text-white mt-1" style="font-size:2.4rem; line-height:1;">{{ cant_atendidos_hoy }} <span class="fs-5" style="color:#64748B;">de {{ cant_turnos_hoy }} atendidos</span></div>
+                <div class="d-flex gap-3 mt-3 small">
+                    <div><span class="fw-bold text-white d-block">{{ cant_confirmados_hoy }}</span><span style="color:#94A3B8;">Confirmados</span></div>
+                    <div><span class="fw-bold text-white d-block">{{ cant_turnos_pendientes }}</span><span style="color:#94A3B8;">Pendientes</span></div>
+                    <div><span class="fw-bold text-white d-block">{{ cant_internados }}</span><span style="color:#94A3B8;">Internados</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            <!-- Tabla (escritorio / tablet) -->
-            <div class="table-responsive d-none d-md-block">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3">Hora</th>
-                            <th>Paciente / Tutor</th>
-                            <th>Veterinario</th>
-                            <th>Estado</th>
-                            <th class="text-end pe-3">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for turno in proximos_turnos %}
-                        <tr>
-                            <td class="ps-3 fw-bold text-primary">{{ turno.fecha_hora|date:"H:i" }} hs</td>
-                            <td>
-                                <strong>{{ turno.mascota.nombre }}</strong>
-                                <div class="small text-muted d-flex align-items-center gap-1">
-                                    {{ turno.mascota.cliente.nombre }} {{ turno.mascota.cliente.apellido }}
-                                    {% if turno.link_recordatorio_whatsapp %}
-                                        <a href="{{ turno.link_recordatorio_whatsapp }}" target="_blank" class="text-success text-decoration-none ms-1" title="Enviar recordatorio del turno por WhatsApp">
-                                            <i class="bi bi-whatsapp"></i>
-                                        </a>
-                                    {% endif %}
+    <!-- Alertas compactas -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <a href="{% url 'inventario:lista_productos' %}?filtro=bajo_stock" class="text-decoration-none">
+                <div class="panel-card p-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                    <div>
+                        <div class="fw-bold text-white small">{{ cant_bajo_stock }} insumo{{ cant_bajo_stock|pluralize }} con stock bajo</div>
+                        <div class="extra-small fw-semibold" style="color:#818cf8;">Reponer &rarr;</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="{% url 'inventario:lista_productos' %}?filtro=proximo_vencer" class="text-decoration-none">
+                <div class="panel-card p-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-hourglass-split text-warning fs-5"></i>
+                    <div>
+                        <div class="fw-bold text-white small">{{ cant_proximo_vencer }} vencen en &lt; 30 días</div>
+                        <div class="extra-small" style="color:#94A3B8;">{{ cant_vencidos }} ya vencidos</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Agenda de hoy -->
+    <div class="panel-card p-0 overflow-hidden">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-3" style="border-bottom:1px solid #232c40;">
+            <h5 class="fw-bold text-white mb-0">Agenda de hoy</h5>
+            <a href="{% url 'turnos:lista_turnos' %}" class="small fw-semibold text-decoration-none" style="color:#818cf8;">Ver Agenda Completa &rarr;</a>
+        </div>
+        <div class="d-flex flex-wrap gap-2 p-3 pb-2">
+            <button type="button" class="btn btn-sm filtro-agenda activo" data-filtro="todos">Todos &middot; {{ cant_turnos_hoy }}</button>
+            <button type="button" class="btn btn-sm filtro-agenda" data-filtro="PENDIENTE">Pendientes &middot; {{ cant_turnos_pendientes }}</button>
+            <button type="button" class="btn btn-sm filtro-agenda" data-filtro="CONFIRMADO">Confirmados &middot; {{ cant_confirmados_hoy }}</button>
+            <button type="button" class="btn btn-sm filtro-agenda" data-filtro="COMPLETADO">Atendidos &middot; {{ cant_atendidos_hoy }}</button>
+        </div>
+
+        {% if not turnos_hoy_tabla %}
+            <div class="text-center py-4" style="color:#64748B;">No hay turnos agendados para hoy.</div>
+        {% else %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 tabla-oscura">
+                <thead>
+                    <tr class="text-uppercase extra-small fw-bold" style="color:#64748B;">
+                        <th class="ps-3">Paciente / Tutor</th>
+                        <th>Hora</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-3">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for turno in turnos_hoy_tabla %}
+                    <tr data-estado="{{ turno.estado }}">
+                        <td class="ps-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-circle" style="width:30px;height:30px;font-size:.78rem;">{{ turno.mascota.nombre|slice:":1"|upper }}</div>
+                                <div>
+                                    <div class="fw-semibold text-white small">{{ turno.mascota.nombre }}</div>
+                                    <div class="extra-small" style="color:#94A3B8;">{{ turno.mascota.cliente.nombre }} {{ turno.mascota.cliente.apellido }}</div>
                                 </div>
-                            </td>
-                            <td class="small text-secondary">
-                                {% if turno.veterinario %}Dr(a). {{ turno.veterinario.apellido }}{% else %}-{% endif %}
-                            </td>
-                            <td>
-                                {% if turno.estado == 'PENDIENTE' %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}
-                                {% if turno.estado == 'CONFIRMADO' %}<span class="badge bg-primary">Confirmado</span>{% endif %}
-                                {% if turno.estado == 'ATENDIENDO' %}<span class="badge bg-info text-dark">Atendiendo</span>{% endif %}
-                            </td>
-                            <td class="text-end pe-3">
-                                <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-sm btn-success fw-bold">
-                                    <i class="bi bi-clipboard2-pulse-fill me-1"></i> Atender
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </td>
+                        <td class="small fw-semibold" style="color:#E2E8F0;">{{ turno.fecha_hora|date:"H:i" }}</td>
+                        <td>
+                            {% if turno.estado == 'PENDIENTE' %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}
+                            {% if turno.estado == 'CONFIRMADO' %}<span class="badge bg-primary">Confirmada</span>{% endif %}
+                            {% if turno.estado == 'EN_ESPERA' %}<span class="badge bg-info text-dark">En espera</span>{% endif %}
+                            {% if turno.estado == 'ATENDIENDO' %}<span class="badge bg-info text-dark">Atendiendo</span>{% endif %}
+                            {% if turno.estado == 'COMPLETADO' %}<span class="badge bg-success">Atendido</span>{% endif %}
+                            {% if turno.estado == 'CANCELADO' %}<span class="badge bg-secondary">Cancelado</span>{% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="d-inline-flex gap-1">
+                                {% if turno.estado == 'PENDIENTE' %}
+                                <a href="{% url 'turnos:cambiar_estado' turno.id 'CONFIRMADO' %}" class="btn btn-sm btn-outline-light fw-semibold">Confirmar</a>
+                                {% endif %}
+                                {% if turno.estado == 'PENDIENTE' or turno.estado == 'CONFIRMADO' or turno.estado == 'EN_ESPERA' %}
+                                <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-sm btn-primary fw-bold">Atender</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% endif %}
     </div>
 </div>
-</div>
 
-<div class="col-lg-4 d-flex flex-column gap-4">
-    <!-- Acciones rápidas -->
-    <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-white py-3">
-            <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-lightning-charge-fill me-2 text-primary"></i>Acciones rápidas</h5>
-        </div>
-        <div class="card-body d-flex flex-column gap-2">
-            <a href="{% url 'clientes:crear_cliente' %}" class="btn btn-light border text-start fw-semibold d-flex align-items-center gap-2 py-2">
-                <i class="bi bi-person-plus-fill text-primary"></i> Nuevo cliente
-            </a>
-            <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border text-start fw-semibold d-flex align-items-center gap-2 py-2">
-                <i class="bi bi-whatsapp text-success"></i> Enviar recordatorios
-            </a>
-        </div>
-    </div>
+<style>
+    .panel-oscuro { background: var(--vs-sidebar-bg, #0f1420); }
+    .panel-card { background: var(--vs-sidebar-bg-soft, #161d2e); border: 1px solid #232c40; border-radius: 16px; }
+    .panel-input { background: var(--vs-sidebar-bg-soft, #161d2e) !important; color: #fff; }
+    .panel-input::placeholder { color: #64748B; }
+    .panel-input:focus { background: var(--vs-sidebar-bg-soft, #161d2e) !important; color: #fff; box-shadow: none; }
+    .filtro-agenda { background: var(--vs-sidebar-bg-soft, #161d2e); border: 1px solid #232c40; color: #94A3B8; font-weight: 600; border-radius: 999px; }
+    .filtro-agenda.activo, .filtro-agenda:hover { background: #6366f1; border-color: #6366f1; color: #fff; }
+    .tabla-oscura { background: transparent; }
+    .tabla-oscura thead { background: rgba(255,255,255,.02); }
+    .tabla-oscura tbody tr { border-color: #232c40 !important; }
+    .tabla-oscura tbody tr:hover { background: rgba(255,255,255,.03) !important; }
+</style>
 
-    <!-- Vencimientos atrasados -->
-    {% if cant_vencimientos_atrasados > 0 %}
-    <div class="card border-0 shadow-sm rounded-3 text-white" style="background: var(--vs-sidebar-bg, #0f1420);">
-        <div class="card-body p-4">
-            <h5 class="fw-extrabold mb-2">
-                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
-                {{ cant_vencimientos_atrasados }} vencimiento{{ cant_vencimientos_atrasados|pluralize }} atrasado{{ cant_vencimientos_atrasados|pluralize }}
-            </h5>
-            <p class="small text-white-50 mb-3">Avisá a los tutores por WhatsApp desde la lista.</p>
-            <a href="{% url 'dashboard:centro_recordatorios' %}" class="small fw-bold text-warning text-decoration-none">
-                Ver vencimientos <i class="bi bi-arrow-right"></i>
-            </a>
-        </div>
-    </div>
-    {% endif %}
-</div>
-</div>
+<script>
+(function() {
+    var cronometro = document.getElementById('cronometroProximo');
+    if (cronometro) {
+        var objetivo = new Date(cronometro.dataset.fecha).getTime();
+        function tick() {
+            var restante = objetivo - Date.now();
+            if (restante <= 0) {
+                cronometro.textContent = 'Ahora';
+                cronometro.style.color = '#4ade80';
+                return;
+            }
+            var totalSeg = Math.floor(restante / 1000);
+            var horas = Math.floor(totalSeg / 3600);
+            var min = Math.floor((totalSeg % 3600) / 60);
+            var seg = totalSeg % 60;
+            var texto = horas > 0
+                ? horas + ':' + ('0' + min).slice(-2) + ':' + ('0' + seg).slice(-2)
+                : ('0' + min).slice(-2) + ':' + ('0' + seg).slice(-2);
+            cronometro.textContent = texto;
+        }
+        tick();
+        setInterval(tick, 1000);
+    }
+
+    document.querySelectorAll('.filtro-agenda').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filtro-agenda').forEach(function(b) { b.classList.remove('activo'); });
+            btn.classList.add('activo');
+            var filtro = btn.dataset.filtro;
+            document.querySelectorAll('tbody tr[data-estado]').forEach(function(fila) {
+                fila.style.display = (filtro === 'todos' || fila.dataset.estado === filtro) ? '' : 'none';
+            });
+        });
+    });
+})();
+</script>
 
 <!-- CONSULTAS Y MENSAJES RECIBIDOS DESDE LA LANDING PAGE (solo superusuario: son
      consultas de prospectos de todo el SaaS, no pertenecen a ninguna veterinaria) -->
@@ -300,5 +312,4 @@
     </div>
 </div>
 {% endif %}
-</div>
 {% endblock %}
