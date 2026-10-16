@@ -4,103 +4,365 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-7">
-            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="card-header bg-primary text-white py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h4 class="fw-extrabold mb-0 fs-5 d-flex align-items-center gap-2">
-                        <i class="bi bi-calendar-plus-fill"></i> {{ titulo|default:"Agendar Nuevo Turno" }}
-                    </h4>
-                    <span class="badge bg-white text-primary small px-3 py-1.5 rounded-pill">VeterSystem Agenda</span>
-                </div>
-                
-                <div class="card-body p-4 p-md-5">
-                    <form method="POST" novalidate>
-                        {% csrf_token %}
 
-                        <!-- Selección de Mascota -->
-                        <div class="mb-4">
-                            <label for="{{ form.mascota.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                <i class="bi bi-heart-pulse-fill text-danger me-1"></i> {{ form.mascota.label }}
-                            </label>
-                            {{ form.mascota }}
-                            {% if form.mascota.errors %}
-                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.mascota.errors.0 }}</div>
-                            {% endif %}
-                        </div>
+    <nav aria-label="breadcrumb" class="mb-1">
+        <ol class="breadcrumb small mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'turnos:agenda_diaria' %}" class="text-decoration-none">Agenda de turnos</a></li>
+            <li class="breadcrumb-item active">{% if turno %}Editar turno{% else %}Nuevo turno{% endif %}</li>
+        </ol>
+    </nav>
+    <h2 class="h3 fw-extrabold text-dark mb-4">{{ titulo|default:"Agendar nuevo turno" }}</h2>
 
-                        <!-- Fecha/Hora y Veterinario -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label for="{{ form.fecha_hora.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                    <i class="bi bi-clock-fill text-primary me-1"></i> {{ form.fecha_hora.label }}
-                                </label>
-                                {{ form.fecha_hora }}
-                                {% if form.fecha_hora.errors %}
-                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_hora.errors.0 }}</div>
-                                {% endif %}
+    <form method="POST" id="formTurno" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="mascota" id="id_mascota_real" value="{{ form.mascota.value|default:'' }}">
+        <input type="hidden" name="fecha_hora" id="id_fecha_hora_real" value="{{ form.fecha_hora.value|default:'' }}">
+        <input type="hidden" name="motivo" id="id_motivo_real" value="{{ form.motivo.value|default:'' }}">
+
+        <div class="row g-4">
+            <div class="col-lg-8 d-flex flex-column gap-4">
+
+                <!-- Paso 1: Paciente -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                            <span class="paso-numero">1</span> Paciente
+                        </h5>
+
+                        <label class="form-label fw-semibold small text-dark mb-1">Mascota *</label>
+                        <div class="producto-picker position-relative mb-2">
+                            <div class="search-producto-wrap d-flex align-items-center gap-2 border rounded-3 px-2">
+                                <i class="bi bi-search text-primary"></i>
+                                <input type="text" id="buscarMascota" class="form-control border-0 shadow-none px-0" placeholder="Buscá por nombre de mascota o tutor" autocomplete="off" value="{{ mascota_inicial_texto }}">
                             </div>
-
-                            <div class="col-md-6">
-                                <label for="{{ form.veterinario.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                    <i class="bi bi-person-badge-fill text-primary me-1"></i> {{ form.veterinario.label }}
-                                </label>
-                                {{ form.veterinario }}
-                                {% if form.veterinario.errors %}
-                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.veterinario.errors.0 }}</div>
-                                {% endif %}
-                            </div>
+                            <div id="resultadosMascota" class="resultados-producto d-none"></div>
                         </div>
+                        {% if form.mascota.errors %}<div class="text-danger small mb-2"><i class="bi bi-exclamation-circle me-1"></i>{{ form.mascota.errors.0 }}</div>{% endif %}
 
-                        <!-- Motivo y Estado -->
-                        <div class="row g-3 mb-4">
-                            <div class="{% if turno %}col-md-8{% else %}col-12{% endif %}">
-                                <label for="{{ form.motivo.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                    <i class="bi bi-chat-left-text-fill text-secondary me-1"></i> {{ form.motivo.label }}
-                                </label>
-                                {{ form.motivo }}
-                                {% if form.motivo.errors %}
-                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.motivo.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-
-                            {% if turno %}
-                            <div class="col-md-4">
-                                <label for="{{ form.estado.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                    <i class="bi bi-flag-fill text-warning me-1"></i> Estado
-                                </label>
-                                {{ form.estado }}
-                                {% if form.estado.errors %}
-                                    <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.estado.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Observaciones -->
-                        <div class="mb-4">
-                            <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-bold text-dark small mb-1">
-                                <i class="bi bi-journal-text text-secondary me-1"></i> {{ form.observaciones.label }}
-                            </label>
-                            {{ form.observaciones }}
-                            {% if form.observaciones.errors %}
-                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ form.observaciones.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Botones de Acción -->
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-4">
-                            <a href="{% url 'turnos:agenda_diaria' %}" class="btn btn-outline-secondary px-4 fw-semibold rounded-3">
-                                <i class="bi bi-arrow-left me-1"></i> Volver
-                            </a>
-                            <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow">
-                                <i class="bi bi-calendar-check-fill me-1"></i> Guardar Turno
+                        {% if recientes_wizard %}
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <span class="small text-muted fw-semibold">Recientes:</span>
+                            {% for m in recientes_wizard %}
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill pill-reciente"
+                                data-id="{{ m.id }}" data-nombre="{{ m.nombre }} — {{ m.cliente.nombre }} {{ m.cliente.apellido }}"
+                                data-cliente="{{ m.cliente.nombre }} {{ m.cliente.apellido }}">
+                                {{ m.nombre }} — {{ m.cliente.apellido|slice:":1" }}. {{ m.cliente.nombre }}
                             </button>
+                            {% endfor %}
+                            <a href="{% url 'clientes:crear_cliente' %}" class="small fw-semibold text-decoration-none ms-1">+ Nuevo paciente</a>
                         </div>
-                    </form>
+                        {% else %}
+                        <a href="{% url 'clientes:crear_cliente' %}" class="small fw-semibold text-decoration-none">+ Nuevo paciente</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Paso 2: Fecha, hora y profesional -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                            <span class="paso-numero">2</span> Fecha, hora y profesional
+                        </h5>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-dark mb-1">Fecha *</label>
+                                <input type="date" id="inputFecha" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small text-dark mb-1">{{ form.veterinario.label }}</label>
+                                {{ form.veterinario }}
+                            </div>
+                        </div>
+
+                        <label class="form-label fw-semibold small text-dark mb-1">Hora * <span class="text-muted fw-normal">horarios libres</span></label>
+                        <div id="horariosLibres" class="d-flex flex-wrap gap-2"></div>
+                        {% if form.fecha_hora.errors %}<div class="text-danger small mt-2"><i class="bi bi-exclamation-circle me-1"></i>{{ form.fecha_hora.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <!-- Paso 3: Motivo y notas -->
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                            <span class="paso-numero">3</span> Motivo y notas
+                        </h5>
+
+                        <label class="form-label fw-semibold small text-dark mb-1">Motivo del turno</label>
+                        <div class="d-flex flex-wrap gap-2 mb-2" id="motivosRapidos">
+                            {% for m in motivos_rapidos %}
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill pill-motivo" data-motivo="{{ m }}">{{ m }}</button>
+                            {% endfor %}
+                        </div>
+                        <input type="text" id="motivoLibre" class="form-control mb-4" placeholder="u otro motivo...">
+
+                        {% if turno %}
+                        <label class="form-label fw-semibold small text-dark mb-1">Estado</label>
+                        <div class="mb-3" style="max-width: 240px;">{{ form.estado }}</div>
+                        {% endif %}
+
+                        <label for="{{ form.observaciones.id_for_label }}" class="form-label fw-semibold small text-dark mb-1">Observaciones</label>
+                        {{ form.observaciones }}
+                        <div class="form-text">Notas adicionales sobre el turno...</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Resumen -->
+            <div class="col-lg-4">
+                <div class="card border-0 shadow-lg rounded-4 text-white sticky-top" style="background: var(--vs-sidebar-bg, #0f1420); top: 1.5rem;">
+                    <div class="card-body p-4">
+                        <div class="small text-white-50 fw-semibold mb-1">Resumen del turno</div>
+                        <div class="fw-extrabold fs-5 mb-3" id="resumenFechaHora">Elegí fecha y hora</div>
+
+                        <div class="d-flex align-items-center gap-2 mb-3" id="resumenMascotaWrap" style="display:none!important;">
+                            <div class="avatar-circle" id="resumenAvatar" style="width:38px;height:38px;">?</div>
+                            <div>
+                                <div class="fw-bold" id="resumenMascota">-</div>
+                                <div class="small text-white-50" id="resumenTutor">Tutor: -</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between small py-1 border-top border-secondary-subtle">
+                            <span class="text-white-50">Profesional</span>
+                            <span class="fw-semibold" id="resumenVet">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between small py-1 border-bottom border-secondary-subtle mb-3">
+                            <span class="text-white-50">Motivo</span>
+                            <span class="fw-semibold" id="resumenMotivo">-</span>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="avisar_whatsapp" id="avisarWhatsapp" checked>
+                            <label class="form-check-label small" for="avisarWhatsapp">Avisar al tutor por WhatsApp</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary fw-bold w-100 mb-2 py-2" id="btnGuardarTurno">
+                            <i class="bi bi-check-lg me-1"></i> Guardar turno
+                        </button>
+                        <a href="{% url 'turnos:agenda_diaria' %}" class="btn btn-outline-light w-100 py-2">Cancelar</a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>
+
+<style>
+    .producto-picker { min-width: 220px; }
+    .search-producto-wrap { background: #fff; transition: box-shadow .15s ease, border-color .15s ease; }
+    .search-producto-wrap:focus-within { border-color: #6366f1 !important; box-shadow: 0 0 0 4px rgba(99,102,241,.15); }
+    .resultados-producto {
+        position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; right: 0;
+        background: #fff; border-radius: 14px; box-shadow: 0 12px 28px rgba(15,23,42,.16);
+        max-height: 260px; overflow-y: auto; padding: 6px;
+    }
+    .resultado-item {
+        display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
+        cursor: pointer; transition: transform .12s cubic-bezier(.34,1.56,.64,1), background-color .12s ease;
+    }
+    .resultado-item:hover { background: #EEF2FF; }
+    .resultado-item:active { transform: scale(.97); }
+    .resultado-icono {
+        width: 34px; height: 34px; border-radius: 10px; background: #EEF2FF; color: #6366f1;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 15px;
+    }
+    .resultado-nombre { font-weight: 700; font-size: .83rem; color: #1E293B; }
+    .resultado-meta { font-size: .74rem; color: #64748B; }
+    .resultado-vacio { padding: 14px 10px; text-align: center; color: #94A3B8; font-size: .82rem; }
+
+    .paso-numero {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 26px; height: 26px; border-radius: 50%; background: #6366f1; color: #fff;
+        font-size: .85rem; font-weight: 800; flex-shrink: 0;
+    }
+    .pill-reciente.activo, .pill-motivo.activo { background: #6366f1; color: #fff; border-color: #6366f1; }
+    .slot-hora {
+        border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 7px 10px; font-size: .85rem; font-weight: 700;
+        background: #fff; color: #334155; cursor: pointer; transition: transform .1s ease;
+    }
+    .slot-hora:hover:not(.ocupado) { border-color: #6366f1; color: #6366f1; }
+    .slot-hora.activo { background: #6366f1; border-color: #6366f1; color: #fff; }
+    .slot-hora.ocupado { background: #f1f5f9; color: #cbd5e1; cursor: not-allowed; text-decoration: line-through; }
+</style>
+
+<script>
+(function() {
+    var MASCOTAS = [
+        {% for m in mascotas_wizard %}
+        { id: {{ m.id }}, nombre: "{{ m.nombre|escapejs }}", cliente: "{{ m.cliente.nombre|escapejs }} {{ m.cliente.apellido|escapejs }}", especie: "{{ m.especie|escapejs }}" }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    var OCUPADOS = {};
+    {% for t in turnos_ocupados_wizard %}
+    OCUPADOS["{{ t.veterinario_id|default:'0' }}_{{ t.fecha_hora|date:'Y-m-d' }}_{{ t.fecha_hora|date:'H:i' }}"] = true;
+    {% endfor %}
+
+    var inputBuscar = document.getElementById('buscarMascota');
+    var resultadosDiv = document.getElementById('resultadosMascota');
+    var idMascotaReal = document.getElementById('id_mascota_real');
+    var idFechaHoraReal = document.getElementById('id_fecha_hora_real');
+    var idMotivoReal = document.getElementById('id_motivo_real');
+    var inputFecha = document.getElementById('inputFecha');
+    var selectVet = document.getElementById('{{ form.veterinario.id_for_label }}');
+    var horariosDiv = document.getElementById('horariosLibres');
+    var motivoLibre = document.getElementById('motivoLibre');
+
+    var horaSeleccionada = null;
+
+    // --- Precarga (editar turno) ---
+    {% if turno %}
+    (function() {
+        var fh = new Date("{{ turno.fecha_hora|date:'c' }}");
+        inputFecha.value = fh.toISOString().slice(0, 10);
+        horaSeleccionada = ("0" + fh.getHours()).slice(-2) + ":" + ("0" + fh.getMinutes()).slice(-2);
+    })();
+    {% endif %}
+
+    // --- Paso 1: buscador de mascota ---
+    function renderResultadosMascota(filtro) {
+        var q = (filtro || '').trim().toLowerCase();
+        var coincidencias = q ? MASCOTAS.filter(function(m) {
+            return m.nombre.toLowerCase().indexOf(q) !== -1 || m.cliente.toLowerCase().indexOf(q) !== -1;
+        }) : MASCOTAS;
+
+        resultadosDiv.innerHTML = '';
+        if (coincidencias.length === 0) {
+            resultadosDiv.innerHTML = '<div class="resultado-vacio">Nada coincide con "' + q + '"</div>';
+        } else {
+            coincidencias.slice(0, 25).forEach(function(m) {
+                var item = document.createElement('div');
+                item.className = 'resultado-item';
+                item.innerHTML =
+                    '<span class="resultado-icono"><i class="bi bi-heart-fill"></i></span>' +
+                    '<span class="flex-grow-1">' +
+                        '<span class="resultado-nombre d-block">' + m.nombre + '</span>' +
+                        '<span class="resultado-meta">Tutor: ' + m.cliente + '</span>' +
+                    '</span>';
+                item.addEventListener('click', function() { elegirMascota(m); });
+                resultadosDiv.appendChild(item);
+            });
+        }
+        resultadosDiv.classList.remove('d-none');
+    }
+
+    function elegirMascota(m) {
+        idMascotaReal.value = m.id;
+        inputBuscar.value = m.nombre + ' — ' + m.cliente;
+        resultadosDiv.classList.add('d-none');
+        document.querySelectorAll('.pill-reciente').forEach(function(p) { p.classList.toggle('activo', p.dataset.id == m.id); });
+        actualizarResumen();
+    }
+
+    inputBuscar.addEventListener('focus', function() { renderResultadosMascota(inputBuscar.value); });
+    inputBuscar.addEventListener('input', function() {
+        idMascotaReal.value = '';
+        renderResultadosMascota(inputBuscar.value);
+    });
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.producto-picker')) resultadosDiv.classList.add('d-none');
+    });
+
+    document.querySelectorAll('.pill-reciente').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            elegirMascota({ id: btn.dataset.id, nombre: btn.dataset.nombre.split(' — ')[0], cliente: btn.dataset.cliente });
+        });
+    });
+
+    // --- Paso 2: horarios libres ---
+    function generarHorarios() {
+        var horas = [];
+        for (var h = 9; h <= 18; h++) {
+            horas.push(("0" + h).slice(-2) + ":00");
+            if (h < 18) horas.push(("0" + h).slice(-2) + ":30");
+        }
+        return horas;
+    }
+
+    function renderHorarios() {
+        horariosDiv.innerHTML = '';
+        var fecha = inputFecha.value;
+        var vetId = selectVet.value || '0';
+        if (!fecha) {
+            horariosDiv.innerHTML = '<div class="small text-muted">Elegí una fecha primero.</div>';
+            return;
+        }
+        generarHorarios().forEach(function(hora) {
+            var key = vetId + '_' + fecha + '_' + hora;
+            var ocupado = !!OCUPADOS[key];
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'slot-hora' + (ocupado ? ' ocupado' : '') + (hora === horaSeleccionada ? ' activo' : '');
+            btn.textContent = hora;
+            btn.disabled = ocupado;
+            btn.addEventListener('click', function() {
+                horaSeleccionada = hora;
+                renderHorarios();
+                actualizarResumen();
+            });
+            horariosDiv.appendChild(btn);
+        });
+    }
+
+    inputFecha.addEventListener('change', renderHorarios);
+    selectVet.addEventListener('change', function() { renderHorarios(); actualizarResumen(); });
+
+    // --- Paso 3: motivo ---
+    document.querySelectorAll('.pill-motivo').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.pill-motivo').forEach(function(p) { p.classList.remove('activo'); });
+            btn.classList.add('activo');
+            motivoLibre.value = '';
+            idMotivoReal.value = btn.dataset.motivo;
+            actualizarResumen();
+        });
+    });
+    motivoLibre.addEventListener('input', function() {
+        document.querySelectorAll('.pill-motivo').forEach(function(p) { p.classList.remove('activo'); });
+        idMotivoReal.value = motivoLibre.value;
+        actualizarResumen();
+    });
+
+    // --- Resumen en vivo ---
+    function actualizarResumen() {
+        var fecha = inputFecha.value;
+        var fh = document.getElementById('resumenFechaHora');
+        if (fecha && horaSeleccionada) {
+            idFechaHoraReal.value = fecha + 'T' + horaSeleccionada;
+            var partes = fecha.split('-');
+            fh.textContent = partes[2] + '/' + partes[1] + ' · ' + horaSeleccionada;
+        } else {
+            fh.textContent = 'Elegí fecha y hora';
+        }
+
+        var mascotaWrap = document.getElementById('resumenMascotaWrap');
+        if (idMascotaReal.value) {
+            mascotaWrap.style.setProperty('display', 'flex', 'important');
+            var texto = inputBuscar.value.split(' — ');
+            document.getElementById('resumenMascota').textContent = texto[0] || '-';
+            document.getElementById('resumenTutor').textContent = 'Tutor: ' + (texto[1] || '-');
+            document.getElementById('resumenAvatar').textContent = (texto[0] || '?').slice(0, 1).toUpperCase();
+        } else {
+            mascotaWrap.style.setProperty('display', 'none', 'important');
+        }
+
+        var vetTexto = selectVet.options[selectVet.selectedIndex] ? selectVet.options[selectVet.selectedIndex].text : '-';
+        document.getElementById('resumenVet').textContent = selectVet.value ? vetTexto : '-';
+        document.getElementById('resumenMotivo').textContent = idMotivoReal.value || '-';
+    }
+
+    // --- Submit: validar que haya mascota + fecha/hora elegidas ---
+    document.getElementById('formTurno').addEventListener('submit', function(e) {
+        if (!idMascotaReal.value || !idFechaHoraReal.value) {
+            e.preventDefault();
+            alert('Elegí un paciente y un horario antes de guardar.');
+        }
+    });
+
+    renderHorarios();
+    actualizarResumen();
+})();
+</script>
 {% endblock %}

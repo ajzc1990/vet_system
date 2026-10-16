@@ -472,3 +472,96 @@ class VeterinariosCrudTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.veterinario_b.refresh_from_db()
         self.assertEqual(self.veterinario_b.nombre, 'Martín')
+
+
+class CrearTurnoWizardTests(TestCase):
+    """El formulario de alta de turno pasó a un wizard con buscador de paciente y
+    selector de horarios: mascota/fecha_hora/motivo llegan por inputs ocultos en vez
+    de los <select>/<input> nativos del form. Esto cubre que ese circuito siga
+    guardando bien, y el nuevo checkbox de aviso inmediato por WhatsApp."""
+
+    def setUp(self):
+        self.vet = Veterinaria.objects.create(nombre="Clinica Wizard")
+        self.admin = User.objects.create_user(username="admin_wizard", password="testpass123")
+        PerfilUsuario.objects.create(user=self.admin, veterinaria=self.vet, rol="ADMIN", is_approved=True)
+
+        self.cliente = Cliente.objects.create(
+            veterinaria=self.vet, nombre="Marta", apellido="Ruiz", dni="999", telefono="3815551234",
+        )
+        self.mascota = Mascota.objects.create(cliente=self.cliente, nombre="Toby", especie="CANINO")
+        self.veterinario = Veterinario.objects.create(veterinaria=self.vet, nombre="Ana", apellido="Soto", matricula="MP-1")
+
+        self.client.force_login(self.admin)
+
+    def test_la_pagina_trae_los_datos_para_el_buscador_y_horarios(self):
+        response = self.client.get(reverse('turnos:nuevo_turno'))
+
+        nombres = [m.nombre for m in response.context['mascotas_wizard']]
+        self.assertIn('Toby', nombres)
+        self.assertIn('Vacunación', response.context['motivos_rapidos'])
+
+    def test_crear_turno_con_los_campos_ocultos(self):
+        fecha_hora = (timezone.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+        response = self.client.post(reverse('turnos:nuevo_turno'), {
+            'mascota': self.mascota.id,
+            'fecha_hora': fecha_hora.strftime('%Y-%m-%dT%H:%M'),
+            'veterinario': self.veterinario.id,
+            'motivo': 'Vacunación',
+            'observaciones': '',
+        })
+
+        self.assertRedirects(response, reverse('turnos:lista_turnos'))
+        turno = Turno.objects.get(veterinaria=self.vet)
+        self.assertEqual(turno.mascota, self.mascota)
+        self.assertEqual(turno.motivo, 'Vacunación')
+
+    @patch('apps.turnos.views.enviar_recordatorio_turno')
+    def test_avisar_whatsapp_tildado_envia_el_recordatorio(self, mock_enviar):
+        fecha_hora = (timezone.now() + timedelta(days=1)).replace(hour=11, minute=0, second=0, microsecond=0)
+        self.client.post(reverse('turnos:nuevo_turno'), {
+            'mascota': self.mascota.id,
+            'fecha_hora': fecha_hora.strftime('%Y-%m-%dT%H:%M'),
+            'veterinario': self.veterinario.id,
+            'motivo': 'Consulta clínica',
+            'observaciones': '',
+            'avisar_whatsapp': 'on',
+        })
+
+        mock_enviar.assert_called_once()
+
+    @patch('apps.turnos.views.enviar_recordatorio_turno')
+    def test_avisar_whatsapp_no_tildado_no_envia_nada(self, mock_enviar):
+        fecha_hora = (timezone.now() + timedelta(days=1)).replace(hour=12, minute=0, second=0, microsecond=0)
+        self.client.post(reverse('turnos:nuevo_turno'), {
+            'mascota': self.mascota.id,
+            'fecha_hora': fecha_hora.strftime('%Y-%m-%dT%H:%M'),
+            'veterinario': self.veterinario.id,
+            'motivo': 'Consulta clínica',
+            'observaciones': '',
+        })
+
+        mock_enviar.assert_not_called()
+
+    @patch('apps.turnos.views.enviar_recordatorio_turno')
+    def test_la_demo_no_manda_whatsapp_aunque_este_tildado(self, mock_enviar):
+        from apps.usuarios.management.commands.seed_demo import DEMO_VET_NOMBRE
+
+        vet_demo = Veterinaria.objects.create(nombre=DEMO_VET_NOMBRE)
+        admin_demo = User.objects.create_user(username="admin_demo_wizard", password="testpass123")
+        PerfilUsuario.objects.create(user=admin_demo, veterinaria=vet_demo, rol="ADMIN", is_approved=True)
+        cliente_demo = Cliente.objects.create(
+            veterinaria=vet_demo, nombre="Demo", apellido="Cliente", dni="1000", telefono="381",
+        )
+        mascota_demo = Mascota.objects.create(cliente=cliente_demo, nombre="DemoPet", especie="CANINO")
+        self.client.force_login(admin_demo)
+
+        fecha_hora = (timezone.now() + timedelta(days=1)).replace(hour=13, minute=0, second=0, microsecond=0)
+        self.client.post(reverse('turnos:nuevo_turno'), {
+            'mascota': mascota_demo.id,
+            'fecha_hora': fecha_hora.strftime('%Y-%m-%dT%H:%M'),
+            'motivo': 'Consulta clínica',
+            'observaciones': '',
+            'avisar_whatsapp': 'on',
+        })
+
+        mock_enviar.assert_not_called()

@@ -1,13 +1,52 @@
 import os
+from datetime import timedelta
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from apps.clientes.models import Mascota
 from .models import Turno, Veterinario, SolicitudTurnoWeb
 from .forms import TurnoForm, VeterinarioForm
 from apps.usuarios.models import Veterinaria
-from apps.usuarios.utils import get_veterinaria_activa
+from apps.usuarios.utils import get_veterinaria_activa, es_veterinaria_demo
+from .whatsapp import enviar_recordatorio_turno, RecordatorioWhatsAppError, RecordatoriosDeshabilitados
+
+MOTIVOS_RAPIDOS = ['Vacunación', 'Consulta clínica', 'Control posoperatorio', 'Desparasitación']
+
+
+def _contexto_wizard_turno(request, vet, excluir_turno=None):
+    """Datos que el buscador de pacientes, el selector de horarios libres y el panel
+    de recientes del formulario de turno necesitan del lado del cliente."""
+    if request.user.is_superuser and not vet:
+        qs_mascotas = Mascota.objects.filter(cliente__activo=True).select_related('cliente')
+        qs_turnos_recientes = Turno.objects.all()
+        qs_turnos_ocupados = Turno.objects.all()
+    else:
+        qs_mascotas = Mascota.objects.filter(cliente__veterinaria=vet, cliente__activo=True).select_related('cliente') if vet else Mascota.objects.none()
+        qs_turnos_recientes = Turno.objects.filter(veterinaria=vet) if vet else Turno.objects.none()
+        qs_turnos_ocupados = qs_turnos_recientes
+
+    recientes_ids = []
+    for mascota_id in qs_turnos_recientes.exclude(estado='CANCELADO').order_by('-creado').values_list('mascota_id', flat=True):
+        if mascota_id not in recientes_ids:
+            recientes_ids.append(mascota_id)
+        if len(recientes_ids) >= 6:
+            break
+    mascotas_por_id = {m.id: m for m in qs_mascotas.filter(id__in=recientes_ids)}
+    recientes = [mascotas_por_id[mid] for mid in recientes_ids if mid in mascotas_por_id]
+
+    desde = timezone.now() - timedelta(days=1)
+    ocupados_qs = qs_turnos_ocupados.filter(fecha_hora__gte=desde).exclude(estado='CANCELADO')
+    if excluir_turno:
+        ocupados_qs = ocupados_qs.exclude(pk=excluir_turno.pk)
+
+    return {
+        'mascotas_wizard': qs_mascotas.order_by('nombre'),
+        'recientes_wizard': recientes,
+        'turnos_ocupados_wizard': ocupados_qs.values('veterinario_id', 'fecha_hora'),
+        'motivos_rapidos': MOTIVOS_RAPIDOS,
+    }
 
 
 @login_required
@@ -71,7 +110,20 @@ def crear_turno(request):
                 return redirect('turnos:lista_turnos')
 
             turno.save()
-            messages.success(request, f"¡Turno agendado con éxito para {turno.mascota.nombre}!")
+
+            if request.POST.get('avisar_whatsapp') == 'on':
+                if es_veterinaria_demo(turno.veterinaria):
+                    messages.success(request, f"¡Turno agendado con éxito para {turno.mascota.nombre}! (La demo no manda WhatsApp real.)")
+                else:
+                    try:
+                        enviar_recordatorio_turno(turno)
+                        messages.success(request, f"¡Turno agendado y aviso por WhatsApp enviado a {turno.mascota.cliente.nombre}!")
+                    except (RecordatorioWhatsAppError, RecordatoriosDeshabilitados) as e:
+                        messages.success(request, f"¡Turno agendado con éxito para {turno.mascota.nombre}!")
+                        messages.warning(request, f"No se pudo enviar el aviso por WhatsApp: {e}")
+            else:
+                messages.success(request, f"¡Turno agendado con éxito para {turno.mascota.nombre}!")
+
             return redirect('turnos:lista_turnos')
         else:
             print("\n" + "="*50)
@@ -84,7 +136,8 @@ def crear_turno(request):
 
     return render(request, 'turnos/nuevo_turno.html', {
         'form': form,
-        'titulo': 'Agendar Nuevo Turno'
+        'titulo': 'Agendar Nuevo Turno',
+        **_contexto_wizard_turno(request, vet),
     })
 
 
@@ -112,7 +165,9 @@ def editar_turno(request, pk):
     return render(request, 'turnos/nuevo_turno.html', {
         'form': form,
         'turno': turno,
-        'titulo': f'Editar Turno: {turno.mascota.nombre}'
+        'titulo': f'Editar Turno: {turno.mascota.nombre}',
+        'mascota_inicial_texto': f'{turno.mascota.nombre} — {turno.mascota.cliente.nombre} {turno.mascota.cliente.apellido}',
+        **_contexto_wizard_turno(request, vet, excluir_turno=turno),
     })
 
 
