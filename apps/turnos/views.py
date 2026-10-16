@@ -71,6 +71,10 @@ def lista_turnos(request):
     fecha_filter = request.GET.get('fecha')
     ver_todos = request.GET.get('todos') == '1'
     hoy = timezone.localdate()
+    fecha_actual = fecha_filter or hoy
+    if isinstance(fecha_actual, str):
+        from datetime import date
+        fecha_actual = date.fromisoformat(fecha_actual)
 
     if fecha_filter:
         turnos = turnos.filter(fecha_hora__date=fecha_filter)
@@ -79,6 +83,30 @@ def lista_turnos(request):
 
     turnos = turnos.select_related('mascota', 'mascota__cliente', 'veterinario').order_by('fecha_hora')
 
+    # Conteos por estado del día seleccionado (sin aplicar el filtro de estado), para
+    # las pills de filtro rápido. No tiene sentido en "ver todos" (sería el histórico completo).
+    estados_del_dia = {}
+    tira_dias = []
+    if not ver_todos:
+        base_del_dia = Turno.objects.filter(veterinaria=vet).filter(fecha_hora__date=fecha_actual) if vet else Turno.objects.none()
+        if request.user.is_superuser and not vet:
+            base_del_dia = Turno.objects.filter(fecha_hora__date=fecha_actual)
+        for codigo, _ in Turno.ESTADOS:
+            estados_del_dia[codigo] = base_del_dia.filter(estado=codigo).count()
+        estados_del_dia['TODOS'] = base_del_dia.count()
+
+        base_vet = Turno.objects.filter(veterinaria=vet) if vet else Turno.objects.none()
+        if request.user.is_superuser and not vet:
+            base_vet = Turno.objects.all()
+        for offset in range(-2, 3):
+            dia = fecha_actual + timedelta(days=offset)
+            tira_dias.append({
+                'fecha': dia,
+                'count': base_vet.filter(fecha_hora__date=dia).count(),
+                'es_hoy': dia == hoy,
+                'es_seleccionado': dia == fecha_actual,
+            })
+
     paginator = Paginator(turnos, 25)
     turnos_pagina = paginator.get_page(request.GET.get('page'))
 
@@ -86,8 +114,11 @@ def lista_turnos(request):
         'turnos': turnos_pagina,
         'estado_filter': estado_filter,
         'fecha_filter': fecha_filter,  # Retorna el string enviado para mantener la fecha en el input
+        'fecha_actual': fecha_actual,
         'ver_todos': ver_todos,
         'hoy': hoy,
+        'estados_del_dia': estados_del_dia,
+        'tira_dias': tira_dias,
     })
 
 @login_required

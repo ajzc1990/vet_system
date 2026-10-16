@@ -4,47 +4,65 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-<!-- Header & Controles de Filtro -->
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+<!-- Header -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
     <div>
-        <h2 class="h3 fw-extrabold text-dark mb-0 d-flex align-items-center gap-2">
-            <i class="bi bi-calendar-week-fill text-primary"></i> Agenda Diaria de Turnos
-        </h2>
         <p class="text-muted small mb-0">
-            {% if ver_todos %}
-                Mostrando el historial completo de turnos
-            {% elif fecha_filter %}
-                Turnos del {{ fecha_filter|date:"d/m/Y" }}
-            {% else %}
-                Turnos de hoy, {{ hoy|date:"d/m/Y" }}
-            {% endif %}
+            {% if ver_todos %}Historial completo{% else %}{{ fecha_actual|date:"l j \d\e F" }}{% endif %}
         </p>
+        <h2 class="h3 fw-extrabold text-dark mb-0">Agenda del día</h2>
     </div>
-
     <div class="d-flex align-items-center gap-2 flex-wrap">
-        <!-- Filtro por Fecha -->
-        <form method="GET" class="d-flex align-items-center bg-white p-2 rounded-3 shadow-sm border gap-2">
-            <label for="fecha" class="form-label me-1 mb-0 fw-bold text-secondary small text-nowrap">
-                <i class="bi bi-funnel-fill text-primary me-1"></i>Fecha:
-            </label>
-            <input type="date" id="fecha" name="fecha" class="form-control form-control-sm border-0 bg-light fw-semibold" value="{{ fecha_filter|default:hoy|date:'Y-m-d' }}">
-            <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold rounded-2">
-                <i class="bi bi-search me-1"></i> Ver
-            </button>
-        </form>
-
-        <a href="?todos=1" class="btn btn-sm {% if ver_todos %}btn-secondary{% else %}btn-outline-secondary{% endif %} fw-bold px-3 rounded-2" title="Ver el historial completo, sin filtrar por fecha">
-            <i class="bi bi-infinity me-1"></i> Ver Todos
-        </a>
-
-        <a href="{% url 'turnos:lista_solicitudes_turno' %}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
+        <a href="{% url 'turnos:lista_solicitudes_turno' %}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2 fw-bold px-3 rounded-3">
             <i class="bi bi-envelope-paper-heart-fill"></i> Solicitudes Online
         </a>
-        <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
-            <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
+        <a href="?todos=1" class="btn btn-sm {% if ver_todos %}btn-secondary{% else %}btn-outline-secondary{% endif %} fw-bold px-3 rounded-3" title="Ver el historial completo, sin filtrar por fecha">
+            <i class="bi bi-infinity me-1"></i> Ver Todos
         </a>
     </div>
 </div>
+
+{% if not ver_todos %}
+<!-- Tira de días -->
+<div class="d-flex align-items-center gap-2 mb-3 overflow-auto pb-1">
+    {% for dia in tira_dias %}
+    <a href="?fecha={{ dia.fecha|date:'Y-m-d' }}" class="dia-pill text-decoration-none {% if dia.es_seleccionado %}activo{% endif %}">
+        <div class="extra-small text-uppercase fw-semibold {% if not dia.es_seleccionado %}text-muted{% endif %}">{{ dia.fecha|date:"D" }}</div>
+        <div class="fw-extrabold">{{ dia.fecha|date:"d" }}</div>
+        <div class="extra-small {% if not dia.es_seleccionado %}text-muted{% endif %}">{{ dia.count }} turno{{ dia.count|pluralize }}</div>
+    </a>
+    {% endfor %}
+    {% if fecha_actual != hoy %}
+    <a href="?" class="btn btn-sm btn-outline-secondary fw-semibold rounded-3 ms-1">Hoy</a>
+    {% endif %}
+</div>
+
+<!-- Pills de estado -->
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="?fecha={{ fecha_actual|date:'Y-m-d' }}" class="estado-pill {% if not estado_filter %}activo{% endif %}">Todos &middot; {{ estados_del_dia.TODOS }}</a>
+    <a href="?fecha={{ fecha_actual|date:'Y-m-d' }}&estado=PENDIENTE" class="estado-pill {% if estado_filter == 'PENDIENTE' %}activo{% endif %}">Pendientes &middot; {{ estados_del_dia.PENDIENTE }}</a>
+    <a href="?fecha={{ fecha_actual|date:'Y-m-d' }}&estado=CONFIRMADO" class="estado-pill {% if estado_filter == 'CONFIRMADO' %}activo{% endif %}">Confirmados &middot; {{ estados_del_dia.CONFIRMADO }}</a>
+    <a href="?fecha={{ fecha_actual|date:'Y-m-d' }}&estado=ATENDIENDO" class="estado-pill {% if estado_filter == 'ATENDIENDO' %}activo{% endif %}">En consulta &middot; {{ estados_del_dia.ATENDIENDO }}</a>
+    <a href="?fecha={{ fecha_actual|date:'Y-m-d' }}&estado=COMPLETADO" class="estado-pill {% if estado_filter == 'COMPLETADO' %}activo{% endif %}">Atendidos &middot; {{ estados_del_dia.COMPLETADO }}</a>
+    <a href="?fecha={{ fecha_actual|date:'Y-m-d' }}&estado=CANCELADO" class="estado-pill {% if estado_filter == 'CANCELADO' %}activo{% endif %}">Cancelados &middot; {{ estados_del_dia.CANCELADO }}</a>
+</div>
+{% endif %}
+
+<div class="d-flex justify-content-end mb-3">
+    <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary d-inline-flex align-items-center gap-2 fw-bold px-3 py-2 rounded-3 shadow-sm">
+        <i class="bi bi-plus-circle-fill"></i> Nuevo Turno
+    </a>
+</div>
+
+<style>
+    .dia-pill { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:62px; padding:8px 6px; border-radius:12px; border:1px solid #e2e8f0; background:#fff; color:#334155; flex-shrink:0; }
+    .dia-pill.activo { background:#6366f1; border-color:#6366f1; color:#fff; }
+    .dia-pill.activo .text-muted { color: rgba(255,255,255,.75) !important; }
+    .estado-pill { display:inline-block; padding:6px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-weight:600; font-size:.82rem; text-decoration:none; }
+    .estado-pill.activo { background:#6366f1; border-color:#6366f1; color:#fff; }
+    .estado-pill:hover { border-color:#6366f1; color:#6366f1; text-decoration:none; }
+    .estado-pill.activo:hover { color:#fff; }
+</style>
 
 <!-- Estado Vacío (compartido entre vista de tabla y de tarjetas) -->
 {% if not turnos %}
@@ -119,24 +137,32 @@
                 <i class="bi bi-chat-left-text me-1"></i>{{ turno.motivo|default:"Sin motivo especificado" }}
             </div>
 
-            <div class="d-flex flex-wrap gap-2 pt-2 border-top">
-                {% if turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
-                    <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-success btn-sm fw-bold px-3 rounded-2 d-inline-flex align-items-center gap-1">
-                        <i class="bi bi-clipboard2-pulse-fill"></i> Atender
-                    </a>
+            <div class="d-flex flex-wrap gap-2 pt-2 border-top align-items-center">
+                {% if turno.estado == 'ATENDIENDO' %}
+                    <a href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}" class="btn btn-success btn-sm fw-bold px-3 rounded-2">Finalizar</a>
+                {% elif turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
+                    <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-primary btn-sm fw-bold px-3 rounded-2">Atender</a>
                 {% endif %}
-                <a href="{% url 'turnos:editar_turno' turno.id %}" class="btn btn-light btn-sm border text-secondary rounded-2">
-                    <i class="bi bi-pencil-fill"></i> Editar
-                </a>
-                {% if turno.estado == 'PENDIENTE' %}
-                    <a href="{% url 'turnos:cambiar_estado' turno.id 'CONFIRMADO' %}" class="btn btn-outline-primary btn-sm rounded-2"><i class="bi bi-check-circle"></i></a>
+                {% if turno.link_recordatorio_whatsapp %}
+                    <a href="{{ turno.link_recordatorio_whatsapp }}" target="_blank" class="btn btn-light btn-sm border rounded-2"><i class="bi bi-whatsapp text-success"></i></a>
                 {% endif %}
-                {% if turno.estado == 'PENDIENTE' or turno.estado == 'CONFIRMADO' or turno.estado == 'ATENDIENDO' %}
-                    <a href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}" class="btn btn-outline-success btn-sm rounded-2"><i class="bi bi-check-all"></i></a>
-                {% endif %}
-                {% if turno.estado != 'CANCELADO' %}
-                    <a href="{% url 'turnos:cambiar_estado' turno.id 'CANCELADO' %}" class="btn btn-outline-danger btn-sm rounded-2"><i class="bi bi-x-circle"></i></a>
-                {% endif %}
+                <div class="dropdown">
+                    <button class="btn btn-light btn-sm border rounded-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
+                    <ul class="dropdown-menu shadow border-0">
+                        <li><a class="dropdown-item small" href="{% url 'turnos:editar_turno' turno.id %}"><i class="bi bi-pencil-fill me-2"></i>Editar</a></li>
+                        {% if turno.estado == 'PENDIENTE' %}
+                        <li><a class="dropdown-item small" href="{% url 'turnos:cambiar_estado' turno.id 'CONFIRMADO' %}"><i class="bi bi-check-circle me-2"></i>Confirmar</a></li>
+                        {% endif %}
+                        {% if turno.estado == 'PENDIENTE' or turno.estado == 'CONFIRMADO' %}
+                        <li><a class="dropdown-item small" href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}"><i class="bi bi-check-all me-2"></i>Marcar completado</a></li>
+                        {% endif %}
+                        {% if turno.estado != 'CANCELADO' %}
+                        <li><a class="dropdown-item small text-danger" href="{% url 'turnos:cambiar_estado' turno.id 'CANCELADO' %}"><i class="bi bi-x-circle me-2"></i>Cancelar</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -243,34 +269,33 @@
                         <!-- Acciones -->
                         <td class="text-end pe-4 py-3">
                             <div class="d-inline-flex gap-1 align-items-center">
-                                <!-- Botón de Atención Directa -->
-                                {% if turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
-                                    <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-success btn-sm fw-bold px-3 py-1.5 shadow-sm rounded-2 d-inline-flex align-items-center gap-1" title="Iniciar Consulta médica en Historia Clínica">
-                                        <i class="bi bi-clipboard2-pulse-fill"></i> Atender
-                                    </a>
+                                {% if turno.estado == 'ATENDIENDO' %}
+                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}" class="btn btn-success btn-sm fw-bold px-3 rounded-2">Finalizar</a>
+                                {% elif turno.mascota and turno.estado != 'COMPLETADO' and turno.estado != 'CANCELADO' %}
+                                    <a href="{% url 'turnos:atender_turno' turno.id %}" class="btn btn-primary btn-sm fw-bold px-3 rounded-2">Atender</a>
                                 {% endif %}
 
-                                <a href="{% url 'turnos:editar_turno' turno.id %}" class="btn btn-light btn-sm border text-secondary rounded-2" title="Editar Turno">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </a>
-
-                                {% if turno.estado == 'PENDIENTE' %}
-                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'CONFIRMADO' %}" class="btn btn-outline-primary btn-sm rounded-2" title="Confirmar Turno">
-                                        <i class="bi bi-check-circle"></i>
-                                    </a>
+                                {% if turno.link_recordatorio_whatsapp %}
+                                    <a href="{{ turno.link_recordatorio_whatsapp }}" target="_blank" class="btn btn-light btn-sm border rounded-2" title="Avisar por WhatsApp"><i class="bi bi-whatsapp text-success"></i></a>
                                 {% endif %}
 
-                                {% if turno.estado == 'PENDIENTE' or turno.estado == 'CONFIRMADO' or turno.estado == 'ATENDIENDO' %}
-                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}" class="btn btn-outline-success btn-sm rounded-2" title="Marcar Completado">
-                                        <i class="bi bi-check-all"></i>
-                                    </a>
-                                {% endif %}
-
-                                {% if turno.estado != 'CANCELADO' %}
-                                    <a href="{% url 'turnos:cambiar_estado' turno.id 'CANCELADO' %}" class="btn btn-outline-danger btn-sm rounded-2" title="Cancelar Turno">
-                                        <i class="bi bi-x-circle"></i>
-                                    </a>
-                                {% endif %}
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm border rounded-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Más acciones">
+                                        <i class="bi bi-three-dots"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <li><a class="dropdown-item small" href="{% url 'turnos:editar_turno' turno.id %}"><i class="bi bi-pencil-fill me-2"></i>Editar</a></li>
+                                        {% if turno.estado == 'PENDIENTE' %}
+                                        <li><a class="dropdown-item small" href="{% url 'turnos:cambiar_estado' turno.id 'CONFIRMADO' %}"><i class="bi bi-check-circle me-2"></i>Confirmar</a></li>
+                                        {% endif %}
+                                        {% if turno.estado == 'PENDIENTE' or turno.estado == 'CONFIRMADO' %}
+                                        <li><a class="dropdown-item small" href="{% url 'turnos:cambiar_estado' turno.id 'COMPLETADO' %}"><i class="bi bi-check-all me-2"></i>Marcar completado</a></li>
+                                        {% endif %}
+                                        {% if turno.estado != 'CANCELADO' %}
+                                        <li><a class="dropdown-item small text-danger" href="{% url 'turnos:cambiar_estado' turno.id 'CANCELADO' %}"><i class="bi bi-x-circle me-2"></i>Cancelar</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
                             </div>
                         </td>
                     </tr>
