@@ -6,21 +6,16 @@
 <div class="container-fluid py-4">
 <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
     <div>
-        <h2 class="h3 fw-bold text-dark mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Panel de Control Operativo</h2>
-        <p class="text-muted small mb-0">Resumen del día {{ hoy|date:"d/m/Y" }}</p>
+        <p class="text-muted small mb-1 text-uppercase fw-semibold" style="letter-spacing:.03em;">{{ hoy|date:"l j \d\e F" }} &middot; {{ vet.nombre|default:"VeterSystem" }}</p>
+        <h2 class="h3 fw-extrabold text-dark mb-0">{{ saludo }}, {% if user.last_name %}Dr(a). {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h2>
     </div>
 
-    <div class="d-flex flex-wrap gap-2">
-        <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-warning text-dark fw-semibold shadow-sm">
-            <i class="bi bi-bell-fill me-1"></i> Recordatorios
-        </a>
-        <a href="{% url 'turnos:nuevo_turno' %}" class="btn btn-primary fw-semibold shadow-sm">
-            <i class="bi bi-calendar-plus me-1"></i> Agendar Turno
-        </a>
-        <a href="{% url 'clientes:crear_cliente' %}" class="btn btn-outline-primary fw-semibold shadow-sm">
-            <i class="bi bi-person-plus me-1"></i> Nuevo Cliente
-        </a>
-    </div>
+    <form method="get" action="{% url 'clientes:lista_clientes' %}" class="flex-grow-1" style="max-width: 360px;">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Buscar paciente o tutor...">
+        </div>
+    </form>
 </div>
 
 <!-- Tarjetas de KPIs Principales -->
@@ -92,10 +87,12 @@
     </div>
 </div>
 
+<div class="row g-4 mb-4">
+<div class="col-lg-8">
 <!-- Próximos Turnos del Día -->
-<div class="card border-0 shadow-sm rounded-3 mb-4">
+<div class="card border-0 shadow-sm rounded-3 h-100">
     <div class="card-header bg-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Próxima Sala de Espera / Turnos</h5>
+        <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Sala de Espera</h5>
         <a href="{% url 'turnos:lista_turnos' %}" class="btn btn-sm btn-outline-primary fw-semibold">Ver Agenda Completa</a>
     </div>
     <div class="card-body p-0">
@@ -170,6 +167,41 @@
             </div>
         {% endif %}
     </div>
+</div>
+</div>
+
+<div class="col-lg-4 d-flex flex-column gap-4">
+    <!-- Acciones rápidas -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title fw-bold text-dark mb-0"><i class="bi bi-lightning-charge-fill me-2 text-primary"></i>Acciones rápidas</h5>
+        </div>
+        <div class="card-body d-flex flex-column gap-2">
+            <a href="{% url 'clientes:crear_cliente' %}" class="btn btn-light border text-start fw-semibold d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-person-plus-fill text-primary"></i> Nuevo cliente
+            </a>
+            <a href="{% url 'dashboard:centro_recordatorios' %}" class="btn btn-light border text-start fw-semibold d-flex align-items-center gap-2 py-2">
+                <i class="bi bi-whatsapp text-success"></i> Enviar recordatorios
+            </a>
+        </div>
+    </div>
+
+    <!-- Vencimientos atrasados -->
+    {% if cant_vencimientos_atrasados > 0 %}
+    <div class="card border-0 shadow-sm rounded-3 text-white" style="background: var(--vs-sidebar-bg, #0f1420);">
+        <div class="card-body p-4">
+            <h5 class="fw-extrabold mb-2">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                {{ cant_vencimientos_atrasados }} vencimiento{{ cant_vencimientos_atrasados|pluralize }} atrasado{{ cant_vencimientos_atrasados|pluralize }}
+            </h5>
+            <p class="small text-white-50 mb-3">Avisá a los tutores por WhatsApp desde la lista.</p>
+            <a href="{% url 'dashboard:centro_recordatorios' %}" class="small fw-bold text-warning text-decoration-none">
+                Ver vencimientos <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
 </div>
 
 <!-- CONSULTAS Y MENSAJES RECIBIDOS DESDE LA LANDING PAGE (solo superusuario: son

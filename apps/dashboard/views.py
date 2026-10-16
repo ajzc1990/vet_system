@@ -22,6 +22,14 @@ def dashboard_principal(request):
     hoy = timezone.localdate()
     limite_vencimiento = hoy + timedelta(days=30)
 
+    hora_actual = timezone.localtime().hour
+    if hora_actual < 12:
+        saludo = "Buen día"
+    elif hora_actual < 20:
+        saludo = "Buenas tardes"
+    else:
+        saludo = "Buenas noches"
+
     # 1. Filtros base según Tenant
     if request.user.is_superuser and not vet:
         qs_turnos = Turno.objects.all()
@@ -56,6 +64,19 @@ def dashboard_principal(request):
     # Próximos turnos del día para la tabla resumida
     proximos_turnos = turnos_hoy.filter(estado__in=['PENDIENTE', 'CONFIRMADO', 'EN_ESPERA', 'ATENDIENDO'])[:5]
 
+    # Vacunas/desparasitaciones con refuerzo ya vencido (no "próximos", atrasados de verdad),
+    # para el aviso de "avisale a estos tutores" del panel.
+    if request.user.is_superuser and not vet:
+        qs_vacunas = RegistroVacuna.objects.all()
+        qs_despara = RegistroDesparasitacion.objects.all()
+    else:
+        qs_vacunas = RegistroVacuna.objects.filter(veterinaria=vet) if vet else RegistroVacuna.objects.none()
+        qs_despara = RegistroDesparasitacion.objects.filter(veterinaria=vet) if vet else RegistroDesparasitacion.objects.none()
+    cant_vencimientos_atrasados = (
+        qs_vacunas.filter(fecha_proxima_dosis__lt=hoy).count()
+        + qs_despara.filter(fecha_proxima_dosis__lt=hoy).count()
+    )
+
     # 3. Mensajes de Contacto recibidos desde la Landing Page: son consultas de
     # prospectos de TODO el SaaS (no pertenecen a ninguna veterinaria), así que sólo
     # el superusuario los ve. Ni se consultan para el resto del staff.
@@ -76,9 +97,12 @@ def dashboard_principal(request):
         'cant_proximo_vencer': cant_proximo_vencer,
         'cant_vencidos': cant_vencidos,
         'proximos_turnos': proximos_turnos,
+        'cant_vencimientos_atrasados': cant_vencimientos_atrasados,
         'mensajes_contacto': mensajes_contacto,
         'mensajes_no_leidos_count': mensajes_no_leidos_count,
         'hoy': hoy,
+        'vet': vet,
+        'saludo': saludo,
     })
 
 
