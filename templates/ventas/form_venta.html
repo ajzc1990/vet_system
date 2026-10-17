@@ -245,8 +245,18 @@
             return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
+        function posicionarResultados(inputBuscar, caja) {
+            var r = inputBuscar.getBoundingClientRect();
+            caja.style.position = 'fixed';
+            caja.style.top = (r.bottom + 6) + 'px';
+            caja.style.left = r.left + 'px';
+            caja.style.width = r.width + 'px';
+            caja.style.right = 'auto';
+        }
+
         function renderResultados(fila, filtro) {
-            var caja = fila.querySelector('.resultados-producto');
+            var caja = fila._cajaResultados;
+            var inputBuscar = fila.querySelector('.input-buscar-producto');
             var q = (filtro || '').trim().toLowerCase();
             var coincidencias = q ? PRODUCTOS.filter(function(p) { return p.nombre.toLowerCase().indexOf(q) !== -1; }) : PRODUCTOS;
 
@@ -267,6 +277,7 @@
                     caja.appendChild(item);
                 });
             }
+            posicionarResultados(inputBuscar, caja);
             caja.classList.remove('d-none');
         }
 
@@ -278,13 +289,23 @@
             hidden.dataset.stock = p.stock;
             hidden.dataset.servicio = p.esServicio ? '1' : '0';
             buscar.value = p.nombre;
-            fila.querySelector('.resultados-producto').classList.add('d-none');
+            fila._cajaResultados.classList.add('d-none');
             fila.querySelector('.producto-picker').classList.add('producto-elegido');
             recalcular();
         }
 
         function agregarFila() {
-            tbody.appendChild(template.content.cloneNode(true));
+            var frag = template.content.cloneNode(true);
+            var filaNueva = frag.querySelector('.fila-item');
+            tbody.appendChild(frag);
+            // El desplegable se saca de la tabla y se cuelga directo del <body>: adentro
+            // de .table-responsive (que tiene overflow para el scroll horizontal) un
+            // position:absolute queda recortado/no se ve, aunque el contenido esté bien
+            // generado. Afuera, posicionado por JS (ver posicionarResultados), no lo
+            // recorta nada.
+            var caja = filaNueva.querySelector('.resultados-producto');
+            document.body.appendChild(caja);
+            filaNueva._cajaResultados = caja;
             recalcular();
         }
 
@@ -340,6 +361,7 @@
             if (btnQuitar) {
                 var fila = btnQuitar.closest('tr');
                 if (tbody.querySelectorAll('.fila-item').length > 1) {
+                    if (fila._cajaResultados) { fila._cajaResultados.remove(); }
                     fila.remove();
                 } else {
                     fila.querySelector('.input-producto-id').value = '';
@@ -373,7 +395,7 @@
         selectMedioPago.addEventListener('change', recalcular);
 
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.producto-picker')) {
+            if (!e.target.closest('.producto-picker') && !e.target.closest('.resultados-producto')) {
                 document.querySelectorAll('.resultados-producto').forEach(function(c) { c.classList.add('d-none'); });
             }
         });
