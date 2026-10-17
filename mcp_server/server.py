@@ -34,6 +34,13 @@ def build_app():
     mcp.tool()(tools.historial_paciente)
     mcp.tool()(tools.buscar_cliente)
     mcp.tool()(tools.turnos)
+    mcp.tool()(tools.ventas)
+    mcp.tool()(tools.estado_caja)
+    mcp.tool()(tools.compras)
+    mcp.tool()(tools.buscar_proveedores)
+    mcp.tool()(tools.internaciones)
+    mcp.tool()(tools.equipo_veterinarios)
+    mcp.tool()(tools.datos_veterinaria)
 
     hosts_permitidos = [h.strip() for h in os.environ.get('MCP_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
     seguridad = TransportSecuritySettings(

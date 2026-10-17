@@ -77,7 +77,7 @@ puede "Regenerar token": el anterior deja de funcionar al instante.
 
 ---
 
-## 3. Las 7 herramientas (solo lectura)
+## 3. Las herramientas (solo lectura)
 
 | Herramienta | Para qué sirve | Ejemplo de pregunta |
 |---|---|---|
@@ -85,9 +85,16 @@ puede "Regenerar token": el anterior deja de funcionar al instante.
 | `consultar_stock` | Stock actual de un producto y si está bajo mínimo | *"¿Cuántas pipetas antipulgas me quedan?"* |
 | `productos_por_vencer` | Productos que vencen dentro de N días (default 30) | *"¿Qué productos vencen antes de fin de mes?"* |
 | `buscar_paciente` | Busca una mascota por nombre, tutor, especie o raza | *"Buscá a Toby"* |
-| `historial_paciente` | Consultas, vacunas y desparasitaciones de una mascota (necesita el ID) | *"¿Cuándo fue la última vacuna de Toby?"* |
+| `historial_paciente` | Consultas, vacunas, desparasitaciones y recetas de una mascota (necesita el ID) | *"¿Cuándo fue la última vacuna de Toby?"* |
 | `buscar_cliente` | Busca un tutor por nombre, DNI o teléfono | *"Buscá al cliente con DNI 30123456"* |
 | `turnos` | Turnos en un rango de fechas (default: hoy) | *"¿Qué turnos tengo hoy?"* |
+| `ventas` | Ventas en un rango de fechas, con el total facturado (default: últimos 7 días) | *"¿Cuánto facturé esta semana?"* |
+| `estado_caja` | Estado de la caja diaria más reciente | *"¿Está abierta la caja?"* |
+| `compras` | Compras a proveedores en un rango de fechas (default: últimos 7 días) | *"¿Qué compramos este mes?"* |
+| `buscar_proveedores` | Busca proveedores por nombre o contacto | *"Buscá el proveedor VetFarma"* |
+| `internaciones` | Pacientes internados (activas por defecto) | *"¿Quién está internado hoy?"* |
+| `equipo_veterinarios` | Lista los veterinarios activos de la clínica | *"¿Quiénes son los veterinarios de la clínica?"* |
+| `datos_veterinaria` | Datos de contacto de tu clínica y estado de tu suscripción | *"¿Cuándo vence mi plan?"* |
 
 Todas devuelven como máximo 20 resultados por llamada (con el total real
 encontrado, por si hace falta acotar más la búsqueda).

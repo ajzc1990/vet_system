@@ -1,7 +1,8 @@
 """Tests del servidor MCP. La prueba más importante de todas es
-test_una_clinica_jamas_ve_datos_de_otra: crea dos clínicas con productos,
-pacientes y turnos de nombres parecidos a propósito, y confirma que cada
-token SOLO ve los datos de su propia clínica en las 7 herramientas.
+AislamientoMultiTenantTests: crea dos clínicas con productos, pacientes,
+turnos, ventas, compras, proveedores e internaciones de nombres parecidos
+a propósito, y confirma que cada token SOLO ve los datos de su propia
+clínica en cada una de las herramientas.
 
 Usa TransactionTestCase (no TestCase) porque las tools corren en un hilo
 aparte vía sync_to_async: con TestCase (que envuelve todo en una transacción)
@@ -17,10 +18,12 @@ from rest_framework.authtoken.models import Token
 from starlette.testclient import TestClient
 
 from apps.clientes.models import Cliente, Mascota
-from apps.historia_clinica.models import ConsultaMedica, RegistroVacuna
+from apps.compras.models import Compra, Proveedor
+from apps.historia_clinica.models import ConsultaMedica, Internacion, RegistroVacuna
 from apps.inventario.models import Categoria, Producto
-from apps.turnos.models import Turno
+from apps.turnos.models import Turno, Veterinario
 from apps.usuarios.models import PerfilUsuario, Veterinaria
+from apps.ventas.models import CajaDiaria, DetalleVenta, Venta
 
 from .server import build_app
 
@@ -96,7 +99,42 @@ class AislamientoMultiTenantTests(TransactionTestCase):
         self.turno_a = Turno.objects.create(veterinaria=self.vet_a, mascota=self.mascota_a, fecha_hora=timezone.now(), motivo="Turno A")
         self.turno_b = Turno.objects.create(veterinaria=self.vet_b, mascota=self.mascota_b, fecha_hora=timezone.now(), motivo="Turno B")
 
+        self.vet_staff_a = Veterinario.objects.create(veterinaria=self.vet_a, nombre="Ana", apellido="Gómez", matricula="MP-1")
+        self.vet_staff_b = Veterinario.objects.create(veterinaria=self.vet_b, nombre="Ana", apellido="Gómez", matricula="MP-1")
+
+        self.caja_a = CajaDiaria.objects.create(veterinaria=self.vet_a, usuario_apertura=self.user_a, monto_inicial=1000, estado='ABIERTA')
+        self.caja_b = CajaDiaria.objects.create(veterinaria=self.vet_b, usuario_apertura=self.user_b, monto_inicial=2000, estado='ABIERTA')
+
+        # Productos aparte para la venta (no los de arriba): DetalleVenta.save()
+        # descuenta stock de verdad, y producto_a/producto_b los verifica con un
+        # stock_actual exacto otro test.
+        producto_venta_a = Producto.objects.create(veterinaria=self.vet_a, nombre="Item Venta A", tipo="OTRO", stock_actual=10, precio_venta=1000)
+        producto_venta_b = Producto.objects.create(veterinaria=self.vet_b, nombre="Item Venta B", tipo="OTRO", stock_actual=10, precio_venta=500)
+        self.venta_a = Venta.objects.create(veterinaria=self.vet_a, caja=self.caja_a, vendedor=self.user_a, total=1000)
+        DetalleVenta.objects.create(venta=self.venta_a, producto=producto_venta_a, cantidad=1, precio_unitario=1000)
+        self.venta_b = Venta.objects.create(veterinaria=self.vet_b, caja=self.caja_b, vendedor=self.user_b, total=500)
+        DetalleVenta.objects.create(venta=self.venta_b, producto=producto_venta_b, cantidad=1, precio_unitario=500)
+
+        self.proveedor_a = Proveedor.objects.create(veterinaria=self.vet_a, nombre="Distribuidora Compartida")
+        self.proveedor_b = Proveedor.objects.create(veterinaria=self.vet_b, nombre="Distribuidora Compartida")
+        self.compra_a = Compra.objects.create(veterinaria=self.vet_a, proveedor=self.proveedor_a, total=500)
+        self.compra_b = Compra.objects.create(veterinaria=self.vet_b, proveedor=self.proveedor_b, total=700)
+
+        self.internacion_a = Internacion.objects.create(
+            veterinaria=self.vet_a, mascota=self.mascota_a, box="Box 1",
+            motivo_ingreso="Motivo A", fecha_ingreso=timezone.now(), estado='INTERNADO',
+        )
+        self.internacion_b = Internacion.objects.create(
+            veterinaria=self.vet_b, mascota=self.mascota_b, box="Box 1",
+            motivo_ingreso="Motivo B", fecha_ingreso=timezone.now(), estado='INTERNADO',
+        )
+
     def tearDown(self):
+        # DetalleVenta.producto y Compra.proveedor usan on_delete=PROTECT: hay que
+        # borrarlos antes, o el cascade a Producto/Proveedor desde Veterinaria falla
+        # (mismo motivo que en el comando reset_y_poblar).
+        DetalleVenta.objects.filter(venta__veterinaria__in=[self.vet_a, self.vet_b]).delete()
+        Compra.objects.filter(veterinaria__in=[self.vet_a, self.vet_b]).delete()
         User.objects.filter(username__in=["mcp_user_a", "mcp_user_b"]).delete()
         Veterinaria.objects.filter(nombre__in=["Clínica A (MCP test)", "Clínica B (MCP test)"]).delete()
 
@@ -163,6 +201,62 @@ class AislamientoMultiTenantTests(TransactionTestCase):
         ids = [t["id"] for t in resultado["turnos"]]
         self.assertIn(self.turno_a.id, ids)
         self.assertNotIn(self.turno_b.id, ids)
+
+    def test_ventas_no_mezcla_clinicas(self):
+        hoy = timezone.localdate().isoformat()
+        with _sesion_mcp(self.token_a) as cliente_a:
+            resultado = _llamar_tool(cliente_a, "ventas", {"fecha_desde": hoy, "fecha_hasta": hoy})
+
+        ids = [v["id"] for v in resultado["ventas"]]
+        self.assertIn(self.venta_a.id, ids)
+        self.assertNotIn(self.venta_b.id, ids)
+        self.assertEqual(resultado["total_facturado_periodo"], "1000.00")
+
+    def test_estado_caja_no_mezcla_clinicas(self):
+        with _sesion_mcp(self.token_b) as cliente_b:
+            resultado = _llamar_tool(cliente_b, "estado_caja", {})
+
+        self.assertTrue(resultado["hay_caja"])
+        self.assertEqual(resultado["monto_inicial"], "2000.00")
+
+    def test_compras_no_mezcla_clinicas(self):
+        hoy = timezone.localdate().isoformat()
+        with _sesion_mcp(self.token_a) as cliente_a:
+            resultado = _llamar_tool(cliente_a, "compras", {"fecha_desde": hoy, "fecha_hasta": hoy})
+
+        ids = [c["id"] for c in resultado["compras"]]
+        self.assertIn(self.compra_a.id, ids)
+        self.assertNotIn(self.compra_b.id, ids)
+
+    def test_buscar_proveedores_no_mezcla_clinicas_aunque_se_llamen_igual(self):
+        with _sesion_mcp(self.token_a) as cliente_a:
+            resultado = _llamar_tool(cliente_a, "buscar_proveedores", {"query": "Compartida"})
+
+        ids = [p["id"] for p in resultado["proveedores"]]
+        self.assertIn(self.proveedor_a.id, ids)
+        self.assertNotIn(self.proveedor_b.id, ids)
+
+    def test_internaciones_no_mezcla_clinicas(self):
+        with _sesion_mcp(self.token_b) as cliente_b:
+            resultado = _llamar_tool(cliente_b, "internaciones", {})
+
+        ids = [i["id"] for i in resultado["internaciones"]]
+        self.assertIn(self.internacion_b.id, ids)
+        self.assertNotIn(self.internacion_a.id, ids)
+
+    def test_equipo_veterinarios_no_mezcla_clinicas_aunque_se_llamen_igual(self):
+        with _sesion_mcp(self.token_a) as cliente_a:
+            resultado = _llamar_tool(cliente_a, "equipo_veterinarios", {})
+
+        ids = [v["id"] for v in resultado["veterinarios"]]
+        self.assertIn(self.vet_staff_a.id, ids)
+        self.assertNotIn(self.vet_staff_b.id, ids)
+
+    def test_datos_veterinaria_devuelve_la_propia(self):
+        with _sesion_mcp(self.token_a) as cliente_a:
+            resultado = _llamar_tool(cliente_a, "datos_veterinaria", {})
+
+        self.assertEqual(resultado["nombre"], "Clínica A (MCP test)")
 
 
 class AutenticacionTests(TransactionTestCase):
