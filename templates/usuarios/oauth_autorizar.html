@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Autorizar acceso - VeterSystem{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="card-header bg-primary text-white py-3 px-4">
+                    <h3 class="card-title h5 mb-0 fw-bold d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock-fill fs-4"></i> Autorizar acceso
+                    </h3>
+                </div>
+                <div class="card-body p-4 p-md-5">
+
+                    {% if bloqueado %}
+                        <div class="alert alert-danger border-0 rounded-3">
+                            <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                            Tu cuenta todavía no está aprobada (o no tiene una veterinaria asignada), así que
+                            no puede autorizar conectores externos todavía.
+                        </div>
+                    {% else %}
+                        <p class="text-secondary">
+                            <strong>{{ client.client_name|default:"Un cliente externo" }}</strong> quiere conectarse
+                            a VeterSystem para consultar, en tu nombre, los datos de
+                            <strong>{{ veterinaria.nombre|default:"tu veterinaria" }}</strong>: productos, stock,
+                            pacientes, turnos e historia clínica.
+                        </p>
+                        <div class="alert alert-info border-0 rounded-3 small">
+                            <i class="bi bi-info-circle-fill me-1"></i>
+                            Es de solo lectura: no puede crear, modificar ni borrar nada todavía.
+                        </div>
+
+                        <form method="post" class="d-flex gap-2 justify-content-end mt-4">
+                            {% csrf_token %}
+                            {% for clave, valor in form_action_params.items %}
+                                <input type="hidden" name="{{ clave }}" value="{{ valor }}">
+                            {% endfor %}
+                            <button type="submit" name="accion" value="rechazar" class="btn btn-outline-secondary fw-semibold rounded-3">
+                                Rechazar
+                            </button>
+                            <button type="submit" name="accion" value="autorizar" class="btn btn-success fw-bold rounded-3">
+                                <i class="bi bi-check-circle-fill me-1"></i> Autorizar
+                            </button>
+                        </form>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

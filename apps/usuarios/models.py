@@ -1,3 +1,5 @@
+import secrets
+
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -215,3 +217,74 @@ class Suscripcion(models.Model):
     def precio_ciclo_actual(self):
         """Precio del plan correspondiente al ciclo de facturación contratado (mensual o anual)."""
         return self.plan.precio_anual if self.ciclo_facturacion == 'ANUAL' else self.plan.precio_mensual
+
+
+# ==============================================================================
+# OAUTH PARA CONECTORES MCP (ej. Claude.ai) — permite que un usuario autorice a
+# un cliente externo (Claude) a usar el servidor MCP en su nombre, sin tener que
+# copiar un token a mano. Implementa lo mínimo que exige Claude: Dynamic Client
+# Registration (RFC 7591) + Authorization Code con PKCE (RFC 7636).
+# ==============================================================================
+
+def _generar_token_oauth():
+    return secrets.token_urlsafe(32)
+
+
+def _generar_client_id():
+    return secrets.token_hex(16)
+
+
+class OAuthClient(models.Model):
+    """Un cliente OAuth registrado dinámicamente (en la práctica, siempre Claude,
+    que se re-registra solo la primera vez que alguien agrega el conector)."""
+    client_id = models.CharField(max_length=64, unique=True, default=_generar_client_id)
+    client_name = models.CharField(max_length=150, blank=True)
+    redirect_uris = models.JSONField(default=list)
+    creado_el = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.client_name or self.client_id
+
+
+class OAuthAuthorizationCode(models.Model):
+    """Código de un solo uso, de vida muy corta, que se intercambia por el token
+    de acceso justo después de que el usuario autoriza a Claude."""
+    code = models.CharField(max_length=64, unique=True, default=_generar_token_oauth)
+    client = models.ForeignKey(OAuthClient, on_delete=models.CASCADE, related_name='codigos')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='codigos_oauth')
+    redirect_uri = models.CharField(max_length=500)
+    code_challenge = models.CharField(max_length=128)
+    resource = models.CharField(max_length=500, blank=True)
+    usado = models.BooleanField(default=False)
+    expira_el = models.DateTimeField()
+    creado_el = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def esta_vencido(self):
+        return timezone.now() > self.expira_el
+
+
+class OAuthAccessToken(models.Model):
+    """Token de acceso de corta duración que el servidor MCP acepta en el header
+    Authorization. Reemplaza (para conectores vía OAuth) al token fijo de
+    'Mi Token de API', que sigue existiendo para uso manual (MCP Inspector, etc.)."""
+    token = models.CharField(max_length=64, unique=True, default=_generar_token_oauth)
+    client = models.ForeignKey(OAuthClient, on_delete=models.CASCADE, related_name='tokens_acceso')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tokens_oauth')
+    expira_el = models.DateTimeField()
+    creado_el = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def esta_vencido(self):
+        return timezone.now() > self.expira_el
+
+
+class OAuthRefreshToken(models.Model):
+    """Token para renovar el acceso sin pedirle a la persona que vuelva a loguearse.
+    Se rota en cada uso (uno solo uso) porque Claude se registra como cliente
+    'público' vía DCR, y la especificación de MCP lo exige para ese caso."""
+    token = models.CharField(max_length=64, unique=True, default=_generar_token_oauth)
+    client = models.ForeignKey(OAuthClient, on_delete=models.CASCADE, related_name='tokens_refresco')
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='refresh_tokens_oauth')
+    usado = models.BooleanField(default=False)
+    creado_el = models.DateTimeField(auto_now_add=True)

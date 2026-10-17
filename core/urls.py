@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 # Importamos las vistas necesarias
 from apps.usuarios.views import CustomLoginView
 from apps.usuarios import views as usuario_views
+from apps.usuarios import oauth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -70,6 +71,14 @@ urlpatterns = [
 
     # API REST (lectura) para integraciones externas
     path('api/', include(('apps.api.urls', 'api'), namespace='api')),
+
+    # OAuth para conectores MCP (ej. Claude.ai) — rutas fijas que exige la spec.
+    path('.well-known/oauth-protected-resource', oauth_views.protected_resource_metadata, name='oauth_protected_resource'),
+    path('.well-known/oauth-protected-resource/mcp', oauth_views.protected_resource_metadata, name='oauth_protected_resource_mcp'),
+    path('.well-known/oauth-authorization-server', oauth_views.authorization_server_metadata, name='oauth_authorization_server'),
+    path('oauth/register', oauth_views.oauth_register, name='oauth_register'),
+    path('oauth/authorize', oauth_views.oauth_authorize, name='oauth_authorize'),
+    path('oauth/token', oauth_views.oauth_token, name='oauth_token'),
 ]
 
 # Servidor de archivos media en desarrollo (PDFs, ecografías, imágenes)
