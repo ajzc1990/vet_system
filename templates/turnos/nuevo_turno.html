@@ -67,6 +67,7 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold small text-dark mb-1">Fecha *</label>
+                                <div class="d-flex flex-wrap gap-2 mb-2" id="fechasRapidas"></div>
                                 <input type="date" id="inputFecha" class="form-control" required>
                             </div>
                             <div class="col-md-6">
@@ -177,7 +178,7 @@
         width: 26px; height: 26px; border-radius: 50%; background: #6366f1; color: #fff;
         font-size: .85rem; font-weight: 800; flex-shrink: 0;
     }
-    .pill-reciente.activo, .pill-motivo.activo { background: #6366f1; color: #fff; border-color: #6366f1; }
+    .pill-reciente.activo, .pill-motivo.activo, .pill-fecha.activo { background: #6366f1; color: #fff; border-color: #6366f1; }
     .slot-hora {
         border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 7px 10px; font-size: .85rem; font-weight: 700;
         background: #fff; color: #334155; cursor: pointer; transition: transform .1s ease;
@@ -219,6 +220,8 @@
         inputFecha.value = fh.toISOString().slice(0, 10);
         horaSeleccionada = ("0" + fh.getHours()).slice(-2) + ":" + ("0" + fh.getMinutes()).slice(-2);
     })();
+    {% else %}
+    inputFecha.value = formatearFechaLocal(new Date());
     {% endif %}
 
     // --- Paso 1: buscador de mascota ---
@@ -270,6 +273,37 @@
             elegirMascota({ id: btn.dataset.id, nombre: btn.dataset.nombre.split(' — ')[0], cliente: btn.dataset.cliente });
         });
     });
+
+    // --- Paso 2: pills de fecha rápida (Hoy / Mañana / Pasado mañana) ---
+    var fechasRapidasDiv = document.getElementById('fechasRapidas');
+    function formatearFechaLocal(d) {
+        return d.getFullYear() + '-' + ("0" + (d.getMonth() + 1)).slice(-2) + '-' + ("0" + d.getDate()).slice(-2);
+    }
+    function renderFechasRapidas() {
+        var opciones = [
+            { etiqueta: 'Hoy', offset: 0 },
+            { etiqueta: 'Mañana', offset: 1 },
+            { etiqueta: 'Pasado mañana', offset: 2 },
+        ];
+        fechasRapidasDiv.innerHTML = '';
+        opciones.forEach(function(op) {
+            var d = new Date();
+            d.setDate(d.getDate() + op.offset);
+            var valor = formatearFechaLocal(d);
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-primary rounded-pill pill-fecha' + (inputFecha.value === valor ? ' activo' : '');
+            btn.textContent = op.etiqueta;
+            btn.addEventListener('click', function() {
+                inputFecha.value = valor;
+                renderFechasRapidas();
+                renderHorarios();
+                actualizarResumen();
+            });
+            fechasRapidasDiv.appendChild(btn);
+        });
+    }
+    inputFecha.addEventListener('change', renderFechasRapidas);
 
     // --- Paso 2: horarios libres ---
     function generarHorarios() {
@@ -361,6 +395,7 @@
         }
     });
 
+    renderFechasRapidas();
     renderHorarios();
     actualizarResumen();
 })();
