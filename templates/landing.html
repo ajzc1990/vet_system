@@ -269,38 +269,8 @@
                 </div>
 
                 <div class="col-lg-6">
-                    <!-- TODO: si se consigue una captura real, reemplazar esta tarjeta (o agregarla al lado)
-                         por un mockup con /static/img/hero-dashboard.png (dashboard en notebook) y
-                         /static/img/hero-app.png (app en celular). Por ahora no hay capturas en el proyecto. -->
-                    <div class="glass-card p-4 p-md-5 text-dark">
-                        <div class="d-flex align-items-center gap-3 mb-4">
-                            <div class="bg-primary text-white p-3 rounded-4 shadow-sm">
-                                <i class="bi bi-shield-lock-fill fs-2"></i>
-                            </div>
-                            <div>
-                                <h5 class="fw-bold mb-0 text-dark">Tus datos son solo tuyos</h5>
-                                <small class="text-muted fw-semibold">Cada clínica tiene su espacio privado y protegido</small>
-                            </div>
-                        </div>
-                        <hr class="opacity-10 my-4">
-                        <ul class="list-unstyled mb-0 d-flex flex-column gap-3 fs-6">
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                                <span><strong>Agenda Médica:</strong> Control de turnos en tiempo real.</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                                <span><strong>Ficha Médica:</strong> Vacunas, desparasitaciones y recetas PDF.</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                                <span><strong>Inventario Automático:</strong> Alertas de bajo stock y vencimientos.</span>
-                            </li>
-                            <li class="d-flex align-items-center gap-2">
-                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
-                                <span><strong>Roles y Seguridad:</strong> Permisos para veterinarios y recepcionistas.</span>
-                            </li>
-                        </ul>
+                    <div class="rounded-4 shadow-lg overflow-hidden" style="border: 1px solid rgba(255,255,255,.15);">
+                        <img src="{% static 'img/hero-dashboard.png' %}" alt="Dashboard de VeterSystem" class="w-100 d-block">
                     </div>
                 </div>
             </div>
@@ -556,16 +526,15 @@
         <div class="container py-5">
             <div class="row align-items-center g-5">
                 <div class="col-lg-5 text-center">
-                    <!-- TODO: reemplazar por una captura real de la app, ej. /static/img/app-mockup-celular.png -->
-                    <div class="mx-auto d-flex align-items-center justify-content-center rounded-4 shadow-lg" style="width: 220px; height: 440px; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #6366f1 100%);">
-                        <i class="bi bi-phone text-white" style="font-size: 4rem;"></i>
+                    <div class="mx-auto rounded-4 shadow-lg overflow-hidden" style="width: 220px; height: 440px; border: 6px solid #0f172a;">
+                        <img src="{% static 'img/app-mockup-celular.png' %}" alt="VeterSystem desde el celular" style="width: 100%; height: 100%; object-fit: cover; object-position: top;">
                     </div>
                 </div>
                 <div class="col-lg-7">
-                    <span class="text-primary fw-bold text-uppercase tracking-wider small">App Móvil Incluida</span>
+                    <span class="text-primary fw-bold text-uppercase tracking-wider small">Acceso desde Cualquier Dispositivo</span>
                     <h2 class="fw-extrabold display-6 text-dark mt-2 mb-4">Tu veterinaria en el bolsillo</h2>
                     <p class="text-muted fs-5 mb-4 leading-relaxed">
-                        Consultá la agenda, las fichas de tus pacientes y el historial clínico desde el celular, estés en la clínica, en un domicilio o de guardia.
+                        Entrá desde el navegador del celular y consultá la agenda, las fichas de tus pacientes y el historial clínico, estés en la clínica, en un domicilio o de guardia.
                     </p>
                     <ul class="list-unstyled d-flex flex-column gap-3 mb-4">
                         <li class="d-flex align-items-center gap-2">
